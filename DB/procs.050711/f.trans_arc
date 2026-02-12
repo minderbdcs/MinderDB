@@ -1,0 +1,4 @@
+alter table transactions_archive add complete complete;
+
+create index trans_archive_date_idx on transactions_archive (trn_date, complete);
+

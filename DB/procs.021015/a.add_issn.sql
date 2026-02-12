@@ -1,0 +1,133 @@
+SET TERM ^ ;
+
+
+CREATE PROCEDURE ADD_ISSN (ORIGINAL_SSN VARCHAR(20),
+WH_ID CHAR(2),
+LOCN_ID VARCHAR(10),
+PREV_LOCN_ID VARCHAR(10),
+CURRENT_QTY INTEGER,
+PREV_QTY INTEGER,
+PREV_DATE TIMESTAMP,
+ISSN_STATUS CHAR(2),
+STATUS_CODE VARCHAR(10),
+CREATE_DATE TIMESTAMP,
+USER_ID VARCHAR(10),
+PROD_ID VARCHAR(30))
+AS 
+ 
+  
+
+  DECLARE VARIABLE REC_ID INTEGER;
+
+BEGIN
+   /* Add ISSN record */                                                                      
+   REC_ID = GEN_ID(ISSN_SSN_ID, 1);
+  
+   INSERT INTO ISSN   
+        (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, PREV_LOCN_ID, CURRENT_QTY, PREV_QTY,
+         PREV_DATE, ISSN_STATUS, STATUS_CODE, CREATE_DATE, USER_ID, PROD_ID)
+
+   VALUES (:REC_ID, :ORIGINAL_SSN, :WH_ID, :LOCN_ID,:PREV_LOCN_ID, :CURRENT_QTY, :PREV_QTY,
+           :PREV_DATE, :ISSN_STATUS, :STATUS_CODE, :CREATE_DATE, :USER_ID, :PROD_ID );
+
+   SUSPEND;
+END ^
+
+ALTER PROCEDURE ADD_MASTER_DATA (TRN_TYPE VARCHAR(4),
+TRN_DATE TIMESTAMP,
+FIELD_VALUE VARCHAR(30))
+AS 
+ 
+  
+
+DECLARE VARIABLE REC_EXIST INTEGER; 
+DECLARE VARIABLE strDESC VARCHAR(50);
+
+BEGIN
+
+   REC_EXIST = 0;
+   strDESC = "Created during audit " || :TRN_DATE;
+   
+   /* Check if record exists */ 
+   IF (:TRN_TYPE = 'NITP') THEN
+   BEGIN   /* SSN Type Table */
+     SELECT 1 
+     FROM SSN_TYPE
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+   
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+       INSERT INTO SSN_TYPE (CODE, DESCRIPTION)
+       VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NIOB') THEN
+   BEGIN   /* Generic Table */                           
+     SELECT 1 
+     FROM GENERIC
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+   
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+       INSERT INTO GENERIC (CODE, DESCRIPTION)
+       VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NIBC') THEN
+   BEGIN   /* Brand Table */                           
+     SELECT 1 
+     FROM BRAND
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+      
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+        INSERT INTO BRAND (CODE, DESCRIPTION)
+        VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NIMO') THEN
+   BEGIN   /* Model Table */                           
+     SELECT 1 
+     FROM MODEL
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+         
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+        INSERT INTO MODEL (CODE, DESCRIPTION)
+        VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NICC') THEN
+   BEGIN   /* Cost Center Table */                           
+     SELECT 1 
+     FROM COST_CENTRE
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO COST_CENTRE (CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NILG') THEN
+   BEGIN   /* Legacy Table */                           
+     SELECT 1 
+     FROM LEGACY
+     WHERE LEGACY_ID = :FIELD_VALUE   
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO LEGACY (LEGACY_ID, LEGACY_DESCRIPTION)
+         VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END   
+ 
+   SUSPEND;
+END ^
+

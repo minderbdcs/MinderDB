@@ -1,0 +1,32 @@
+have in options
+a default sale account 
+
+in ssn creation use the default sale account
+
+in add pick lines
+	if item is a product use the prod_profiles sale account
+	otherwise use the ssn's sale acount
+
+similarly
+	for pick_order have a default freight account in options table
+
+want to also have purchase accounts
+ie want a purchase_account in ssn and prod_profile and purchase_order_line
+want to have triggers for new ssn to populate the accounts
+=========================================================================================
+
+
+add company_id to chart of accounts
+
+then make the options records like group_code = 'CMPLEGACY' code =  'company_id|Account type' description =  'Account code'
+
+so use group_code = 'CMPLGRCODE' instead
+code = company | screen | account type
+description = account code to use
+
+so for account types have 
+freight   'FREIGHT_CODE'
+sales     'SALE_CODE'
+admin     'ADMIN_FEE'
+deposit   'DEPOSIT_CODE'
+

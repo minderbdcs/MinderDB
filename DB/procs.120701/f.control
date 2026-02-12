@@ -1,0 +1,4 @@
+alter table control add use_sale_channel value_tf;
+update control set use_sale_channel = 'F';
+
+

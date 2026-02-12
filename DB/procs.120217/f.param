@@ -1,0 +1,2 @@
+alter domain data_expression type varchar(40);
+

@@ -1,0 +1,2 @@
+update param  set menu_name=menu_name ||'^' || data_expression where data_id='SALESORDER'; 
+update param  set data_expression = '(00|1[38]|3[13]|45|83|DX|PS|S[01345IKMOPS]|WP)[0-9A-Z]*'  where data_id='SALESORDER'; 

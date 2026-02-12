@@ -1,0 +1,5 @@
+/*
+503 DECLARE EXTERNAL FUNCTION NONULL
+506 ENTRY_POINT 'Nonull' MODULE_NAME 'udf_file';
+*/
+drop external function nonull;

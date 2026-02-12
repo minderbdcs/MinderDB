@@ -1,0 +1,15 @@
+1	in transfer TRIL and TRLI
+	check temperature zone of the to location versus that of the product involved
+	if the to location is ST move stat and 
+	the temperature zone of the product is not null 
+	and the temperature zone of the to location is not the same as for the product
+	then don't allow the move.
+	I have so far added procedure pc_check_temperature_zone
+
+2	For importing of orders from ftp folders
+	Glen wants a status in the company to overwrite the order status
+	if DA leave DA as DA = allow normal processing
+	if OP make the DA OP = can only pick = credit check
+	if HD make the DA HD ! = cannot pick or despatch = bad credit
+	if IO make the DA CN ! = import only
+

@@ -1,0 +1,78 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/*
+CREATE OR ALTER PROCEDURE PC_WMAR (RECORD_ID INTEGER,
+WH_ID CHAR(2),
+LOCN_ID VARCHAR(10),
+OBJECT VARCHAR(30),
+TRN_TYPE VARCHAR(4),
+TRN_CODE CHAR(1),
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(1024),
+QTY INTEGER,
+PERSON_ID VARCHAR(10),
+DEVICE_ID CHAR(2),
+SUBLOCN_ID VARCHAR(10))
+*/
+
+CREATE OR ALTER PROCEDURE PC_WMAR (RECORD_ID INTEGER,
+WH_ID WH_ID,
+LOCN_ID LOCN_ID,
+OBJECT OBJECT,
+TRN_TYPE TRN_TYPE,
+TRN_CODE TRN_CODE,
+TRN_DATE TRN_DATE,
+REFERENCE REFERENCE,
+QTY QTY,
+PERSON_ID PERSON,
+DEVICE_ID DEVICE_ID,
+SUBLOCN_ID LOCN_ID)
+AS 
+           
+  DECLARE VARIABLE SSN_EXIST INTEGER; 
+  DECLARE VARIABLE PARENT_SSN VARCHAR(22);
+  DECLARE VARIABLE strAUDIT_DESC VARCHAR(50);
+  
+BEGIN
+   SSN_EXIST = 0;
+   PARENT_SSN = :WH_ID || :LOCN_ID || :SUBLOCN_ID;     
+  
+   /* Check SSN */
+   SELECT 1
+   FROM SSN
+   WHERE SSN_ID = :OBJECT
+   INTO :SSN_EXIST;
+
+   /* If SSN does not exists, then exit */
+   IF (SSN_EXIST = 0) THEN
+   BEGIN
+       /* Update transactions table */        
+       EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'SSN is not in the database');
+       EXIT;         
+   END
+   ELSE
+   BEGIN
+      /* Update Parent SSN */
+      UPDATE SSN
+      SET PARENT_SSN_ID = :PARENT_SSN
+      WHERE SSN_ID = :OBJECT;
+
+      /* Update transactions table */        
+      EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+
+      strAUDIT_DESC = 'Add parent barcode ' || :PARENT_SSN;
+      /* Add transaction history */                                                                                     
+      EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                     :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+
+   END
+
+   SUSPEND;
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

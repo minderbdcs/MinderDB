@@ -1,0 +1,26 @@
+CREATE PROCEDURE GET_PICK_LABEL_NO  RETURNS (
+  PICK_LABEL_NO VARCHAR(7)
+) AS   
+
+DECLARE VARIABLE iLabelNo INTEGER;
+DECLARE VARIABLE iLengthLabelNo INTEGER;
+DECLARE VARIABLE sLabelNo VARCHAR(7);
+     
+BEGIN
+  iLabelNo = GEN_ID(PICK_LABEL_GEN, 1) ;
+  iLengthLabelNo = STRLEN(iLabelNo);
+  
+  sLabelNo = ''; /* Enter prefix number here */
+  /* Padding leading with 0 */
+  WHILE (iLengthLabelNo < 7) DO
+  BEGIN
+        sLabelNo = sLabelNo || '0';      
+        iLengthLabelNo = iLengthLabelNo + 1;
+  END
+  sLabelNo = sLabelNo || iLabelNo;
+  
+  /* Return LoadNo to the caller */
+  PICK_LABEL_NO = sLabelNo;
+  
+  
+END^

@@ -1,0 +1,2 @@
+update control set default_purchase_type='PO',default_purchase_status='OP';
+

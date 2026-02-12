@@ -1,0 +1,4 @@
+create domain hire_rate double precision;
+alter table ssn add hire_rate hire_rate;
+alter table ssn add hire_uom code_two;
+

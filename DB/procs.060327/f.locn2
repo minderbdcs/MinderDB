@@ -1,0 +1,2 @@
+create index location_seq_idx on location(locn_seq);
+

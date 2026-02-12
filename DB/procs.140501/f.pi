@@ -1,0 +1,11 @@
+alter table pick_item_dx add PS_DEL_TO_STORE_IN_HOUSE_NO EDI_LOCN_NO;
+alter table pick_item_dx add PS_DEL_TO_DC_IN_HOUSE_NO        EDI_LOCN_NO;
+alter table pick_item_dx add PS_CUSTOMER_EDI_NO EDI_NO;
+
+alter table pick_item add PS_DEL_TO_STORE_IN_HOUSE_NO EDI_LOCN_NO;
+alter table pick_item add PS_DEL_TO_DC_IN_HOUSE_NO        EDI_LOCN_NO;
+alter table pick_item add PS_CUSTOMER_EDI_NO EDI_NO;
+
+alter table pick_order_item_temp add L_PS_DEL_TO_STORE_IN_HOUSE_NO EDI_LOCN_NO;
+alter table pick_order_item_temp add L_PS_DEL_TO_DC_IN_HOUSE_NO        EDI_LOCN_NO;
+alter table pick_order_item_temp add L_PS_CUSTOMER_EDI_NO EDI_NO;

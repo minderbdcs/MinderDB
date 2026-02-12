@@ -1,0 +1,32 @@
+
+/*
+KIT_ID                          (PRODUCT) VARCHAR(30) Not Null 
+PROD_ID                         (PRODUCT) VARCHAR(30) Not Null 
+CREATED_BY                      (USER_ID) VARCHAR(10) Nullable 
+CREATE_DATE                     (CREATE_DATE) TIMESTAMP Nullable 
+STATUS                          (STATUS) CHAR(2) Nullable 
+PROD_QTY                        (KIT_QTY) DOUBLE PRECISION Nullable 
+
+fields for pinpoint
+KIT_LINE_NO                     INTEGER Nullable 
+TOTAL_LINES                     INTEGER Nullable 
+KIT_ACTION                      (STATUS) CHAR(2) Nullable 
+KIT_RUN_NO                      (KIT_RUN) INTEGER Nullable 
+*/
+
+ALTER TABLE PRODUCT_KIT ADD LAST_UPDATE_DATE LAST_UPDATE_DATE;
+ALTER TABLE PRODUCT_KIT ADD LAST_UPDATED_BY USER_ID;
+
+CREATE TABLE PRODUCT_KIT_TEMP (
+        RECORD_ID INTEGER NOT NULL ,
+        KIT_ID PRODUCT ,
+        PROD_ID PRODUCT ,
+        CREATE_DATE CREATE_DATE,
+        CREATED_BY USER_ID,
+        STATUS STATUS,
+        PROD_QTY KIT_QTY,
+        LAST_UPDATE_DATE LAST_UPDATE_DATE,
+        LAST_UPDATED_BY USER_ID,
+
+PRIMARY KEY (RECORD_ID));
+

@@ -1,0 +1,62 @@
+
+ALTER PROCEDURE GET_DATA_REFERENCE_FIELD4 (REFERENCE VARCHAR(1024) ,
+WK_DELIMITER CHAR(1) )
+RETURNS (WK_FIELD_LABEL VARCHAR(1024) ,
+WK_FIELD_DATA VARCHAR(1024) )
+AS 
+ 
+DECLARE VARIABLE WK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_DELIMITER2 CHAR(1);
+DECLARE VARIABLE RES INTEGER;
+BEGIN
+  WK_FIELD_LABEL = '';
+  WK_FIELD_DATA = '';
+  WK_FIELD = '';
+  
+  RES = FILE_WRITELN('logfile4.txt', 'in get_data_reference_field4');
+  RES = FILE_WRITELN('logfile4.txt', :REFERENCE);
+/*
+  IF (STRLEN(:REFERENCE) = 0) THEN
+  BEGIN     
+     EXIT;
+  END
+  WK_FIELD_LABEL = V4ALLTRIM(V4PARSE(:REFERENCE, :WK_DELIMITER, 1));
+  IF (WK_FIELD_LABEL = 'Token to long in parse') THEN
+  BEGIN
+     WK_FIELD_LABEL = '';
+  END
+*/
+  WK_FIELD = V4ALLTRIM(V4PARSE(:REFERENCE, :WK_DELIMITER, 1));
+  RES = FILE_WRITELN('logfile4.txt', 'wk_field');
+  RES = FILE_WRITELN('logfile4.txt', :WK_FIELD);
+  IF (WK_FIELD = 'Token to long in parse') THEN
+  BEGIN
+     WK_FIELD = '';
+     WK_FIELD_LABEL = '';
+     RES = FILE_WRITELN('logfile4.txt', 'token to long in parse field');
+  END
+  ELSE
+  BEGIN
+     RES = FILE_WRITELN('logfile4.txt', 'else have wk_field');
+     WK_DELIMITER2 = '<';
+     WK_FIELD_LABEL = V4ALLTRIM(V4PARSE(:WK_FIELD, :WK_DELIMITER2, 2));
+     IF (WK_FIELD_LABEL = 'Token to long in parse') THEN
+     BEGIN
+        WK_FIELD_LABEL = '';
+        RES = FILE_WRITELN('logfile4.txt', 'token to long in parse label');
+     END
+     ELSE
+     BEGIN
+        RES = FILE_WRITELN('logfile4.txt', 'wk_field_label');
+        RES = FILE_WRITELN('logfile4.txt', :WK_FIELD_LABEL);
+     END
+  END
+  WK_FIELD_DATA = V4ALLTRIM(V4PARSE(REFERENCE, WK_DELIMITER, 2));
+  IF (WK_FIELD_DATA = 'Token to long in parse') THEN
+  BEGIN
+     WK_FIELD_DATA = '';
+     RES = FILE_WRITELN('logfile4.txt', 'token to long in parse data');
+  END
+  SUSPEND;
+END ^
+

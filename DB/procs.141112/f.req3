@@ -1,0 +1,4 @@
+/*
+add zone to transfer request so can divde by zone  
+*/
+alter table transfer_request add zone_c code_two ;

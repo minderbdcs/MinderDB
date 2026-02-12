@@ -1,0 +1,2 @@
+alter table control add export_despatch char(1);
+update control set export_despatch='F';

@@ -1,0 +1,17 @@
+/* create table PICK_CLIENT_TYPE */
+/*
+CREATE TABLE PICK_CLIENT_TYPE (RECORD_ID INTEGER NOT NULL,
+        PCT_ID                    CODE NOT NULL,
+	PCT_NAME                  DESCRIPTION, 
+        PCT_PICK_ORDER_SUB_TYPE   CODE_TWO,
+        PCT_ALLOW_KIT_COMPONENTS  VALUE_TF,
+        PCT_PARTIAL_PICK_ALLOWED  VALUE_TF,
+        PCT_NOTES                 NOTES,
+        LAST_UPDATE_DATE          LAST_UPDATE_DATE,
+        LAST_UPDATE_BY            USER_ID,
+PRIMARY KEY (RECORD_ID));
+*/
+
+alter table pick_client_type alter pct_allow_kit_components type value_tfn;
+alter table pick_client_type alter pct_partial_pick_allowed type value_tfn;
+

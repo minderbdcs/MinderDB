@@ -1,0 +1,2 @@
+alter table pick_despatch add pickd_pick_order1 pick_order;
+alter table pick_despatch_dx add pickd_pick_order1 pick_order;

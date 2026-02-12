@@ -1,0 +1,2 @@
+select count(*),pick_detail_status from pick_item_detail group by pick_detail_status; 
+select count(*),p1.pick_detail_status,p2.pick_line_status,p3.company_id,p3.p_country from pick_item_detail p1 join pick_item p2 on p2.pick_label_no = p1.pick_label_no join pick_order p3 on p3.pick_order=p2.pick_order  where p3.company_id='MM' group by p1.pick_detail_status,p2.pick_line_status,p3.company_id,p3.p_country; 

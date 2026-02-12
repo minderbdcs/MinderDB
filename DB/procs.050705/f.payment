@@ -1,0 +1,13 @@
+insert into payment_methods(payment_method) values('American Express');
+insert into payment_methods(payment_method) values('Bank Card');
+insert into payment_methods(payment_method) values('Cash');
+insert into payment_methods(payment_method) values('Cheque');
+insert into payment_methods(payment_method) values('Credit');
+insert into payment_methods(payment_method) values('Diners Club');
+insert into payment_methods(payment_method) values('Direct Bank Deposit');
+insert into payment_methods(payment_method) values('EFTPOS');
+insert into payment_methods(payment_method) values('Master Card');
+insert into payment_methods(payment_method) values('Money Order');
+insert into payment_methods(payment_method) values('No Payment');
+insert into payment_methods(payment_method) values('Other');
+insert into payment_methods(payment_method) values('Visa');

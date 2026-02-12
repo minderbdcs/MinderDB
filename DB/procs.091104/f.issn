@@ -1,0 +1,4 @@
+alter table issn add original_create_date create_date;
+
+CREATE DESC INDEX ISSN_CREATE_DATE_IDX ON ISSN (ORIGINAL_CREATE_DATE , SSN_ID );
+

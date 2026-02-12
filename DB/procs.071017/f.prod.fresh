@@ -1,0 +1,7 @@
+update prod_profile set issue=1 where issue is null;
+update prod_profile set issue_per_order_unit=1 where issue_per_order_unit is null;
+update prod_profile set issue_per_inner_unit=1 where issue_per_inner_unit is null;
+
+update prod_profile set issue=1 where issue=0;
+update prod_profile set issue_per_order_unit=1 where issue_per_order_unit = 0;
+update prod_profile set issue_per_inner_unit=1 where issue_per_inner_unit = 0 ;

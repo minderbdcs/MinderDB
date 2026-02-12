@@ -1,0 +1,17 @@
+update sys_user set user_type='PR' where user_type is null;
+/*
+update ssn set ssn_type=null where ssn_type='';
+update ssn set generic=null where generic='';
+update ssn set product=null where product='';
+*/
+
+update ssn set ssn_type='UNKNOWN' where ssn_type='';
+update ssn set generic='UNKNOWN' where generic='';
+update ssn set ssn_sub_type='UNKNOWN' where ssn_sub_type='';
+update ssn set product='UNKNOWN' where product='';
+update ssn set brand='UNKNOWN' where brand='';
+update ssn set ssn_type='UNKNOWN' where ssn_type is null;
+update ssn set generic='UNKNOWN' where generic is null;
+update ssn set ssn_sub_type='UNKNOWN' where ssn_sub_type is null;
+update ssn set product='UNKNOWN' where product is null;
+update ssn set brand='UNKNOWN' where brand is null;

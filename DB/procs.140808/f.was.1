@@ -1,0 +1,449 @@
+           IF (WK_QTY_REMAINING > 0) THEN
+           BEGIN
+              WK_PI_PICKED_QTY_NULL = 0;
+              SELECT 1
+                     FROM PICK_ITEM
+                     WHERE PICK_LABEL_NO = :WK_LABEL_NO
+                       AND PICKED_QTY IS NULL
+                     INTO :WK_PI_PICKED_QTY_NULL;
+              IF (WK_PI_PICKED_QTY_NULL = 1) THEN
+              BEGIN
+                 WK_PI_PICKED_QTY = 0;
+              END
+              WK_PI_STATUS = 'PG';
+              IF (WK_REASON <> '') THEN
+              BEGIN
+                 WK_PI_STATUS = 'PL';
+              END
+              /* how much to use on this line */
+              WK_PI_LINE_QTY_REMAINING = WK_PI_ORDER_QTY - WK_PI_PICKED_QTY;
+              IF (WK_PI_LINE_QTY_REMAINING <= WK_QTY_REMAINING) THEN
+              BEGIN
+                 WK_QTY_TO_USE = WK_PI_LINE_QTY_REMAINING;
+              END
+              ELSE
+              BEGIN
+                 WK_QTY_TO_USE = WK_QTY_REMAINING;
+              END
+              WK_PI_PICKED_QTY = WK_PI_PICKED_QTY + WK_QTY_TO_USE;
+              IF (WK_PI_PICKED_QTY >= WK_PI_ORDER_QTY) THEN
+              BEGIN
+                 WK_PI_STATUS = 'PL';
+              END
+   
+              /* must get issns to make up qty to use */
+              WK_IS_QTY_REMAINING = WK_QTY_TO_USE;
+              /* if prod was NOPROD must ensure that we have enough stock */
+              /* so must create issns */
+              IF (WK_OBJECT = 'NOPROD') THEN
+              BEGIN
+                 WK_IS_QTY = 0;
+                 SELECT SUM(CURRENT_QTY)
+                  FROM ISSN
+                  WHERE PROD_ID = :WK_OBJECT
+                  AND WH_ID = :WK_WH_ID
+                  AND LOCN_ID = :WK_LOCN_ID
+                  AND POS(:WK_ALLOWED_STATUS, ISSN.ISSN_STATUS, 0, 1) > -1
+                  AND CURRENT_QTY > 0
+                  INTO :WK_IS_QTY;  
+                 IF (WK_IS_QTY IS NULL) THEN
+                 BEGIN
+                    WK_IS_QTY = 0;
+                 END
+
+                 IF (WK_IS_QTY_REMAINING > WK_IS_QTY) THEN
+                 BEGIN
+                    /* lets make 10 time the amount for later use */
+                    WK_IS_QTY = 10 * WK_IS_QTY_REMAINING;
+                    EXECUTE PROCEDURE ADD_ISSN ('' ,
+                       :WK_WH_ID,
+                       :WK_LOCN_ID,
+                       '',
+                       :WK_IS_QTY,
+                       0,
+                       'NOW',
+                       'ST',
+                       '',
+                       'NOW',
+                       :WK_USER ,
+                       :WK_OBJECT,
+                       1);
+                    SELECT FIRST 1 SSN_ID FROM ISSN
+                       WHERE PROD_ID = :WK_OBJECT
+                       AND WH_ID = :WK_WH_ID
+                       AND LOCN_ID = :WK_LOCN_ID
+                       AND POS(:WK_ALLOWED_STATUS, ISSN.ISSN_STATUS, 0, 1) > -1
+                       AND CURRENT_QTY > 0
+                       ORDER BY CREATE_DATE DESC
+                    INTO :WK_IS_SSN;
+                    UPDATE ISSN SET COMPANY_ID = :WK_PO_COMPANY_ID
+                    WHERE SSN_ID = :WK_IS_SSN;
+                 END
+              END
+              WK_IS_TAKEN = 'N';
+              FOR SELECT CURRENT_QTY, SSN_ID
+                  FROM ISSN
+                  WHERE PROD_ID = :WK_OBJECT
+                  AND WH_ID = :WK_WH_ID
+                  AND LOCN_ID = :WK_LOCN_ID
+                  AND POS(:WK_ALLOWED_STATUS, ISSN.ISSN_STATUS, 0, 1) > -1
+                  AND CURRENT_QTY > 0
+                  AND COMPANY_ID = :WK_PO_COMPANY_ID
+                  INTO :WK_IS_QTY, :WK_IS_SSN 
+              DO
+              BEGIN
+                 IF (WK_IS_QTY_REMAINING > 0) THEN
+                 BEGIN
+                    /* how much can I take */
+                    /* either issn qty or remaining qty if its less */
+                    WK_USED_SSN = WK_IS_SSN;
+                    WK_IS_USED_QTY = WK_IS_QTY;
+                    IF (WK_IS_QTY_REMAINING < WK_IS_QTY) THEN
+                    BEGIN
+                       WK_IS_USED_QTY = WK_IS_QTY_REMAINING;
+                       /*  SPlit it  and take wk_is_qty_remaining */
+                       WK_ISSN_PREFIX = '';
+                       /* Get length for Barcode */   
+                       EXECUTE PROCEDURE GET_BARCODE_LENGTH RETURNING_VALUES iSSN_LENGTH;
+                       SELECT DATA_PREFIX FROM PARAM WHERE DATA_ID = 'BARCODE' INTO :WK_ISSN_PREFIX;
+                       IF (WK_ISSN_PREFIX IS NULL) THEN
+                       BEGIN
+                          WK_ISSN_PREFIX = '';
+                       END
+                       iSSN_ID = GEN_ID(ISSN_SSN_ID, 1);
+                       P_SSN_ID = iSSN_ID - 1;
+                       SELECT ISSN_ID FROM GET_ISSN_BARCODE('BARCODE', :P_SSN_ID, 36) INTO :I_SSN_ID;
+                          
+                       EXECUTE PROCEDURE PC_TRSS 
+                          :WK_RECORD ,
+                          :WK_WH_ID,
+                          :WK_LOCN_ID,
+                          :WK_IS_SSN,
+                          'TRSS',
+                          'A',
+                          :WK_DATE,
+                          :I_SSN_ID,
+                          :WK_IS_QTY_REMAINING,
+                          :WK_USER,
+                          :WK_DEVICE;
+                       WK_OLD_SSN_ID = WK_IS_SSN;
+                       /* WK_OBJECT = I_SSN_ID */
+                       WK_USED_SSN = I_SSN_ID;
+                       /* must reduce wk_is_qty_remaining to zero */
+                       /* so end of issns that we take */
+                       UPDATE ISSN SET OTHER1 = (SELECT OTHER1 FROM ISSN WHERE SSN_ID=:WK_OLD_SSN_ID), OTHER2 = 'Split ' || :WK_OLD_SSN_ID || ' Order ' || :WK_PI_ORDER WHERE SSN_ID = :I_SSN_ID;
+         
+                    END
+                    WK_IS_TAKEN = 'Y';
+                    SELECT WH_ID, LOCN_ID, PROD_ID, COMPANY_ID
+                    FROM ISSN
+                    WHERE SSN_ID = :WK_USED_SSN
+                    INTO :WK_IS_WH_ID, :WK_IS_LOCN_ID, :WK_IS_PROD_ID, :WK_IS_COMPANY_ID ;
+                    UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS,
+                        PREV_PREV_WH_ID = PREV_WH_ID,
+                        PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                        PREV_WH_ID = WH_ID,
+                        PREV_LOCN_ID = LOCN_ID,
+                        WH_ID = :WK_DEVICE_WH,
+                        LOCN_ID = :WK_DEVICE,
+                        PREV_PREV_PICK_ORDER = PREV_PICK_ORDER ,
+                        PREV_PICK_ORDER = PICK_ORDER ,
+                        PICK_ORDER = :WK_LABEL_NO
+                     WHERE SSN_ID = :WK_USED_SSN;
+                    EXECUTE PROCEDURE ADD_SSN_HIST(:WK_DEVICE_WH, :WK_DEVICE, :WK_USED_SSN, 
+                             :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                             :WK_AUDIT_DESC , :WK_REASON, :WK_IS_USED_QTY, :WK_USER, :WK_DEVICE); 
+                    BEGIN
+                      /* now add transactions archive for this ssn_id */
+                      INSERT INTO TRANSACTIONS_ARCHIVE
+                         (WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE, REFERENCE,
+                          QTY, ERROR_TEXT, INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+                          PERSON_ID, DEVICE_ID, RECORD_ID, PROD_ID, COMPANY_ID, ORDER_NO)
+                       SELECT :WK_IS_WH_ID, :WK_IS_LOCN_ID, :WK_USED_SSN, :WK_TRN_TYPE, 'i', :WK_DATE, REFERENCE,
+                          :WK_IS_USED_QTY, 'Processed successfully', INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+                          :WK_USER, :WK_DEVICE, :WK_RECORD , :WK_IS_PROD_ID, :WK_IS_COMPANY_ID, :WK_PI_ORDER
+                       FROM TRANSACTIONS
+                        WHERE RECORD_ID = :WK_RECORD;
+                   END
+                    /* must reduce wk_is_qty_remaining by wk_is_used_qty */
+         
+                    IF (WK_PI_STATUS = 'PL') THEN
+                    BEGIN
+                       UPDATE PICK_ITEM_DETAIL 
+                       SET  PICK_DETAIL_STATUS = :WK_PI_STATUS
+                       WHERE PICK_LABEL_NO = :WK_LABEL_NO 
+                       AND PICK_DETAIL_STATUS = 'PG';
+                       FOR SELECT SSN_ID FROM PICK_ITEM_DETAIL
+                           WHERE PICK_LABEL_NO = :WK_LABEL_NO 
+                           INTO :WK_PID_SSN
+                       DO
+                       BEGIN
+                          UPDATE ISSN 
+                          SET  ISSN_STATUS = :WK_PI_STATUS
+                          WHERE SSN_ID = :WK_PID_SSN 
+                          AND ISSN_STATUS = 'PG';
+                       END
+                    END
+                    WK_PID_FOUND = 0;
+                    SELECT 1, QTY_PICKED, PICK_DETAIL_ID 
+                          FROM PICK_ITEM_DETAIL
+                          WHERE PICK_LABEL_NO = :WK_LABEL_NO
+                          AND SSN_ID = :WK_USED_SSN
+                          INTO :WK_PID_FOUND, :WK_PID_QTY, :WK_DETAIL_ID;
+                    IF (WK_PID_FOUND = 0) THEN
+                    BEGIN
+                       /* no detail record */
+                       INSERT INTO PICK_ITEM_DETAIL 
+                           (PICK_LABEL_NO, 
+                            SSN_ID, 
+                            PICK_DETAIL_STATUS, 
+                            QTY_PICKED,
+                            USER_ID, 
+                            DEVICE_ID, 
+                            CREATE_DATE,
+                            FROM_WH_ID,
+                            FROM_LOCN_ID,
+                            PROD_ID)
+                       VALUES (:WK_LABEL_NO, 
+                            :WK_USED_SSN,
+                            :WK_PI_STATUS,
+                            :WK_IS_USED_QTY,
+                            :WK_USER,
+                            :WK_DEVICE,
+                            :WK_DATE,
+                            :WK_CURRENT_WH_ID,
+                            :WK_CURRENT_LOCN_ID,
+                            :WK_IS_PROD_ID);
+                    END
+                    ELSE
+                    BEGIN
+                       UPDATE PICK_ITEM_DETAIL 
+                       SET  PICK_DETAIL_STATUS = :WK_PI_STATUS,
+                            QTY_PICKED = :WK_IS_USED_QTY ,
+                            USER_ID = :WK_USER,
+                            DEVICE_ID = :WK_DEVICE
+                       WHERE PICK_DETAIL_ID = :WK_DETAIL_ID;
+                    END
+                    WK_IS_QTY_REMAINING = WK_IS_QTY_REMAINING - WK_IS_USED_QTY;
+                 END
+      
+              END /* end for issns loop */
+              IF (WK_IS_TAKEN = 'N') THEN
+              BEGIN
+                 /* no stock - so create dummy zero qtys */
+                 EXECUTE PROCEDURE ADD_ISSN ('' ,
+                       :WK_WH_ID,
+                       :WK_LOCN_ID,
+                       '',
+                       0,
+                       0,
+                       'NOW',
+                       'ST',
+                       '',
+                       'NOW',
+                       :WK_USER ,
+                       :WK_OBJECT,
+                       1);
+                 SELECT FIRST 1 CURRENT_QTY, SSN_ID
+                     FROM ISSN
+                     WHERE PROD_ID = :WK_OBJECT
+                     AND WH_ID = :WK_WH_ID
+                     AND LOCN_ID = :WK_LOCN_ID
+                     AND POS(:WK_ALLOWED_STATUS, ISSN.ISSN_STATUS, 0, 1) > -1
+                     AND CURRENT_QTY = 0
+                     ORDER BY CREATE_DATE DESC
+                     INTO :WK_IS_USED_QTY, :WK_USED_SSN;
+                 SELECT WH_ID, LOCN_ID, PROD_ID, COMPANY_ID
+                    FROM ISSN
+                    WHERE SSN_ID = :WK_USED_SSN
+                    INTO :WK_IS_WH_ID, :WK_IS_LOCN_ID, :WK_IS_PROD_ID, :WK_IS_COMPANY_ID ;
+                 UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS,
+                     PREV_PREV_WH_ID = PREV_WH_ID,
+                     PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                     PREV_WH_ID = WH_ID,
+                     PREV_LOCN_ID = LOCN_ID,
+                     WH_ID = :WK_DEVICE_WH,
+                     LOCN_ID = :WK_DEVICE,
+                     PREV_PREV_PICK_ORDER = PREV_PICK_ORDER ,
+                     PREV_PICK_ORDER = PICK_ORDER ,
+                     PICK_ORDER = :WK_LABEL_NO,
+                     COMPANY_ID = :WK_PO_COMPANY_ID 
+                  WHERE SSN_ID = :WK_USED_SSN;
+                 WK_IS_COMPANY_ID = WK_PO_COMPANY_ID;
+                 EXECUTE PROCEDURE ADD_SSN_HIST(:WK_DEVICE_WH, :WK_DEVICE, :WK_USED_SSN, 
+                          :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                          :WK_AUDIT_DESC , :WK_REASON, :WK_IS_USED_QTY, :WK_USER, :WK_DEVICE); 
+                 BEGIN
+                    /* now add transactions archive for this ssn_id */
+                    INSERT INTO TRANSACTIONS_ARCHIVE
+                       (WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE, REFERENCE,
+                        QTY, ERROR_TEXT, INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+                        PERSON_ID, DEVICE_ID, RECORD_ID, PROD_ID, COMPANY_ID, ORDER_NO)
+                     SELECT :WK_IS_WH_ID, :WK_IS_LOCN_ID, :WK_USED_SSN, :WK_TRN_TYPE, 'i', :WK_DATE, REFERENCE,
+                        :WK_IS_USED_QTY, 'Processed successfully', INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+                        :WK_USER, :WK_DEVICE, :WK_RECORD , :WK_IS_PROD_ID, :WK_IS_COMPANY_ID, :WK_PI_ORDER
+                     FROM TRANSACTIONS
+                        WHERE RECORD_ID = :WK_RECORD;
+                 END
+                 /* no detail record */
+                 INSERT INTO PICK_ITEM_DETAIL 
+                     (PICK_LABEL_NO, 
+                      SSN_ID, 
+                      PICK_DETAIL_STATUS, 
+                      QTY_PICKED,
+                      USER_ID, 
+                      DEVICE_ID, 
+                      CREATE_DATE,
+                      FROM_WH_ID,
+                      FROM_LOCN_ID,
+                      PROD_ID)
+                 VALUES (:WK_LABEL_NO, 
+                      :WK_USED_SSN,
+                      :WK_PI_STATUS,
+                      :WK_IS_USED_QTY,
+                      :WK_USER,
+                      :WK_DEVICE,
+                      :WK_DATE,
+                      :WK_CURRENT_WH_ID,
+                      :WK_CURRENT_LOCN_ID,
+                      :WK_IS_PROD_ID);
+              END
+              IF (WK_IS_QTY_REMAINING > 0) THEN
+              BEGIN
+                 /* dont have that much stock to take so adjust it down */
+                 WK_PI_PICKED_QTY = WK_PI_PICKED_QTY - WK_IS_QTY_REMAINING;
+                 WK_QTY_TO_USE = WK_QTY_TO_USE - WK_IS_QTY_REMAINING;
+              END
+              UPDATE PICK_ITEM
+              SET  PICK_LINE_STATUS =
+                      :WK_PI_STATUS,
+                      PICKED_QTY = :WK_PI_PICKED_QTY,
+                      REASON = :WK_REASON
+              WHERE PICK_LABEL_NO = :WK_LABEL_NO;
+              WK_QTY_REMAINING = WK_QTY_REMAINING - WK_QTY_TO_USE;
+           END
+           ELSE
+           BEGIN
+              /* qty remaining is zero but still have lines left */
+              /* must create zero qty issn and pick_item_detail */
+              WK_PI_PICKED_QTY_NULL = 0;
+              SELECT 1
+                     FROM PICK_ITEM
+                     WHERE PICK_LABEL_NO = :WK_LABEL_NO
+                       AND PICKED_QTY IS NULL
+                     INTO :WK_PI_PICKED_QTY_NULL;
+              IF (WK_PI_PICKED_QTY_NULL = 1) THEN
+              BEGIN
+                 WK_PI_PICKED_QTY = 0;
+              END
+              ELSE
+              BEGIN
+                 SELECT PICKED_QTY
+                     FROM PICK_ITEM
+                     WHERE PICK_LABEL_NO = :WK_LABEL_NO
+                     INTO :WK_PI_PICKED_QTY;
+              END
+              WK_PI_STATUS = 'PG';
+              IF (WK_REASON <> '') THEN
+              BEGIN
+                 WK_PI_STATUS = 'PL';
+              END
+              /* no stock - so create dummy zero qtys */
+              EXECUTE PROCEDURE ADD_ISSN ('' ,
+                    :WK_WH_ID,
+                    :WK_LOCN_ID,
+                    '',
+                    0,
+                    0,
+                    'NOW',
+                    'ST',
+                    '',
+                    'NOW',
+                    :WK_USER ,
+                    :WK_OBJECT,
+                    1);
+              SELECT FIRST 1 CURRENT_QTY, SSN_ID
+                  FROM ISSN
+                  WHERE PROD_ID = :WK_OBJECT
+                  AND WH_ID = :WK_WH_ID
+                  AND LOCN_ID = :WK_LOCN_ID
+                  AND POS(:WK_ALLOWED_STATUS, ISSN.ISSN_STATUS, 0, 1) > -1
+                  AND CURRENT_QTY = 0
+                  ORDER BY CREATE_DATE DESC
+                  INTO :WK_IS_USED_QTY, :WK_USED_SSN;
+              SELECT WH_ID, LOCN_ID, PROD_ID, COMPANY_ID
+                    FROM ISSN
+                    WHERE SSN_ID = :WK_USED_SSN
+                    INTO :WK_IS_WH_ID, :WK_IS_LOCN_ID, :WK_IS_PROD_ID, :WK_IS_COMPANY_ID ;
+              UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS,
+                  PREV_PREV_WH_ID = PREV_WH_ID,
+                  PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                  PREV_WH_ID = WH_ID,
+                  PREV_LOCN_ID = LOCN_ID,
+                  WH_ID = :WK_DEVICE_WH,
+                  LOCN_ID = :WK_DEVICE,
+                  PREV_PREV_PICK_ORDER = PREV_PICK_ORDER ,
+                  PREV_PICK_ORDER = PICK_ORDER ,
+                  PICK_ORDER = :WK_LABEL_NO
+               WHERE SSN_ID = :WK_USED_SSN;
+              EXECUTE PROCEDURE ADD_SSN_HIST(:WK_DEVICE_WH, :WK_DEVICE, :WK_USED_SSN, 
+                       :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                       :WK_AUDIT_DESC , :WK_REASON, :WK_IS_USED_QTY, :WK_USER, :WK_DEVICE); 
+              BEGIN
+                 /* now add transactions archive for this ssn_id */
+                 INSERT INTO TRANSACTIONS_ARCHIVE
+                    (WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE, REFERENCE,
+                     QTY, ERROR_TEXT, INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+                     PERSON_ID, DEVICE_ID, RECORD_ID, PROD_ID, COMPANY_ID, ORDER_NO)
+                  SELECT :WK_IS_WH_ID, :WK_IS_LOCN_ID, :WK_USED_SSN, :WK_TRN_TYPE, 'i', :WK_DATE, REFERENCE,
+                     :WK_IS_USED_QTY, 'Processed successfully', INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+                     :WK_USER, :WK_DEVICE, :WK_RECORD , :WK_IS_PROD_ID, :WK_IS_COMPANY_ID, :WK_PI_ORDER
+                  FROM TRANSACTIONS
+                     WHERE RECORD_ID = :WK_RECORD;
+              END
+              /* no detail record */
+              INSERT INTO PICK_ITEM_DETAIL 
+                  (PICK_LABEL_NO, 
+                   SSN_ID, 
+                   PICK_DETAIL_STATUS, 
+                   QTY_PICKED,
+                   USER_ID, 
+                   DEVICE_ID, 
+                   CREATE_DATE,
+                   FROM_WH_ID,
+                   FROM_LOCN_ID,
+                   PROD_ID)
+              VALUES (:WK_LABEL_NO, 
+                   :WK_USED_SSN,
+                   :WK_PI_STATUS,
+                   :WK_IS_USED_QTY,
+                   :WK_USER,
+                   :WK_DEVICE,
+                   :WK_DATE,
+                   :WK_CURRENT_WH_ID,
+                   :WK_CURRENT_LOCN_ID,
+                   :WK_IS_PROD_ID);
+              UPDATE PICK_ITEM
+              SET  PICK_LINE_STATUS =
+                      :WK_PI_STATUS,
+                      PICKED_QTY = :WK_PI_PICKED_QTY,
+                      REASON = :WK_REASON
+              WHERE PICK_LABEL_NO = :WK_LABEL_NO;
+              IF (WK_PI_STATUS = 'PL') THEN
+              BEGIN
+                 UPDATE PICK_ITEM_DETAIL 
+                 SET  PICK_DETAIL_STATUS = :WK_PI_STATUS
+                 WHERE PICK_LABEL_NO = :WK_LABEL_NO 
+                 AND PICK_DETAIL_STATUS = 'PG';
+                 FOR SELECT SSN_ID FROM PICK_ITEM_DETAIL
+                     WHERE PICK_LABEL_NO = :WK_LABEL_NO 
+                     INTO :WK_PID_SSN
+                 DO
+                 BEGIN
+                    UPDATE ISSN 
+                    SET  ISSN_STATUS = :WK_PI_STATUS
+                    WHERE SSN_ID = :WK_PID_SSN 
+                    AND ISSN_STATUS = 'PG';
+                 END
+              END
+           END

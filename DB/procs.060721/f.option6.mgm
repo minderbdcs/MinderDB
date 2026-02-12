@@ -1,0 +1,2 @@
+update options set description = description || '|FIRST' where group_code = 'CMPPKPR' and code = 'BW|NZ' ;
+

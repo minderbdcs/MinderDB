@@ -1,0 +1,6 @@
+update location set store_type = 'PS',locn_type='SH' where wh_id='NR' and locn_id starting 'PM' and store_type is null;
+update location set store_type = 'PS' where wh_id='NR' and locn_id starting 'PM' and store_type = 'SH';
+update location set store_type = 'PS',locn_type='SH' where wh_id='NR' and locn_id starting 'MM' and len(locn_id)=8 and store_type is null;
+update location set store_type = 'PS' where wh_id='NR' and locn_id starting 'MM' and len(locn_id)=8 and store_type = 'SH';
+
+

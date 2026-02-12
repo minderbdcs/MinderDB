@@ -1,0 +1,1 @@
+execute procedure add_tran('RP','DS000000','S155117','PKIL','L','NOW','RP|T1010100|',127,'F','','MASTER   ',0,'','SSSSSSSSS','BDCS','XX','');

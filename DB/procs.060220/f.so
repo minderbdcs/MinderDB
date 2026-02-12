@@ -1,0 +1,1 @@
+alter table pick_order add pallet_base product;

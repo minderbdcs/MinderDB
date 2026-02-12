@@ -1,0 +1,2 @@
+alter table sys_screen_var alter ssv_other2 to ssv_input_method ;
+

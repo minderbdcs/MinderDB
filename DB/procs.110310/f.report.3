@@ -1,0 +1,4 @@
+alter table reports add report_menu_type code_two;
+
+update reports set report_menu_type = report_type where report_type <> 'JS' and report_type <> 'RM' and (report_type is not null);
+

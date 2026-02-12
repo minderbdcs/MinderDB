@@ -1,0 +1,98 @@
+--Table: IMPORT_RULES
+
+--DROP TABLE IMPORT_RULES;
+
+CREATE GLOBAL TEMPORARY TABLE IMPORT_RULES (
+  RECORD_ID                      RECORD_ID NOT NULL,
+  IMPORT_RULES_NAME              VARCHAR(20) NOT NULL,
+  IMPORT_RULES_TYPE              CODE_TWO NOT NULL,
+  IMPORT_RULES_SERVER_NAME       VARCHAR(40) NOT NULL,
+  IMPORT_RULES_SERVER_COMMAND    CODE_128 NOT NULL,
+  IMPORT_RULES_SERVER_SLEEP      INTEGER DEFAULT 300 NOT NULL,
+  IMPORT_RULES_PATH              FILESYSTEM_PATH NOT NULL,
+  IMPORT_RULES_FILENAME_DATA_ID  DATA_ID NOT NULL,
+  IMPORT_RULES_FILENAME_PREFIX   VARCHAR(40) NOT NULL,
+  IMPORT_RULES_FILENAME_EXTENSN  VARCHAR(40) DEFAULT '.csv' NOT NULL,
+  IMPORT_RULES_WORKSHEET         VARCHAR(40) NOT NULL,
+  IMPORT_RULES_SUCCESS_PREFIX    VARCHAR(40) DEFAULT NULL,
+  IMPORT_RULES_ERROR_PREFIX      VARCHAR(40) DEFAULT NULL,
+  IMPORT_RULES_SUCCESS_EXTENSN   VARCHAR(20) DEFAULT '.processed' NOT NULL,
+  IMPORT_RULES_ERROR_EXTENSN     VARCHAR(20) DEFAULT '.err' NOT NULL,
+  IMPORT_RULES_PRE_PROCEDURE     VARCHAR(40),
+  IMPORT_RULES_POST_PROCEDURE    VARCHAR(40),
+  IMPORT_RULES_LAST_UPDATE_DATE  LAST_UPDATE_DATE DEFAULT 'NOW' NOT NULL,
+  IMPORT_RULES_LAST_UPDATE_BY    USER_ID NOT NULL,
+  /* Keys */
+  PRIMARY KEY (RECORD_ID)
+);
+
+
+SET TERM ^ ;
+
+CREATE TRIGGER ADD_IMPORT_RULES_BI FOR IMPORT_RULES
+ACTIVE BEFORE INSERT POSITION 10
+AS
+BEGIN
+  IF (NEW.RECORD_ID IS NULL OR NEW.RECORD_ID = 0 ) THEN
+  NEW.RECORD_ID = GEN_ID(GEN_IMPORT_RULES_ID,1);
+END^
+
+SET TERM ; ^
+
+COMMENT ON TABLE IMPORT_RULES
+  IS 'Rules on where to locate and how data files are to be imported into MINDER system';
+
+COMMENT ON COLUMN IMPORT_RULES.RECORD_ID
+  IS 'Unique IMPORT_RULES record number';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_NAME
+  IS 'Unique IMPORT_RULES Name which is referred to in the IMPORT_MAP. Avoids using RECORD_ID as this can be changed by an import.';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_TYPE
+  IS 'Use OPTIONS table to list';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_SERVER_NAME
+  IS 'Name of the Server application used to run automatic import processing. Use ''NONE'' or if CMDR Python Commander Server is  used then ''1:bdcs 2:bdcs   ''';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_SERVER_COMMAND
+  IS 'Linux op.sys command e.g. ''python /data/asset.rf/python/import/importfile.csv.py {} /tmp/importcsv.log''';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_SERVER_SLEEP
+  IS 'Number of seconds interval between scans for data files';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_PATH
+  IS 'Folder to seek import data files';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_FILENAME_DATA_ID
+  IS 'Used to point to PARAM.DATA_ID record and enable use of REGEX to identify conforming Filenames. Use ''NONE'' if not applicable.';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_FILENAME_PREFIX
+  IS 'Use to help indentify Import Filename using Prefix such as ''PICK_'' or ''SALES_'' or ''PACK_'' or ''PURCHASE_'' or ''NONE no standard name.';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_FILENAME_EXTENSN
+  IS 'Need to identify unprocessed data files from processed. e.g. ''*.csv'' whereas processed maybe ''*.psv''';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_WORKSHEET
+  IS 'Used for Spreadsheet imports.';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_SUCCESS_PREFIX
+  IS 'The import data file''s Prefix is renamed to this value after successful processing. e.g. We may use the same data file more than once hence first name = ''PICK_'' for the PICK_ORDER_ITEM_TEMP then we need import as ''PACK_'' for PACK_SSC table';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_ERROR_PREFIX
+  IS 'Use this to indicate file did not import successfully';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_SUCCESS_EXTENSN
+  IS 'Used to indicate data file was successfully imported';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_ERROR_EXTENSN
+  IS 'Used to indicate import processing was NOT successful';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_PRE_PROCEDURE
+  IS 'Used to run Stored Procedure before importing/ e.g. generate next PICK_DESPATCH.DESPATCH_ID';
+
+COMMENT ON COLUMN IMPORT_RULES.IMPORT_RULES_POST_PROCEDURE
+  IS 'Used to run Stored Procedure after Importing. e.g. PICK_DESPATCH.AWB_CONSIGNMENT_NO';
+
+GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES
+  ON TABLE IMPORT_RULES
+TO MINDER WITH GRANT OPTION;

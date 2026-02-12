@@ -1,0 +1,4 @@
+
+alter table pick_order  add despatch_full_order  	value_tf;
+alter table pick_order_dx  add despatch_full_order  	value_tf;
+alter table pick_order_item_temp  add H_despatch_full_order value_tf;

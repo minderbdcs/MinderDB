@@ -1,0 +1,4 @@
+create domain code_two_v varchar(2);
+alter table sys_screen_var add ssv_field_width_char code_two_v;
+alter table sys_screen_var add ssv_field_width_dim code_two;
+

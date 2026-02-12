@@ -1,0 +1,2 @@
+alter table carrier add label_number_base integer default 10;
+

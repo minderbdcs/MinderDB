@@ -1,0 +1,2 @@
+alter table sys_equip add label_record_delimitor varchar(6) default '\n';
+

@@ -1,0 +1,22 @@
+/* other 3 - uses global conditions  */
+/*
+update or insert  into  global_conditions( description, other_no, result ) values('UNKNOWN', '3', 'O');
+*/
+update ssn set other3 = upper(other3) where upper(other3) <> other3;
+/*
+update ssn set other3 = 'UNKNOWN'  where coalesce(other3,'') = '';
+update ssn set other3 = 'UNKNOWN'  where other3 = '';
+*/
+update ssn set other3 = null  where other3 = '';
+update ssn set other3 = alltrim(other3)  where other3 starting ' ';
+commit;
+insert into global_conditions (description, other_no, result)
+select s1.other3, '3', 'O'
+from ssn s1
+left outer join global_conditions s2 on
+s2.other_no  = '3' and
+s2.description    = s1.other3
+where s2.description is null
+and (s1.other3 is not null)
+group by s1.other3
+;

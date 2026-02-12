@@ -1,0 +1,4 @@
+alter transfer TRIL and TROL class P
+so that the passed Company is used .
+Then change handheld to always pass the company in the transaction
+

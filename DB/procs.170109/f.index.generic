@@ -1,0 +1,9 @@
+
+delete from generic where ssn_type is null;
+update generic set code    = 'UNKNOWN'  where coalesce(code ,'') = '';
+update generic set ssn_type    = 'UNKNOWN'  where coalesce(ssn_type ,'') = '';
+commit;
+UPDATE RDB$RELATION_FIELDS SET RDB$NULL_FLAG = 1
+WHERE RDB$FIELD_NAME = 'SSN_TYPE' AND RDB$RELATION_NAME = 'GENERIC';
+commit;
+alter table generic  ADD CONSTRAINT GENERIC_PKEY PRIMARY KEY (SSN_TYPE, CODE); 

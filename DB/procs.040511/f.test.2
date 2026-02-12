@@ -1,0 +1,56 @@
+           SELECT PICK_DESPATCH.DESPATCH_ID,
+               PICK_DESPATCH.PICKD_PALLET_QTY,
+               PICK_DESPATCH.PICKD_CARTON_QTY,
+               PICK_DESPATCH.PICKD_SATCHEL_QTY,
+               PICK_DESPATCH.PICKD_ADDRESS_QTY,
+/*
+               PICK_ITEM.PICK_ORDER,
+               PICK_ORDER.CUSTOMER_PO_WO,
+*/
+               PICK_DESPATCH.AWB_CONSIGNMENT_NO,
+               PACK_ID.DESPATCH_LABEL_NO,
+/*
+               PICK_ORDER.CONTACT_NAME,
+               PICK_ITEM.CONTACT_NAME,
+               PN.ADDRESS_LINE1,
+               PN.ADDRESS_LINE2,
+               PN.CITY,
+               PN.STATE,
+               PN.POST_CODE,
+               PN.PHONE_NO,
+               PICK_ORDER.SHIP_VIA,
+               PICK_ITEM.SHIP_VIA
+*/
+		pick_despatch.pickd_post_code
+               FROM PICK_DESPATCH
+               JOIN PACK_ID ON PACK_ID.DESPATCH_ID = PICK_DESPATCH.DESPATCH_ID
+/*
+               JOIN PICK_ITEM_DETAIL ON PICK_ITEM_DETAIL.DESPATCH_ID = PICK_DESPATCH.DESPATCH_ID
+               LEFT OUTER JOIN PICK_ITEM ON PICK_ITEM.PICK_LABEL_NO = PICK_ITEM_DETAIL.PICK_LABEL_NO
+               LEFT OUTER JOIN PICK_ORDER ON PICK_ORDER.PICK_ORDER = PICK_ITEM.PICK_ORDER 
+               LEFT OUTER JOIN PERSON PN ON PN.PERSON_ID = PICK_ORDER.PERSON_ID
+*/
+               WHERE PICK_DESPATCH.AWB_CONSIGNMENT_NO = 'CON1'
+               AND PICK_DESPATCH.DESPATCH_STATUS = 'DC'
+               AND PICK_DESPATCH.PICKD_ADDRESS_QTY > 0
+;
+/*
+               GROUP BY PICK_DESPATCH.DESPATCH_ID,
+               PICK_DESPATCH.PICKD_PALLET_QTY,
+               PICK_DESPATCH.PICKD_CARTON_QTY,
+               PICK_DESPATCH.PICKD_SATCHEL_QTY,
+               PICK_DESPATCH.PICKD_ADDRESS_QTY,
+               PICK_ITEM.PICK_ORDER,
+               PICK_ORDER.CUSTOMER_PO_WO,
+               PICK_DESPATCH.AWB_CONSIGNMENT_NO,
+               PICK_ORDER.CONTACT_NAME,
+               PICK_ITEM.CONTACT_NAME,
+               PN.ADDRESS_LINE1,
+               PN.ADDRESS_LINE2,
+               PN.CITY,
+               PN.STATE,
+               PN.POST_CODE,
+               PN.PHONE_NO,
+               PICK_ORDER.SHIP_VIA,
+               PICK_ITEM.SHIP_VIA;
+*/

@@ -1,0 +1,1 @@
+ update pick_despatch pd set pd.pickd_pick_order1 = (select first 1 pid.pick_order from pick_item_detail pid where pid.despatch_id=pd.despatch_id) where pd.pickd_pick_order1 is null;

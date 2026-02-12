@@ -1,0 +1,54 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+
+CREATE OR ALTER  TRIGGER SAVE_PURCHASE_SUB_LINE FOR PURCHASE_SUB_LINE 
+ACTIVE BEFORE DELETE POSITION 0 
+AS
+DECLARE VARIABLE WK_SAVE_PURCHASE_ITEM CHAR(1);
+BEGIN
+   BEGIN
+      INSERT INTO PURCHASE_LINE_CANCEL(
+        PURCHASE_ORDER ,
+        PO_LINE ,
+        SSN_ID ,
+        PSL_OTHER1 ,
+        PSL_OTHER2 ,
+        PSL_OTHER_DATE3 ,
+        PSL_OTHER_DATE4 ,
+        PSL_STATUS ,
+        USER_ID ,
+        DEVICE_ID ,
+        CREATE_DATE ,
+        LAST_UPDATE_DATE ,
+        LAST_UPDATE_BY ,
+        PSL_ORDER_QTY ,
+        PSL_RECEIVED_QTY ,
+        REASON ,
+        CANCEL_METHOD )
+      VALUES (
+        OLD.PURCHASE_ORDER ,
+        OLD.PO_LINE ,
+        OLD.SSN_ID ,
+        OLD.PSL_OTHER1 ,
+        OLD.PSL_OTHER2 ,
+        OLD.PSL_OTHER_DATE3 ,
+        OLD.PSL_OTHER_DATE4 ,
+        OLD.PSL_STATUS ,
+        OLD.USER_ID ,
+        OLD.DEVICE_ID ,
+        OLD.CREATE_DATE ,
+        OLD.LAST_UPDATE_DATE ,
+        OLD.LAST_UPDATE_BY ,
+        OLD.PSL_ORDER_QTY ,
+        OLD.PSL_RECEIVED_QTY ,
+        'Purchase Sub Line Record Deleted' ,
+        's' );
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

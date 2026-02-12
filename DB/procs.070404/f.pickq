@@ -1,0 +1,31 @@
+/*
+CREATE TABLE PICK_QUEUE (PICK_ORDER USER_ID NOT NULL,
+        CREATE_DATE CREATE_DATE NOT NULL,
+        PICK_QUEUE_STATUS CODE_TWO NOT NULL,
+        SEEN_DATE TIMESTAMP);
+CREATE INDEX PICK_QUEUE_STATUS_IDX ON PICK_QUEUE(PICK_QUEUE_STATUS, CREATE_DATE);
+*/
+
+/*
+COMMIT;
+
+DROP TRIGGER RUN_TRANSACTION_PLAO ;
+COMMIT;
+
+alter table pick_queue add user_id user_id;
+alter table pick_queue drop pick_order;
+commit;
+
+alter table pick_queue add pick_order pick_order ;
+CREATE INDEX PICK_QUEUE_LABEL_IDX ON PICK_QUEUE(PICK_ORDER, PICK_QUEUE_STATUS);
+
+*/
+
+alter table pick_queue add device_id device_id;
+
+alter index pick_queue_status_idx inactive ;
+COMMIT;
+DROP index pick_queue_status_idx ;
+COMMIT;
+
+CREATE INDEX PICK_QUEUE_STATUS_IDX ON PICK_QUEUE(PICK_QUEUE_STATUS, DEVICE_ID, CREATE_DATE);

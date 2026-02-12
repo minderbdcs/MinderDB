@@ -1,0 +1,9 @@
+select p1.pick_order,p1.wh_id,p1.locn_id 
+from pick_location p1
+group by p1.pick_order,p1.wh_id,p1.locn_id
+union
+select p2.pick_order,i1.wh_id,i1.locn_id 
+from pick_item p2 
+join pick_item_detail p3 on p2.pick_label_no=p3.pick_label_no
+join issn i1 on p3.ssn_id=i1.ssn_id
+group by p2.pick_order,i1.wh_id,i1.locn_id;

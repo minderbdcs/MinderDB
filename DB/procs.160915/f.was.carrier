@@ -1,0 +1,2 @@
+alter table carrier add RETURN_NAME_PERSON VALUE_TF DEFAULT 'T';
+update carrier set return_name_person = 'T';

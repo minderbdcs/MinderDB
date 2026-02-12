@@ -1,0 +1,342 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+
+CREATE OR ALTER PROCEDURE PROCESS_TEST_RESULTS (CATEGORY VARCHAR(1) ,
+SSNID SSN_ID )
+AS 
+ 
+ 
+ DECLARE VARIABLE STRPASSCRITERIA VARCHAR(6);
+ DECLARE VARIABLE STRPASSFAIL VARCHAR(6);
+ DECLARE VARIABLE INTTESTID INTEGER;
+ DECLARE VARIABLE PROCESS_PASSED VARCHAR(20);
+ DECLARE VARIABLE PROCESS_FAILED VARCHAR(20);
+ DECLARE VARIABLE STRRESPONSE VARCHAR(50);
+ DECLARE VARIABLE STRTEXTRESPONSE VARCHAR(30);
+ DECLARE VARIABLE NUMNUMRESPONSE FLOAT;
+ DECLARE VARIABLE DATEDATERESPONSE TIMESTAMP;
+ DECLARE VARIABLE NUMFIELDTYPE INTEGER;
+ DECLARE VARIABLE STRRESULT CHAR(1);
+ DECLARE VARIABLE WK_QUESTION INTEGER;
+ DECLARE VARIABLE WKORIGINAL VARCHAR(1);
+ DECLARE VARIABLE WK_TEST_EXISTS INTEGER;
+ DECLARE VARIABLE WK_TEST_ID INTEGER;
+ DECLARE VARIABLE WKTESTID  INTEGER;
+ DECLARE VARIABLE WKTESTID2  INTEGER;
+ DECLARE VARIABLE WK_WHEN  TIMESTAMP;
+ DECLARE VARIABLE STRDESC VARCHAR(30);
+ DECLARE VARIABLE WK_DUMMY CHAR(1);
+ DECLARE VARIABLE WK_FAIL_STATUS VARCHAR(2);
+ DECLARE VARIABLE WK_HAVE_FAIL VARCHAR(2);
+ DECLARE VARIABLE WK_ALLOWED_STATUS VARCHAR(40);
+ DECLARE VARIABLE WK_DO_UASL CHAR(1);
+ DECLARE VARIABLE WK_TEST_PROD PRODUCT;
+BEGIN
+  STRPASSFAIL = 'PASSED';
+  /* REMOVE THIS SSN FROM THE INCOMLETE TEST LIST */
+     DELETE FROM RESUME_TEST WHERE SSN_ID = :SSNID;
+
+     PROCESS_PASSED = ',';
+     PROCESS_FAILED = ',';
+     WKTESTID = -1;
+     /* AND INSPECT_CATEGORY = :CATEGORY */
+     FOR SELECT
+          INSPECT_PASS_CRITERIA,
+          SSN_TEST_ID,
+          RESPONSE,
+          TEXT_RESPONSE,
+          NUMBER_RESPONSE,
+          DATE_RESPONSE,
+          FIELD_TYPE,
+          ORIGINAL_TEST,
+          TEST_ID,
+          TIME_STAMP,
+          INSPECT_CATEGORY
+          FROM
+          SSN_TEST_RESULTS
+          WHERE
+          SSN_ID = :SSNID
+          AND PROCESSED = 'O'
+          ORDER BY  INSPECT_CATEGORY 
+        INTO
+          :STRPASSCRITERIA, 
+          :INTTESTID, 
+          :STRRESPONSE, 
+          :STRTEXTRESPONSE, 
+          :NUMNUMRESPONSE, 
+          :DATEDATERESPONSE, 
+          :NUMFIELDTYPE , 
+          :WKORIGINAL, 
+          :WKTESTID2, 
+          :WK_WHEN,
+          :CATEGORY
+     DO 
+     BEGIN
+        IF (WKTESTID = -1) THEN
+        BEGIN
+          WK_TEST_EXISTS = 0;
+          SELECT 1, TEST_ID FROM SSN_TEST
+              WHERE SSN_ID = :SSNID AND
+                    STATUS_TEST = 'OP'
+              INTO :WK_TEST_EXISTS, :WK_TEST_ID;
+          IF (WK_TEST_EXISTS = 0) THEN
+          BEGIN
+              DELETE FROM PRODUCT_COND_STATUS 
+              WHERE SSN_ID = :SSNID
+              AND ORIGINAL_TEST = 'S';
+              /* MUST GET THE NEXT TEST ID */
+/*            WK_TEST_ID = GEN_ID(TEST_ID, 1); */
+              WK_TEST_ID = NEXT VALUE FOR TEST_ID ;    
+              INSERT INTO SSN_TEST(TEST_ID, SSN_ID, START_DATE, STATUS_TEST)
+                     VALUES (:WK_TEST_ID, :SSNID, :WK_WHEN, 'OP');
+          END 
+          WKTESTID = WK_TEST_ID;
+        END 
+/*
+        IF (NUMFIELDTYPE = 1) THEN
+        BEGIN
+  -* MEMO TYPE *-
+        END
+*/
+        IF (NUMFIELDTYPE = 2) THEN
+        BEGIN
+  /* NUMBER TYPE */
+  STRRESPONSE = NUMNUMRESPONSE;
+        END
+        IF (NUMFIELDTYPE = 3) THEN
+        BEGIN
+  /* DATE TYPE */
+  STRRESPONSE = CAST(:DATEDATERESPONSE AS CHAR(22));
+        END
+        IF (NUMFIELDTYPE = 4) THEN
+        BEGIN
+  /* TEXT TYPE */
+  STRRESPONSE = STRTEXTRESPONSE;
+        END
+
+        IF (CATEGORY = 'E') THEN 
+        BEGIN
+              UPDATE SSN
+              SET OTHER5 = :STRRESPONSE
+              WHERE SSN_ID = :SSNID;
+        END
+        ELSE
+        BEGIN
+            IF (STRPASSCRITERIA = 'FAILED') THEN 
+            BEGIN
+                STRPASSFAIL = 'FAILED';
+                IF (WKORIGINAL = 'O') THEN
+                BEGIN
+                    EXECUTE PROCEDURE ADD_PROD_COND_STATUS_TEST :SSNID, :CATEGORY, :STRRESPONSE, 'S' 
+                      RETURNING_VALUES :STRRESULT;
+                END
+                EXECUTE PROCEDURE ADD_PROD_COND_STATUS_TEST :SSNID, :CATEGORY, :STRRESPONSE, :WKORIGINAL 
+                  RETURNING_VALUES :STRRESULT;
+                /* FOUND AT LEAST ON RECORD */
+/*              IF (POS(PROCESS_FAILED, CATEGORY, 0, 1) > -1) THEN */
+                IF (POSITION( CATEGORY, PROCESS_FAILED, 1) > 0) THEN
+                BEGIN
+                   /* already have a fail for this category */ 
+                   WK_DUMMY = '';
+                END
+                ELSE
+                BEGIN
+                   /* category not in there yet so add it */
+                   PROCESS_FAILED = PROCESS_FAILED || CATEGORY || ',';
+                END
+            END
+            ELSE
+            BEGIN
+                IF (STRPASSCRITERIA = 'PASSED') THEN 
+                BEGIN
+                    /* FOUND AT LEAST ON RECORD */
+/*                  IF (POS(PROCESS_PASSED, CATEGORY, 0, 1) > -1) THEN */
+                    IF (POSITION( CATEGORY, PROCESS_PASSED, 1) > 0) THEN
+                    BEGIN
+                       /* already have a pass for this category */ 
+                       WK_DUMMY = '';
+                    END
+                    ELSE
+                    BEGIN
+                       /* category not in there yet so add it */
+                       PROCESS_PASSED = PROCESS_PASSED || CATEGORY || ',';
+                    END
+                END
+            END
+        END
+          
+        UPDATE SSN_TEST_RESULTS SET PROCESSED = 'P', TEST_ID = :WKTESTID
+        WHERE SSN_TEST_ID = :INTTESTID;
+        /* WKTESTID = -1; */
+     END
+     
+     WK_HAVE_FAIL = 'F';
+/*   IF (POS(PROCESS_FAILED, 'A', 0, 1) > -1) THEN */
+     IF (POSITION( 'A', PROCESS_FAILED, 1) > 0) THEN
+     BEGIN
+        /* have a failure */
+        EXECUTE PROCEDURE GET_GLOBAL_CONDITION 1, 'F' RETURNING_VALUES :STRDESC;
+        UPDATE SSN
+        /*SET OTHER1 = 'NOT NEW CONDITION'*/
+        SET OTHER1 = :STRDESC
+        WHERE SSN_ID = :SSNID;
+        WK_HAVE_FAIL = 'T';
+     END
+     ELSE
+     BEGIN
+/*      IF (POS(PROCESS_PASSED, 'A', 0, 1) > -1) THEN */
+        IF (POSITION( 'A', PROCESS_PASSED, 1) > 0) THEN
+        BEGIN
+           /* all passed */
+           EXECUTE PROCEDURE GET_GLOBAL_CONDITION 1, 'P' RETURNING_VALUES :STRDESC;
+           UPDATE SSN
+           /*SET OTHER1 = 'AS NEW CONDITION'*/
+           SET OTHER1 = :STRDESC
+           WHERE SSN_ID = :SSNID;
+        END
+     END
+/*   IF (POS(PROCESS_FAILED, 'B', 0, 1) > -1) THEN */
+     IF (POSITION( 'B', PROCESS_FAILED, 1) > 0) THEN
+     BEGIN
+        /* have a failure */
+        EXECUTE PROCEDURE GET_GLOBAL_CONDITION 2, 'F' RETURNING_VALUES :STRDESC;
+        UPDATE SSN
+        /*SET OTHER2 = 'TESTED - FAULTY'*/
+        SET OTHER2 = :STRDESC
+        WHERE SSN_ID = :SSNID;
+        WK_HAVE_FAIL = 'T';
+     END
+     ELSE
+     BEGIN
+/*      IF (POS(PROCESS_PASSED, 'B', 0, 1) > -1) THEN */
+        IF (POSITION( 'B', PROCESS_PASSED, 1) > 0) THEN
+        BEGIN
+           /* all passed */
+           EXECUTE PROCEDURE GET_GLOBAL_CONDITION 2, 'P' RETURNING_VALUES :STRDESC;
+           UPDATE SSN
+           /*SET OTHER2 = 'TESTED - OK'*/
+           SET OTHER2 = :STRDESC
+           WHERE SSN_ID = :SSNID;
+        END
+     END
+/*   IF (POS(PROCESS_FAILED, 'C', 0, 1) > -1) THEN */
+     IF (POSITION( 'C', PROCESS_FAILED, 1) > 0) THEN
+     BEGIN
+        /* have a failure */
+        EXECUTE PROCEDURE GET_GLOBAL_CONDITION 3, 'F' RETURNING_VALUES :STRDESC;
+        UPDATE SSN
+        /*SET OTHER3 = 'INCOMPLETE'*/
+        SET OTHER3 = :STRDESC
+        WHERE SSN_ID = :SSNID;
+        WK_HAVE_FAIL = 'T';
+     END
+     ELSE
+     BEGIN
+/*      IF (POS(PROCESS_PASSED, 'C', 0, 1) > -1) THEN */
+        IF (POSITION( 'C', PROCESS_PASSED, 1) > 0) THEN
+        BEGIN
+           /* all passed */
+           EXECUTE PROCEDURE GET_GLOBAL_CONDITION 3, 'P' RETURNING_VALUES :STRDESC;
+           UPDATE SSN
+           /*SET OTHER3 = 'COMPLETE'*/
+           SET OTHER3 = :STRDESC
+           WHERE SSN_ID = :SSNID;
+        END
+     END
+/*   IF (POS(PROCESS_FAILED, 'D', 0, 1) > -1) THEN */
+     IF (POSITION( 'D', PROCESS_FAILED, 1) > 0) THEN
+     BEGIN
+        /* have a failure */
+        EXECUTE PROCEDURE GET_GLOBAL_CONDITION 4, 'F' RETURNING_VALUES :STRDESC;
+        UPDATE SSN
+        /*SET OTHER4 = 'SERVICE PROVIDED'*/
+        SET OTHER4 = :STRDESC
+        WHERE SSN_ID = :SSNID;
+        WK_HAVE_FAIL = 'T';
+     END
+     ELSE
+     BEGIN
+/*      IF (POS(PROCESS_PASSED, 'D', 0, 1) > -1) THEN */
+        IF (POSITION( 'D', PROCESS_PASSED, 1) > 0) THEN
+        BEGIN
+           /* all passed */
+           EXECUTE PROCEDURE GET_GLOBAL_CONDITION 4, 'P' RETURNING_VALUES :STRDESC;
+           UPDATE SSN
+           /*SET OTHER4 = 'NO SERVICE'*/
+           SET OTHER4 = :STRDESC
+           WHERE SSN_ID = :SSNID;
+        END
+     END
+     /* MUST UPDATE PASSED SSN ANSWER_ID = NULL
+     QUESTION_ID = SEQUENCE 0 QUESTION FOR TYPE
+     */
+     /* GET SEQ 0 QUESTION */
+     SELECT TQ.QUESTION_ID
+     FROM SSN SN 
+     JOIN TEST_QUESTIONS TQ ON TQ.SSN_TYPE = SN.SSN_TYPE
+     WHERE SN.SSN_ID = :SSNID
+     AND TQ.SEQUENCE = 0
+     INTO :WK_QUESTION;
+     IF ( WK_HAVE_FAIL = 'F') THEN
+     BEGIN
+        UPDATE SSN SET ANSWER_ID = NULL,QUESTION_ID=:WK_QUESTION, STATUS_SSN ='PA' WHERE SSN_ID = :SSNID;
+        /* UPDATE ISSN SET ISSN_STATUS ='PA' WHERE SSN_ID = :SSNID; */
+        /* UPDATE ISSN SET ISSN_STATUS ='PA' WHERE ORIGINAL_SSN = :SSNID; */
+        SELECT TEST_FROM_ALLOWED_SSN_STATUS,
+               SEND_UASL_V4 
+        FROM CONTROL 
+        INTO :WK_ALLOWED_STATUS,
+             :WK_DO_UASL;
+/*      AND (POS(:WK_ALLOWED_STATUS,ISSN.ISSN_STATUS,0,1) > -1); */
+        UPDATE ISSN SET ISSN_STATUS = 'PA' 
+        WHERE ORIGINAL_SSN = :SSNID
+        AND (WH_ID < 'X' OR WH_ID > 'X~') 
+        AND (POSITION( ISSN.ISSN_STATUS, :WK_ALLOWED_STATUS, 1) > 0) ;
+ /* cannot update issns in 'X' wh_ids 
+           or status starting 'Q' 'D' 'A' 'X' 
+                     'P' (except 'PA')
+        */
+        IF (WK_DO_UASL = 'T') THEN
+        BEGIN
+           WK_TEST_PROD = '';
+           SELECT PROD_ID FROM ISSN WHERE SSN_ID = :SSNID
+           INTO :WK_TEST_PROD;
+           IF (WK_TEST_PROD IS NOT NULL) THEN
+           BEGIN
+              EXECUTE PROCEDURE SEND_PICKABLE_STOCK (:WK_TEST_PROD,
+                 'BDCS',
+                 'XX',
+                 'NOW');
+           END
+        END
+     END
+     ELSE
+     BEGIN
+        SELECT TEST_FAIL_STATUS FROM CONTROL INTO :WK_FAIL_STATUS;
+        UPDATE SSN SET ANSWER_ID = NULL,QUESTION_ID=:WK_QUESTION, STATUS_SSN =:WK_FAIL_STATUS WHERE SSN_ID = :SSNID;
+        /* UPDATE ISSN SET ISSN_STATUS =:WK_FAIL_STATUS WHERE SSN_ID = :SSNID; */
+        SELECT TEST_FROM_ALLOWED_SSN_STATUS 
+        FROM CONTROL 
+        INTO :WK_ALLOWED_STATUS;
+/*      AND (POS(:WK_ALLOWED_STATUS,ISSN.ISSN_STATUS,0,1) > -1); */
+        UPDATE ISSN SET ISSN_STATUS = :WK_FAIL_STATUS 
+        WHERE ORIGINAL_SSN = :SSNID
+        AND (WH_ID < 'X' OR WH_ID > 'X~') 
+        AND (POSITION( ISSN.ISSN_STATUS, :WK_ALLOWED_STATUS, 1) > 0) ;
+ /* cannot update issns in 'X' wh_ids 
+           or status starting 'Q' 'D' 'A' 'X' 
+                     'P' (except 'PA')
+        */
+     END
+     UPDATE SSN_TEST SET STATUS_TEST = 'CL',END_DATE='NOW' 
+     WHERE SSN_ID=:SSNID AND STATUS_TEST = 'OP';
+
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+

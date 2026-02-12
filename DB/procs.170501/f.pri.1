@@ -1,0 +1,26 @@
+alter table ssn      drop constraint ssn_fk_generic;
+alter table ssn      drop constraint ssn_fk_brand;
+alter table cost_centre drop constraint COST_CENTRE_PKEY ;
+/*
+alter table company drop constraint integ_8;
+*/
+alter table brand   drop constraint integ_6;
+alter table generic  drop constraint GENERIC_PKEY ;
+commit;
+/*
+alter table company add constraint COMPANY_PKEY 
+ PRIMARY KEY (COMPANY_ID);
+*/
+alter table COST_CENTRE  add constraint COST_CENTRE_PKEY 
+PRIMARY KEY (WH_ID, COMPANY_ID, CODE) ;
+
+alter table BRAND  add constraint BRAND_PKEY
+PRIMARY KEY (CODE);
+
+alter table GENERIC  add constraint GENERIC_PKEY
+PRIMARY KEY (SSN_TYPE, CODE) ;
+
+alter table SSN add  CONSTRAINT SSN_FK_BRAND foreign key (BRAND) references BRAND(CODE) ON UPDATE CASCADE;
+
+alter table SSN add  CONSTRAINT SSN_FK_GENERIC foreign key (SSN_TYPE, GENERIC) references GENERIC(SSN_TYPE,CODE) ON UPDATE CASCADE;
+

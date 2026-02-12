@@ -1,0 +1,19 @@
+/*
+primary keys:
+employee_image
+PRIMARY KEY (IMAGE_ID));
+employee
+PRIMARY KEY (EMPLOYEE_ID));
+employee_skill
+PRIMARY KEY (EMPLOYEE_ID, SKILL_CODE));
+
+indexes:
+CREATE INDEX PERSONINDEX1 ON PERSON (PERSON_ID);
+CREATE INDEX PICK_ORDER_PERSON_IDX ON PICK_ORDER (PERSON_ID);
+CREATE INDEX TRANSACTIONS_JVX_IDX ON TRANSACTIONS (WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE, PERSON_ID, DEVICE_ID       );
+*/
+alter table employee drop constraint INTEG_276;
+
+alter table employee_skill drop constraint INTEG_268;
+
+alter table employee_image drop constraint INTEG_289 ;

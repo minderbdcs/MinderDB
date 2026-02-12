@@ -1,0 +1,167 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+CREATE OR ALTER PROCEDURE ADD_PICK_ADDRESS ( PICK_LABEL_NO VARCHAR(7) ,
+        PICK_ORDER VARCHAR(20) ,
+        PIA_ADDR_TYPE VARCHAR(2) ,
+        PIA_PERSON_ID VARCHAR(10),
+        PIA_PERSON_TYPE VARCHAR(2),
+        PIA_FIRST_NAME VARCHAR(50),
+        PIA_LAST_NAME VARCHAR(50),
+        PIA_SUBURB VARCHAR(25),
+        PIA_CITY VARCHAR(25),
+        PIA_STATE VARCHAR(15),
+        PIA_POST_CODE VARCHAR(10),
+        PIA_COUNTRY VARCHAR(25),
+        PIA_PHONE VARCHAR(30),
+        PIA_ADDRESS_LINE1 VARCHAR(100),
+        PIA_ADDRESS_LINE2 VARCHAR(50),
+        PIA_ADDRESS_LINE3 VARCHAR(50),
+        PIA_ADDRESS_LINE4 VARCHAR(50),
+        PIA_ADDRESS_LINE5 VARCHAR(50),
+        PIA_TITLE VARCHAR(10),
+        PIA_EMAIL VARCHAR(50),
+        PIA_FAX_NO VARCHAR(30),
+        PIA_SAME_AS_SOLD_FROM VARCHAR(1),
+        PIA_SAME_AS_SENT_FROM VARCHAR(1),
+        PIA_SAME_AS_INVOICE_TO VARCHAR(1),
+        PIA_EDI_IN_HOUSE_NO VARCHAR(35) ,  
+        PS_DEL_TO_STORE_IN_HOUSE_NO VARCHAR(20) ,  
+        PS_DEL_TO_DC_IN_HOUSE_NO    VARCHAR(20) ,  
+        PS_CUSTOMER_EDI_NO          VARCHAR(35) )  
+ 
+AS
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_LEN_LABEL_NO INTEGER;
+DECLARE VARIABLE WK_PROD_LENGTH INTEGER;
+DECLARE VARIABLE WK_PICK_SSN_ALLOWED VARCHAR(40);
+DECLARE VARIABLE WK_TEST_STATUS VARCHAR(4);
+DECLARE VARIABLE WK_PP_EXPORT_CATEGORY CHAR(1);
+DECLARE VARIABLE WK_STATE VARCHAR(15); 
+DECLARE VARIABLE WK_USE_PERSON_IDS  VARCHAR(10);
+DECLARE VARIABLE WK_LOG_FILENAME         VARCHAR(80);
+DECLARE VARIABLE WK_RESULT               INTEGER;
+BEGIN
+   WK_LOG_FILENAME = '/tmp/salesimport.log';
+   /* this procedure needs the pick order pick label and address type to use */
+   BEGIN
+      WK_FOUND = 0;
+      IF (PICK_LABEL_NO IS NULL) THEN
+      BEGIN
+         PICK_LABEL_NO = 'ORDER';
+      END
+      IF (PICK_LABEL_NO = '') THEN
+      BEGIN
+         PICK_LABEL_NO = 'ORDER';
+      END
+      IF (PIA_ADDR_TYPE IS NULL) THEN
+      BEGIN
+         PIA_ADDR_TYPE = 'P';
+      END
+      IF (PIA_ADDR_TYPE = '') THEN
+      BEGIN
+         PIA_ADDR_TYPE = 'P';
+      END
+      SELECT 1 FROM PICK_ITEM_ADDRESS 
+         WHERE PICK_ORDER = :PICK_ORDER
+         AND PICK_LABEL_NO = :PICK_LABEL_NO
+         AND PIA_ADDR_TYPE = :PIA_ADDR_TYPE
+         INTO :WK_FOUND;
+      IF (WK_FOUND = 0) THEN
+      BEGIN
+         /* NO ADDRESS SO INSERT IT */
+         INSERT INTO PICK_ITEM_ADDRESS  (PICK_LABEL_NO ,
+             PICK_ORDER ,
+             PIA_ADDR_TYPE ,
+             PIA_PERSON_ID ,
+             PIA_PERSON_TYPE ,
+             PIA_FIRST_NAME ,
+             PIA_LAST_NAME ,
+             PIA_SUBURB ,
+             PIA_CITY ,
+             PIA_STATE ,
+             PIA_POST_CODE ,
+             PIA_COUNTRY ,
+             PIA_PHONE ,
+             PIA_ADDRESS_LINE1 ,
+             PIA_ADDRESS_LINE2 ,
+             PIA_ADDRESS_LINE3 ,
+             PIA_ADDRESS_LINE4 ,
+             PIA_ADDRESS_LINE5 ,
+             PIA_TITLE ,
+             PIA_EMAIL ,
+             PIA_FAX_NO,
+             PIA_SAME_AS_SOLD_FROM ,
+             PIA_SAME_AS_SENT_FROM ,
+             PIA_SAME_AS_INVOICE_TO ,
+             PIA_EDI_IN_HOUSE_NO  ,  
+             PS_DEL_TO_STORE_IN_HOUSE_NO , 
+             PS_DEL_TO_DC_IN_HOUSE_NO , PS_CUSTOMER_EDI_NO )
+         VALUES (:PICK_LABEL_NO ,
+             :PICK_ORDER ,
+             :PIA_ADDR_TYPE ,
+             :PIA_PERSON_ID ,
+             :PIA_PERSON_TYPE ,
+             :PIA_FIRST_NAME ,
+             :PIA_LAST_NAME ,
+             :PIA_SUBURB ,
+             :PIA_CITY ,
+             :PIA_STATE ,
+             :PIA_POST_CODE ,
+             :PIA_COUNTRY ,
+             :PIA_PHONE ,
+             :PIA_ADDRESS_LINE1 ,
+             :PIA_ADDRESS_LINE2 ,
+             :PIA_ADDRESS_LINE3 ,
+             :PIA_ADDRESS_LINE4 ,
+             :PIA_ADDRESS_LINE5 ,
+             :PIA_TITLE ,
+             :PIA_EMAIL ,
+             :PIA_FAX_NO ,
+             :PIA_SAME_AS_SOLD_FROM ,
+             :PIA_SAME_AS_SENT_FROM ,
+             :PIA_SAME_AS_INVOICE_TO ,
+             :PIA_EDI_IN_HOUSE_NO  ,  
+             :PS_DEL_TO_STORE_IN_HOUSE_NO , 
+             :PS_DEL_TO_DC_IN_HOUSE_NO, :PS_CUSTOMER_EDI_NO );
+      END
+      ELSE
+      BEGIN
+         UPDATE PICK_ITEM_ADDRESS  SET 
+             PIA_PERSON_ID = :PIA_PERSON_ID ,
+             PIA_PERSON_TYPE = :PIA_PERSON_TYPE ,
+             PIA_FIRST_NAME = :PIA_FIRST_NAME ,
+             PIA_LAST_NAME = :PIA_LAST_NAME ,
+             PIA_SUBURB = :PIA_SUBURB ,
+             PIA_CITY = :PIA_CITY ,
+             PIA_STATE = :PIA_STATE ,
+             PIA_POST_CODE = :PIA_POST_CODE ,
+             PIA_COUNTRY = :PIA_COUNTRY ,
+             PIA_PHONE = :PIA_PHONE ,
+             PIA_ADDRESS_LINE1 = :PIA_ADDRESS_LINE1 ,
+             PIA_ADDRESS_LINE2 = :PIA_ADDRESS_LINE2 ,
+             PIA_ADDRESS_LINE3 = :PIA_ADDRESS_LINE3 ,
+             PIA_ADDRESS_LINE4 = :PIA_ADDRESS_LINE4 ,
+             PIA_ADDRESS_LINE5 = :PIA_ADDRESS_LINE5 ,
+             PIA_TITLE = :PIA_TITLE ,
+             PIA_EMAIL = :PIA_EMAIL ,
+             PIA_FAX_NO = :PIA_FAX_NO ,
+             PIA_SAME_AS_SOLD_FROM = :PIA_SAME_AS_SOLD_FROM ,
+             PIA_SAME_AS_SENT_FROM = :PIA_SAME_AS_SENT_FROM ,
+             PIA_SAME_AS_INVOICE_TO = :PIA_SAME_AS_INVOICE_TO, 
+             PIA_EDI_IN_HOUSE_NO  =  :PIA_EDI_IN_HOUSE_NO,   
+             PS_DEL_TO_STORE_IN_HOUSE_NO = :PS_DEL_TO_STORE_IN_HOUSE_NO , 
+             PS_DEL_TO_DC_IN_HOUSE_NO = :PS_DEL_TO_DC_IN_HOUSE_NO, PS_CUSTOMER_EDI_NO = :PS_CUSTOMER_EDI_NO 
+          WHERE PICK_LABEL_NO  = :PICK_LABEL_NO
+          AND   PICK_ORDER     = :PICK_ORDER
+          AND   PIA_ADDR_TYPE  = :PIA_ADDR_TYPE;
+      END
+   END
+END  ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+

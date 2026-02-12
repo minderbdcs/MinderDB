@@ -1,0 +1,17 @@
+select trim(cc.rdb$constraint_name), rc.rdb$relation_name /* ,trg.rdb$trigger_source */
+from rdb$relation_constraints rc
+  join rdb$check_constraints cc on rc.rdb$constraint_name = cc.rdb$constraint_name 
+/*
+  join rdb$triggers trg on cc.rdb$trigger_name = trg.rdb$trigger_name 
+*/
+/*
+where rc.rdb$relation_name = 'SYS_EMAIL'
+and   rc.rdb$constraint_type = 'CHECK' 
+and   trg.rdb$trigger_type = 1
+*/
+where   rc.rdb$constraint_type = 'CHECK' 
+/*
+and   trg.rdb$trigger_type = 1
+*/
+;
+

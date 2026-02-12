@@ -1,0 +1,54 @@
+/* 
+new procedure to calculate the device to use and login
+is passed the ip_address and computername, user_id */
+
+and returns the device a status and a message
+statuses are
+-1	no IP sent
+1	IP Found
+10	Computer Name Found
+20	DHCP record Found
+-10	No valid User supplied
+-20	Too many logged in users to allow login
+-30	Invalid License
+
+/*
+try using the passed ip
+if found then use this records device id
+else
+{
+	not found by ip
+	try using the passed name
+	if found then use this records device id
+	else
+	{
+		not found by ip or name
+		try using 'DHCP'
+		if any found (not in use => sys_equip.logged_on is null and sys_equip.current_person is null)
+			use this device id	
+		if still empty then none available
+
+	}
+}
+
+if device found
+{
+	check login count qtys
+	update sys_equip and sys_user for login
+}
+------------------------------------------------------------------
+new procedure to logout a device
+
+------------------------------------------------------------------
+must still check logged in qty
+select count(*) from sys_equip where device_type in ('PC', 'HH')
+and (not(logged_on is null) 
+or not(current_person is null) 
+check this qty against the saved within the check_login udf
+it returns a 10 valid to login   
+-10 	invalid license code
+-20	too many already logged in
+
+   
+*/
+

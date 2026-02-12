@@ -1,0 +1,18 @@
+create domain uom varchar(10);
+CREATE DOMAIN QTY_F AS DOUBLE PRECISION;
+
+alter table prod_profile add volume_uom uom;
+
+alter table prod_profile add orientation code;
+alter table prod_profile add prod_type_comment code_255;
+alter table prod_profile add hazard_type code;
+alter table prod_profile add order_qty qty_f;
+alter table prod_profile add mths_onorder qty_f;
+alter table prod_profile add sale_per_mth qty_f;
+alter table prod_profile add locn_visit_per_mth qty_f;
+alter table prod_profile add percent_hit_mth qty_f;
+alter table prod_profile add min_lot_size  qty_f;
+alter table prod_profile add sale_vol_per_mth  qty_f;
+alter table prod_profile add turnover_per_mth  qty_f;
+alter table prod_profile add store_type code;
+alter table prod_profile add prod_locn_seq locn_seq;

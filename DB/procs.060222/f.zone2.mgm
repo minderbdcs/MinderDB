@@ -1,0 +1,3 @@
+
+update zone set company_id = 'MM' where code='AU';
+update zone set company_id = 'BW' where code='BU';

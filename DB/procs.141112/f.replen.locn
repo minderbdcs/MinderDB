@@ -1,0 +1,114 @@
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+CREATE OR ALTER  PROCEDURE REPLENISH_ORDER_LOCN 
+RETURNS (
+PROD_ID PRODUCT ,
+COMPANY_ID COMPANY ,
+TO_WH_ID CHAR(2) ,
+TO_LOCN_ID VARCHAR(10) ,
+ZONE_C VARCHAR(2) ,
+TRN_PRIORITY SMALLINT,
+REQUIRED_QTY INTEGER,
+CURRENT_QTY INTEGER,
+WH_QTY INTEGER,
+UNPICKED_ORDER_QTY INTEGER
+)
+AS 
+ 
+
+DECLARE VARIABLE WK_MIN_QTY INTEGER;
+DECLARE VARIABLE WK_MAX_QTY INTEGER;
+DECLARE VARIABLE WK_REORDER_QTY INTEGER;
+DECLARE VARIABLE WK_CURRENT_QTY INTEGER;
+DECLARE VARIABLE WK_WH_QTY INTEGER;
+DECLARE VARIABLE WK_UNPICKED_QTY INTEGER;
+DECLARE VARIABLE IMPORTSTATUS VARCHAR(40);
+BEGIN
+/*
+have a procedure to report the current transfer request 
+for locations with
+
+	get current stock of that product in the location zone
+	if current stock < reorder_level
+	begin
+		begin
+			priority is default
+		end
+		qty to get is the reorder qty  - current level
+	end
+change on 210706
+only include prods where have some stock in the warehouse
+change on 250706
+include warehouse and locn totals
+change on 260706
+include unpicked totals
+create on 201114
+use the qty in transfer requests for the qty outstanding
+*/
+   SELECT CONTROL.PICK_IMPORT_SSN_STATUS
+   FROM CONTROL
+   INTO :IMPORTSTATUS; 
+
+   FOR SELECT PROD_ID, COMPANY_ID, TO_WH_ID, ZONE_C, QTY
+   FROM TRANSFER_REQUEST
+   WHERE TRN_STATUS IN ('OP','AL','PG')
+   AND (PROD_ID IS NOT NULL)
+   AND (QTY IS NOT NULL)
+   INTO :PROD_ID, 
+        :COMPANY_ID,
+        :TO_WH_ID,
+        :ZONE_C,
+        :WK_REORDER_QTY
+   DO
+   BEGIN
+      SELECT COALESCE(AVAILABLE_QTY,0) , COALESCE(UNPICKED_ORDER_QTY,0)
+   /* FROM PRODUCT_CMP_WH_STOCK_STATUS_V(:PROD_ID, :COMPANY_ID, :TO_WH_ID,'Admin','|AVAILABLE_QTY|UNPICKED_ORDER_QTY|PROD_ID|') */
+      FROM PRODUCT_CMP_WH_STOCK_STATUS_6(:PROD_ID,:COMPANY_ID,:TO_WH_ID,:ZONE_C, 'Admin','|PROD_ID|AVAILABLE_QTY|UNPICKED_ORDER_QTY|')
+      INTO :WK_WH_QTY, :WK_UNPICKED_QTY;
+      IF (WK_WH_QTY IS NULL) THEN
+      BEGIN
+         WK_WH_QTY = 0;
+      END
+      IF (WK_UNPICKED_QTY IS NULL) THEN
+      BEGIN
+         WK_UNPICKED_QTY = 0;
+      END
+      IF (WK_WH_QTY > 0) THEN
+      BEGIN
+         WH_QTY = WK_WH_QTY;
+         UNPICKED_ORDER_QTY = WK_UNPICKED_QTY;
+   
+         SELECT SUM( ISSN.CURRENT_QTY ) 
+            FROM ISSN
+            JOIN LOCATION ON ISSN.WH_ID = LOCATION.WH_ID AND ISSN.LOCN_ID = LOCATION.LOCN_ID  AND LOCATION.STORE_TYPE = 'DS'
+            WHERE ISSN.PROD_ID = :PROD_ID
+            AND ISSN.COMPANY_ID = :COMPANY_ID
+            AND ISSN.WH_ID = :TO_WH_ID
+            /* AND ISSN.LOCN_ID = :TO_LOCN_ID */
+            /* AND (POS(:IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1) */
+            INTO :WK_CURRENT_QTY;
+         IF (WK_CURRENT_QTY IS NULL) THEN
+         BEGIN
+            WK_CURRENT_QTY = 0;
+         END
+         IF (WK_CURRENT_QTY < WK_REORDER_QTY) THEN
+         BEGIN
+            BEGIN
+               TRN_PRIORITY = 10;
+            END
+            REQUIRED_QTY = WK_REORDER_QTY - WK_CURRENT_QTY;
+            CURRENT_QTY = WK_CURRENT_QTY;
+            SUSPEND;
+         END
+      END
+   END
+   
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

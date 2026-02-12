@@ -1,0 +1,25 @@
+/*
+CREATE SEQUENCE ID_GEN;
+ALTER SEQUENCE ID_GEN RESTART WITH 8000;
+
+commit;
+alter table location add id varchar(36);
+-* update location set id=gen_id(TRANSACTION_ID,1); *-
+ update location set id = next value from ID_GEN;
+commit;
+
+commit;
+alter table warehouse add id varchar(36);
+-* update warehouse set id=gen_id(TRANSACTION_ID,1); *-
+ update warehouse set id = next value from ID_GEN;
+commit;
+
+commit;
+alter table issn add id varchar(36);
+-* update issn set id=gen_id(TRANSACTION_ID,1); *-
+ update issn set id = next value from ID_GEN;
+commit;
+*/
+
+alter table person add id varchar(36);
+ update person set id = uuid_to_char(gen_uuid());

@@ -1,0 +1,13 @@
+/*
+528:DECLARE EXTERNAL FUNCTION PARSE
+531:ENTRY_POINT 'fudlib_parse' MODULE_NAME 'fudlib';
+673:DECLARE EXTERNAL FUNCTION V4PARSE
+676:ENTRY_POINT 'fudlib_parse' MODULE_NAME 'fudlib';
+778:DECLARE EXTERNAL FUNCTION VPARSE
+781:ENTRY_POINT 'fudlib_parse' MODULE_NAME 'fudlib';
+*/
+
+drop external function parse;
+drop external function vparse;
+drop external function v4parse;
+

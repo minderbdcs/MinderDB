@@ -1,0 +1,100 @@
+
+CREATE PROCEDURE SO_PICK_LOCATIONS_ORDERSLIST (ORDER_LIST VARCHAR(32760) )
+RETURNS (WH_ID CHAR(2) ,
+LOCN_ID VARCHAR(10) ,
+WH_ID2 CHAR(2) ,
+LOCN_ID2 VARCHAR(10) ,
+DESCRIPTION VARCHAR(80) ,
+SSN_ID VARCHAR(20) ,
+PROD_ID VARCHAR(30) ,
+PICK_ORDER_QTY INTEGER,
+PICK_ALLOCATED_QTY INTEGER,
+PICKED_QTY INTEGER)
+AS 
+ 
+DECLARE VARIABLE WK_ORIGINAL VARCHAR(20);
+DECLARE VARIABLE WK_PI_WH CHAR(2);
+DECLARE VARIABLE WK_PI_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_PROD_CNT INTEGER;
+BEGIN
+   /*
+   first get fields from pick_item
+   */
+   /* ORDER BY PICK_ORDER_LINE_NO, PICK_LABEL_NO */
+
+   FOR SELECT 
+          PICK_ITEM.SSN_ID, 
+          PICK_ITEM.PROD_ID, 
+          SUM(PICK_ITEM.PICK_ORDER_QTY),
+          SUM(PICK_ITEM.PICK_ALLOCATED_QTY),
+          SUM(PICK_ITEM.PICKED_QTY)
+   FROM PICK_ITEM
+   WHERE (V4POS(:ORDER_LIST, PICK_ITEM.PICK_ORDER, 0, 1) > -1)
+   AND (PICK_ITEM.PICK_LINE_STATUS IN ('OP','UP'))
+   GROUP BY PICK_ITEM.SSN_ID, PICK_ITEM.PROD_ID
+   INTO :SSN_ID, :PROD_ID, :PICK_ORDER_QTY, :PICK_ALLOCATED_QTY, :PICKED_QTY  
+   DO
+   BEGIN
+      IF (SSN_ID IS NULL) THEN
+      BEGIN
+         /* a product */
+         WK_PROD_CNT = 0;
+         /*  AND ISSN.ISSN_STATUS IN ('ST','PA','OP','AL','PG','PL') */
+         FOR
+         SELECT FIRST 2 ISSN.WH_ID, ISSN.LOCN_ID, PROD_PROFILE.SHORT_DESC 
+         FROM ISSN 
+              JOIN PROD_PROFILE ON PROD_PROFILE.PROD_ID = ISSN.PROD_ID
+              JOIN CONTROL ON CONTROL.RECORD_ID = 1
+         WHERE ISSN.PROD_ID = :PROD_ID 
+           AND (WH_ID < 'X '
+           OR WH_ID > 'X~')
+           AND (POS(CONTROL.PICK_IMPORT_SSN_STATUS, ISSN.ISSN_STATUS, 0, 1) > -1)
+         GROUP BY ISSN.WH_ID, ISSN.LOCN_ID, PROD_PROFILE.SHORT_DESC 
+         INTO :WK_PI_WH, :WK_PI_LOCN, :DESCRIPTION  
+         DO
+         BEGIN
+            IF (WK_PROD_CNT = 0) THEN
+            BEGIN
+               WH_ID = WK_PI_WH;
+               LOCN_ID = WK_PI_LOCN;
+            END
+            IF (WK_PROD_CNT = 1) THEN
+            BEGIN
+               WH_ID2 = WK_PI_WH;
+               LOCN_ID2 = WK_PI_LOCN;
+            END
+            WK_PROD_CNT = WK_PROD_CNT + 1;
+         END
+         IF (DESCRIPTION IS NULL) THEN
+         BEGIN
+            SELECT SHORT_DESC 
+            FROM PROD_PROFILE 
+            WHERE PROD_ID = :PROD_ID 
+            INTO :DESCRIPTION;
+         END
+      END
+      ELSE
+      BEGIN
+      /*
+      now if for an ssn get the ssn details
+      */
+         SELECT ISSN.WH_ID, ISSN.LOCN_ID, SSN.SSN_DESCRIPTION, ISSN.ORIGINAL_SSN
+         FROM ISSN
+         JOIN SSN ON SSN.SSN_ID = ISSN.ORIGINAL_SSN
+         WHERE ISSN.SSN_ID = :SSN_ID
+         INTO :WH_ID, :LOCN_ID, :DESCRIPTION, :WK_ORIGINAL;
+      /* get 2nd issn for ssn */
+         SELECT FIRST 1 ISSN.WH_ID, ISSN.LOCN_ID 
+         FROM ISSN
+         WHERE ORIGINAL_SSN = :WK_ORIGINAL
+         AND SSN_ID <> :SSN_ID
+         AND (WH_ID < 'X '
+         OR WH_ID > 'X~')
+         AND (WH_ID <> :WH_ID 
+         OR LOCN_ID <> :LOCN_ID)
+         INTO :WH_ID2, :LOCN_ID2 ;
+      END
+      SUSPEND;
+   END
+END ^
+

@@ -1,0 +1,1 @@
+update company set despatch_check_weight='T', despatch_check_volume='F';

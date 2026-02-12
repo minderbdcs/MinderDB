@@ -1,0 +1,133 @@
+/*
+TABLE = SSN_MUSEUM 
+This table is specifically for Museums but I have more fields to be added to suit 4RAR.
+RECORD_ID  - we should be adding this as standard
+*SSN_ID
+OBJECT_NAME		current, change to	-> SSN_OBJECT_NAME
+OBJECT_NUMBER		current, change to	-> SSN_OBJECT_NO
+COLLECTION_TYPE - VARCHAR(5) -> SSN_COLLECTION_TYPE  - Uses OPTIONS
+COLLECTION_NAME	current, change to	-> SSN_COLLECTION_NAME
+FILE_NUMBER	current, change to-> SSN_FILE_NO (shorten NUMBER to NO)
+ACCESSION - VARCHAR ( 80 ) current, change to -> SSN_ACCESSION. 
+- Used to hold Catalogue no. or Accession no.
+SSN_ACQUISITION_METHOD  CODE - We will use dropdown from OPTIONS e.g. 'DONATED', 'Purchased at Auction', 'Swapped’.
+SSN_ACQUISITION_APPRVD_BY  PERSON - Museum Staff who approved acquisition
+SSN_ACQUISITION_APPRVD_DATE
+SSN_ACQUISITION_ACCEPTED VALUE_FT (DEFAULT ='T') - If = 'T' and  
+SSN_ACQUISITION_METHOD  CODE_TWO – ‘DN’ = 'DONATED'  then must send Acknowledgement 	otherwise send Refusal Letter
+SSN_ACCEPT_REFUSE_NOTES  NOTES - Records details of Letter sent accepting or refusing Acquisition
+SSN_ACCEPTED_REASON_CODE   CODE_TWO – ‘PC’ = Permanent Collection, ‘LC’ = Loan Collection, ‘EC’ = Education Collection – use OPTIONS
+SSN_ACCEPTED_REFUSED_SENT   TIMESTAMP
+SSN_SIGNIFICANCE  CODE   CODE_TWO – ‘AS’ = Aesthetic, ‘HI’ = Historical Importance,  others maybe  ‘SO’ =Social, ‘HT’ =Historical Technical, ‘RS’= Research, Representativeness, Rarity value - Use OPTIONS table.
+SSN_SIGNIFICANCE_NOTES  COMMENTS
+SSN_SOURCE_ID PERSON - This may be different to the GRN.SUPPLIER_ID  i.e. a Donor and with details in PERSON_ADDRESS table.
+SSN_SOURCE_SIGNATURE VALUE_TF  - Used for Gifts and where Donor’s signature is required approving their donation. ‘F’ means they do not have signature.
+SSN_PREV_OWNER COMMENTS – Used to record where Object acquired from and relationship to Museum i.e. 'George Smith, Deceased Estate. John Smith, son has donated to Museum.'
+SSN_RELEVANCE_PERIOD  CODE - e.g. '< 1898', '1939 - 1945'… 
+- We will use dropdown from OPTIONS table
+SSN_MADE_BY_ORIGIN   CODE - e.g. 'Rhine Region, Germany', 'Vietnam' – Museum may not know manufacturer.
+SSN_MADE_BY  CODE - Manufacturer, Artist, Photographer, Author - This is not same as BRAND. Maybe a letter, painting, photograph, book, technical publication..
+SSN_MADE_BY_MARKINGS  CODE - Artist Signature, Maker's Mark/s. 
+SSN_MARKINGS_LOCATION  CODE - Location of Artist Signature, Maker's Mark on Object e.g. 'Bottom RH Corner'
+SSN_MADE_BY_PERIOD CODE - e.g. '< 1898', '1939 - 1945' – Not the same as Relevance Period.  We will use dropdown from OPTIONS
+SSN_OBJECT_USED_AREA COMMENTS - Where was Object used e.g. 'Vietnam War'
+SSN_HISTORY NOTES - BLOB SUB_TYPE TEXT
+SSN_HISTORY_REFERENCES – COMMENTS
+SSN_CONSERVATION_REPORT  VALUE_TF (DEFAULT ='F'). 
+Used to report which Objects have not been assessed and reported for conservation.
+SSN_CONSERVATION_NOTES NOTES - BLOB SUB_TYPE TEXT
+SSN_CONSERVATION_REPORT_DATE
+SSN_CONSERVATION_NOTES_BY PERSON - VARCHAR( 10 ) 
+SSN_ASSOCIATED_ITEMS NOTES - BLOB SUB_TYPE TEXT
+SSN_DEACCESSIONED VALUE_TF  If Object fails conservation => T, may not yet have been Disposed and will not be part of Museum's Inventory.
+SSN_DEACCESSIONED_DATE TIMESTAMP
+SSN_DEACCESSIONED_BY 
+SSN_MUSEUM_LAST_UPDTD_BY
+SSN_MUSEUM_LAST_UPDTD_DATE
+SSN_MUSEUM_LAST_UPDTD_DEVICE  -* length = 28 characters *-
+*/
+create domain approved_date timestamp;
+create domain refuse_date timestamp;
+create domain report_date timestamp;
+create domain legacy_device varchar(28);
+commit;
+
+CREATE TABLE SSN_MUSEUM (RECORD_ID INTEGER NOT NULL,
+        SSN_ID                          SSN_ID NOT NULL,
+        SSN_OBJECT_NAME                 OBJECT_NAME,
+        SSN_OBJECT_NO                   OBJECT_NUMBER,
+        SSN_COLLECTION_TYPE             COLLECTION_TYPE,
+        SSN_COLLECTION_NAME             COLLECTION_NAME,
+	SSN_FILE_NO                     FILE_NUMBER, 
+	SSN_ACCESSION                   ACCESSION, 
+	SSN_ACQUISITION_METHOD          CODE, 
+	SSN_ACQUISITION_APPRVD_BY       PERSON, 
+	SSN_ACQUISITION_APPRVD_DATE     APPROVED_DATE, 
+	SSN_ACQUISITION_ACCEPTED        VALUE_FT, 
+        SSN_ACCEPT_REFUSE_NOTES         NOTES,
+        SSN_ACCEPTED_REASON_CODE        CODE_TWO,
+        SSN_ACCEPTED_REFUSED_SENT       REFUSE_DATE,
+        SSN_SIGNIFICANCE_CODE           CODE_TWO,
+        SSN_SIGNIFICANCE_NOTES          COMMENTS,
+        SSN_SOURCE_ID                   PERSON,
+        SSN_SOURCE_SIGNATURE            VALUE_TF,
+        SSN_PREV_OWNER                  COMMENTS,
+        SSN_RELEVANCE_PERIOD            CODE,
+        SSN_MADE_BY_ORIGIN              CODE,
+        SSN_MADE_BY                     CODE,
+        SSN_MADE_BY_MARKINGS            CODE,
+        SSN_MARKINGS_LOCATION           CODE,
+        SSN_MADE_BY_PERIOD              CODE,
+        SSN_OBJECT_USED_AREA            COMMENTS,
+        SSN_HISTORY_NOTES               NOTES,
+        SSN_HISTORY_REFERENCES          COMMENTS,
+        SSN_CONSERVATION_REPORT         VALUE_TF,
+        SSN_CONSERVATION_NOTES          NOTES,
+        SSN_CONSERVATION_REPORT_DATE    REPORT_DATE,
+        SSN_CONSERVATION_NOTES_BY       PERSON,
+        SSN_ASSOCIATED_ITEMS            NOTES,
+        SSN_DEACCESSIONED               VALUE_TF,
+        SSN_DEACCESSIONED_DATE          LAST_UPDATE_DATE,
+        SSN_DEACCESSIONED_BY            PERSON,
+        SSN_MUSEUM_LAST_UPDTD_BY        USER_ID,
+        SSN_MUSEUM_LAST_UPDTD_DATE      LAST_UPDATE_DATE,
+        SSN_MUSEUM_LAST_UPDTD_DEVICE    LEGACY_DEVICE,
+PRIMARY KEY (RECORD_ID));
+
+
+CREATE GENERATOR SSN_MUSEUM_ID_GEN;
+CREATE UNIQUE INDEX SSN_MUSEUM_IDX ON SSN_MUSEUM (SSN_ID);
+CREATE INDEX SSN_MUSEUM_OBJECT_NAME_IDX ON SSN_MUSEUM (SSN_OBJECT_NAME);
+CREATE INDEX SSN_MUSEUM_OBJECT_NO_IDX ON SSN_MUSEUM (SSN_OBJECT_NO);
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+CREATE TRIGGER ADD_SSN_MUSEUM FOR SSN_MUSEUM 
+ACTIVE BEFORE INSERT POSITION 10 
+AS
+BEGIN
+   IF ((NEW.RECORD_ID IS NULL) OR (NEW.RECORD_ID = 0)) THEN
+   BEGIN
+      NEW.RECORD_ID  = GEN_ID(SSN_MUSEUM_ID_GEN,1);
+   END
+   NEW.SSN_MUSEUM_LAST_UPDTD_DATE = 'NOW';
+END ^
+
+CREATE TRIGGER UPD_SSN_MUSEUM FOR SSN_MUSEUM 
+ACTIVE BEFORE UPDATE POSITION 10 
+AS
+BEGIN
+   IF ((NEW.RECORD_ID IS NULL) OR (NEW.RECORD_ID = 0)) THEN
+   BEGIN
+      NEW.RECORD_ID  = GEN_ID(SSN_MUSEUM_ID_GEN,1);
+   END
+   NEW.SSN_MUSEUM_LAST_UPDTD_DATE = 'NOW';
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+

@@ -1,0 +1,21 @@
+/*
+
+433:DECLARE EXTERNAL FUNCTION MER_DAY
+436:ENTRY_POINT 'fudlib_mer_day' MODULE_NAME 'fudlib';
+438:DECLARE EXTERNAL FUNCTION MER_HOUR
+441:ENTRY_POINT 'fudlib_mer_hour' MODULE_NAME 'fudlib';
+443:DECLARE EXTERNAL FUNCTION MER_MINUTE
+446:ENTRY_POINT 'fudlib_mer_minute' MODULE_NAME 'fudlib';
+448:DECLARE EXTERNAL FUNCTION MER_MONTH
+451:ENTRY_POINT 'fudlib_mer_month' MODULE_NAME 'fudlib';
+453:DECLARE EXTERNAL FUNCTION MER_YEAR
+456:ENTRY_POINT 'fudlib_mer_year' MODULE_NAME 'fudlib';
+
+*/
+
+drop external function mer_day;
+drop external function mer_month;
+drop external function mer_year;
+drop external function mer_hour;
+drop external function mer_minute;
+/* drop external function sec; */

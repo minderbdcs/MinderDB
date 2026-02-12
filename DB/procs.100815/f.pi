@@ -1,0 +1,19 @@
+create domain discount double precision default 0;
+create domain tax_rate double precision default 0;
+create domain tax_amount numeric(13,2) default 0;
+
+/* have to drop the 2 procedures and 3 triggers */
+
+drop procedure cancel_sale_line;
+drop procedure cancel_sale_order;
+drop trigger save_pick_item;
+drop trigger add_pick_from_temp;
+drop trigger run_transaction_trbk;
+
+commit;
+
+alter table pick_item   alter discount type discount;
+alter table pick_item   alter tax_rate type tax_rate;
+alter table pick_item   alter tax_amount type tax_amount;
+ 
+/* now add in the 2 procedures and 3 triggers */

@@ -1,0 +1,1 @@
+alter table company add PICK_HELD_STATUS STATUS;

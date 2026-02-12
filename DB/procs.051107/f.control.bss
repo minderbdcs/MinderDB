@@ -1,0 +1,2 @@
+
+update control set allow_unpick_in_pick_cancel = 'T';

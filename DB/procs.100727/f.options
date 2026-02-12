@@ -1,0 +1,1 @@
+insert into options(group_code,code,description,description2) values('LABELPRINT','DP','PF','Print Copy command to force only 1 file');

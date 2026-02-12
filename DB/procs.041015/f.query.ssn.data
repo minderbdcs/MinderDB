@@ -1,0 +1,20 @@
+delete from query_layout where code='1ssn';
+/*
+select sn.ssn_id, sin.locn_id, sin.wh_id, sn.ssn_type, sn.generic, sn.brand, sn.model,sn.serial_number, sin.ssn_id, sin.issn_status, sin.prod_id , sin.current_qty, sn.ssn_description
+*/
+/*
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','ssn.ssn_id',1,'SSN');
+*/
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','issn.locn_id',3,'Location');
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','issn.wh_id',2,'Warehouse');
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','ssn.ssn_type',4,'Type');
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','ssn.generic',5,'Generic');
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','ssn.brand',6,'Brand');
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','ssn.model',7,'Model');
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','ssn.serial_number',8,'Serial');
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','issn.ssn_id',0,'ISSN');
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','issn.issn_status',9,'Status');
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','issn.prod_id',10,'Product');
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','issn.current_qty',11,'Qty');
+INSERT INTO QUERY_LAYOUT (CODE, DESCRIPTION, SEQUENCE, LABEL) VALUES ('1ssn','ssn.ssn_description',12,'Description');
+

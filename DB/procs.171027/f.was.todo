@@ -1,0 +1,4 @@
+alter the add_pick_items to use prod_type table rather than options record to hold used status
+
+create new procedure for add pick items - has no bhp statses or processing
+CREATE OR ALTER PROCEDURE ADD_PICK_ITEMS_PM 

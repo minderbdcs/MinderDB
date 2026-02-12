@@ -1,0 +1,105 @@
+DROP TRIGGER RUN_TRANSACTION_QANE  ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_QANE FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 43 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_ISSN_SSNID VARCHAR(30);
+DECLARE VARIABLE WK_SSN_SSNID VARCHAR(30);
+DECLARE VARIABLE WK_RECORD  INTEGER;
+DECLARE VARIABLE WK_QUESTION  INTEGER;
+DECLARE VARIABLE WK_HAS_ERROR  INTEGER;
+DECLARE VARIABLE WK_DATE  TIMESTAMP;
+DECLARE VARIABLE WK_TEST_ID INTEGER;
+DECLARE VARIABLE WK_CATEGORY VARCHAR(1);
+ DECLARE VARIABLE strDesc VARCHAR(30);
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'QANE') THEN
+  BEGIN
+   /* must update passed ssn answer_id = null
+      question_id = sequence 0 question for type
+      and remove records from resume test for this ssn_id
+   */
+     WK_ISSN_SSNID = NEW.OBJECT; 
+     WK_SSN_SSNID = NEW.OBJECT; 
+     WK_RECORD = NEW.RECORD_ID; 
+     WK_DATE = NEW.TRN_DATE; 
+     /* get seq 0 question */
+     SELECT TQ.QUESTION_ID, SN.SSN_ID 
+         FROM ISSN ISS 
+              JOIN SSN SN ON SN.SSN_ID = ISS.ORIGINAL_SSN 
+                 JOIN TEST_QUESTIONS TQ ON TQ.SSN_TYPE = SN.SSN_TYPE
+         WHERE ISS.SSN_ID = :WK_ISSN_SSNID
+              AND TQ.SEQUENCE = 0
+         INTO :WK_QUESTION, :WK_SSN_SSNID;
+     UPDATE SSN SET ANSWER_ID = NULL,QUESTION_ID=:WK_QUESTION,STATUS_SSN='PA' WHERE SSN_ID = :WK_SSN_SSNID;
+     UPDATE ISSN SET ISSN_STATUS ='PA' WHERE SSN_ID = :WK_SSN_SSNID;
+     DELETE FROM RESUME_TEST WHERE SSN_ID = :WK_ISSN_SSNID;
+     SELECT TEST_ID FROM SSN_TEST 
+         WHERE SSN_ID=:WK_SSN_SSNID AND STATUS_TEST = 'OP'
+         INTO :WK_TEST_ID;
+     UPDATE SSN_TEST SET STATUS_TEST = 'CL',END_DATE=:WK_DATE 
+         WHERE SSN_ID=:WK_SSN_SSNID AND STATUS_TEST = 'OP';
+     WK_HAS_ERROR = 0;
+     SELECT COUNT(*) FROM PRODUCT_COND_STATUS 
+         WHERE SSN_ID = :WK_SSN_SSNID
+           AND ORIGINAL_TEST = 'S'
+         INTO :WK_HAS_ERROR;
+     IF (WK_HAS_ERROR = 0) THEN
+     BEGIN
+         /* no error - look for passed categorys */
+         FOR SELECT INSPECT_CATEGORY
+              FROM SSN_TEST_RESULTS
+              WHERE SSN_ID = :WK_SSN_SSNID
+               AND INSPECT_PASS_CRITERIA = 'PASSED'
+               AND TEST_ID = :WK_TEST_ID
+               INTO :WK_CATEGORY
+         DO
+         BEGIN
+             IF (WK_CATEGORY = 'A') THEN
+             BEGIN
+                 EXECUTE PROCEDURE GET_GLOBAL_CONDITION 1, 'P' RETURNING_VALUES :strDesc;
+                 UPDATE SSN
+                 /*SET OTHER1 = 'AS NEW CONDITION'*/
+                 SET OTHER1 = :strDesc
+                 WHERE SSN_ID = :WK_SSN_SSNID;
+             END
+             IF (WK_CATEGORY = 'B') THEN
+             BEGIN
+                 EXECUTE PROCEDURE GET_GLOBAL_CONDITION 2, 'P' RETURNING_VALUES :strDesc;
+                 UPDATE SSN
+                 /*SET OTHER2 = 'TESTED - OK'*/
+                 SET OTHER2 = :strDesc
+                 WHERE SSN_ID = :WK_SSN_SSNID;
+             END
+             IF (WK_CATEGORY = 'C') THEN
+             BEGIN
+                 EXECUTE PROCEDURE GET_GLOBAL_CONDITION 3, 'P' RETURNING_VALUES :strDesc;
+                 UPDATE SSN
+                 /*SET OTHER3 = 'COMPLETE'*/
+                 SET OTHER3 = :strDesc
+                 WHERE SSN_ID = :WK_SSN_SSNID;
+             END
+             IF (WK_CATEGORY = 'D') THEN 
+             BEGIN
+                 EXECUTE PROCEDURE GET_GLOBAL_CONDITION 4, 'P' RETURNING_VALUES :strDesc;
+                 UPDATE SSN
+                 /*SET OTHER4 = 'NO SERVICE'*/
+                 SET OTHER4 = :strDesc
+                 WHERE SSN_ID = :WK_SSN_SSNID;
+             END
+         END
+         
+     END
+
+     UPDATE TRANSACTIONS SET COMPLETE='T',ERROR_TEXT='Reset Answer ID' WHERE RECORD_ID = :WK_RECORD;
+
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+  END
+ END
+END ^
+ 

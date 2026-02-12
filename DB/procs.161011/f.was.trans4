@@ -1,0 +1,14 @@
+drop trigger add_trans4_source ^
+commit^
+
+create trigger add_trans4_source for transactions4
+BEFORE INSERT POSITION 0
+AS
+BEGIN
+   IF (NEW.TRN_CLASS = 'C') THEN
+   BEGIN
+      NEW.INPUT_SOURCE = NEW.INPUT_SOURCE || 'ss';
+   END
+END^
+
+

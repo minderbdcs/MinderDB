@@ -1,0 +1,1 @@
+alter domain ATTRIBUTE_NAME TYPE VARCHAR(15);

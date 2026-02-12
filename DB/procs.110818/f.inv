@@ -1,0 +1,78 @@
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+CREATE OR ALTER TRIGGER ADD_PICK_INVOICE FOR PICK_INVOICE 
+ACTIVE BEFORE INSERT POSITION 10 
+AS
+BEGIN
+   IF ((NEW.INVOICE_ID IS NULL) OR (NEW.INVOICE_ID = 0)) THEN
+   BEGIN
+      NEW.INVOICE_ID  = GEN_ID(PICK_INVOICE_ID_GEN,1);
+   END
+   NEW.LAST_UPDATE_DATE = 'NOW';
+   NEW.CREATE_DATE = 'NOW';
+   /* if order no is populated and company or wh is not then populate from the order
+      if invoice type is null then make this a qt */
+   IF (NEW.PICK_ORDER IS NOT NULL) THEN
+   BEGIN
+      IF (NEW.COMPANY_ID IS NULL) THEN
+      BEGIN
+         SELECT COMPANY_ID 
+         FROM PICK_ORDER
+         WHERE PICK_ORDER = NEW.PICK_ORDER
+         INTO NEW.COMPANY_ID;
+      END
+      IF (NEW.WH_ID IS NULL) THEN
+      BEGIN
+         SELECT WH_ID 
+         FROM PICK_ORDER
+         WHERE PICK_ORDER = NEW.PICK_ORDER
+         INTO NEW.WH_ID;
+      END
+   END
+   IF (NEW.INVOICE_TYPE IS NULL) THEN
+   BEGIN
+      NEW.INVOICE_TYPE = 'QT';
+   END
+END ^
+
+CREATE OR ALTER TRIGGER UPD_PICK_INVOICE FOR PICK_INVOICE
+ACTIVE BEFORE UPDATE POSITION 10 
+AS
+BEGIN
+   IF ((NEW.INVOICE_ID IS NULL) OR (NEW.INVOICE_ID = 0)) THEN
+   BEGIN
+      NEW.INVOICE_ID  = GEN_ID(PICK_INVOICE_ID_GEN,1);
+   END
+   NEW.LAST_UPDATE_DATE = 'NOW';
+   /* if order no is populated and company or wh is not then populate from the order
+      if invoice type is null then make this a qt */
+   IF (NEW.PICK_ORDER IS NOT NULL) THEN
+   BEGIN
+      IF (NEW.COMPANY_ID IS NULL) THEN
+      BEGIN
+         SELECT COMPANY_ID 
+         FROM PICK_ORDER
+         WHERE PICK_ORDER = NEW.PICK_ORDER
+         INTO NEW.COMPANY_ID;
+      END
+      IF (NEW.WH_ID IS NULL) THEN
+      BEGIN
+         SELECT WH_ID 
+         FROM PICK_ORDER
+         WHERE PICK_ORDER = NEW.PICK_ORDER
+         INTO NEW.WH_ID;
+      END
+   END
+   IF (NEW.INVOICE_TYPE IS NULL) THEN
+   BEGIN
+      NEW.INVOICE_TYPE = 'QT';
+   END
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+

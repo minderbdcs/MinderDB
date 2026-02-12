@@ -1,0 +1,390 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/*
+CREATE OR ALTER PROCEDURE PC_TRSS (RECORD_ID INTEGER,
+WH_ID CHAR(2) ,
+LOCN_ID VARCHAR(10) ,
+OBJECT VARCHAR(30) ,
+TRN_TYPE VARCHAR(4) ,
+TRN_CODE CHAR(1) ,
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(1024) ,
+QTY INTEGER,
+PERSON_ID VARCHAR(10) ,
+DEVICE_ID CHAR(2) )
+*/
+
+CREATE OR ALTER PROCEDURE PC_TRSS (RECORD_ID RECORD_ID,
+WH_ID WH_ID ,
+LOCN_ID LOCN_ID ,
+OBJECT OBJECT ,
+TRN_TYPE TRN_TYPE ,
+TRN_CODE TRN_CODE ,
+TRN_DATE TRN_DATE,
+REFERENCE REFERENCE ,
+QTY QTY,
+PERSON_ID PERSON ,
+DEVICE_ID DEVICE_ID )
+AS 
+DECLARE VARIABLE SSN_EXIST INTEGER;
+  DECLARE VARIABLE STRWH_ID CHAR(2);
+  DECLARE VARIABLE STRLOCN_ID VARCHAR(10);
+  DECLARE VARIABLE STRAUDIT_DESC VARCHAR(70);
+  DECLARE VARIABLE ICURRENT_QTY INTEGER;
+  DECLARE VARIABLE ISUB_QTY INTEGER;
+  DECLARE VARIABLE PROCESS_OK CHAR(1);
+  DECLARE VARIABLE STRISSN_STATUS CHAR(2);
+  DECLARE VARIABLE STRISSN_STATUS_CODE VARCHAR(10);
+/*  DECLARE VARIABLE STRPROD_ID VARCHAR(30); */
+  DECLARE VARIABLE STRPROD_ID PRODUCT;
+  DECLARE VARIABLE STRORIGINAL_SSN VARCHAR(20);
+  DECLARE VARIABLE SSN_NEW_EXIST INTEGER;
+  DECLARE VARIABLE LOCN_NAME VARCHAR(50);
+/*  DECLARE VARIABLE WK_COMPANY VARCHAR(20); */
+  DECLARE VARIABLE WK_COMPANY COMPANY;
+  DECLARE VARIABLE WK_IPREV_QTY INTEGER;
+  DECLARE VARIABLE WK_ORIGINAL_WH_ID WH_ID ;
+DECLARE VARIABLE ISSN_ID INTEGER;
+DECLARE VARIABLE P_SSN_ID INTEGER;
+DECLARE VARIABLE WK_NEW_ISSN_ID SSN_ID;
+DECLARE VARIABLE WK_GENERATE_SSN_METHOD VARCHAR(25);
+DECLARE VARIABLE WK_ERROR_TEXT ERROR_TEXT;
+       
+BEGIN
+  
+  STRAUDIT_DESC = ''; 
+    
+  IF (:TRN_TYPE = 'TRSS') THEN
+  BEGIN       
+     STRWH_ID = '';
+     STRLOCN_ID = '';
+    
+     /* Check too location */
+     SELECT LOCN_ID, WH_ID 
+     FROM LOCATION
+     WHERE LOCN_ID = :LOCN_ID
+       AND WH_ID = :WH_ID
+     INTO :STRLOCN_ID, :STRWH_ID; 
+
+     IF (STRLOCN_ID = '') THEN /* Location not found */
+     BEGIN
+        LOCN_NAME = 'Created during split ' || :TRN_DATE;
+        /* Add new Location record */
+/*
+        INSERT INTO LOCATION (LOCN_ID, WH_ID, LOCN_NAME , LAST_UPDATE_DATE, LAST_UPDATE_BY )
+        VALUES (:LOCN_ID, :WH_ID, :LOCN_NAME, :TRN_DATE, :PERSON_ID);
+*/
+
+     END
+     WK_GENERATE_SSN_METHOD =  NULL; 
+     SELECT GENERATE_SSN_METHOD FROM CONTROL INTO :WK_GENERATE_SSN_METHOD;
+     WK_GENERATE_SSN_METHOD =  NULL; 
+     IF (:TRN_CODE = 'A') THEN
+     BEGIN                         
+        /* it dosn t make sense to split a product so i ll treat all splits as for an ssn */
+           SSN_EXIST = 0;
+           SSN_NEW_EXIST = 0;
+           ICURRENT_QTY = -1; 
+           WK_IPREV_QTY = -0; 
+           ISUB_QTY = (-1) * :QTY;
+           STRISSN_STATUS = '';
+           STRISSN_STATUS_CODE = '';
+
+           /* Check From SSN */
+           SELECT 1, CURRENT_QTY, ISSN_STATUS, STATUS_CODE, PROD_ID, ORIGINAL_SSN, COMPANY_ID, PREV_QTY, ORIGINAL_WH_ID
+           FROM ISSN
+           WHERE SSN_ID = :OBJECT
+           INTO :SSN_EXIST, :ICURRENT_QTY, :STRISSN_STATUS, :STRISSN_STATUS_CODE, :STRPROD_ID , :STRORIGINAL_SSN, :WK_COMPANY, :WK_IPREV_QTY, :WK_ORIGINAL_WH_ID ;
+                
+           /* SSN not exists, then exit */
+           IF (SSN_EXIST = 0) THEN
+           BEGIN 
+             /* Update transactions table */        
+             EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'SSN is not in the database');
+             EXIT;
+           END 
+           /* Check new SSN */
+           SELECT 1
+           FROM ISSN
+           WHERE SSN_ID = :REFERENCE
+           INTO :SSN_NEW_EXIST;
+           IF (SSN_NEW_EXIST = 0) THEN
+           BEGIN 
+              IF (REFERENCE = '') THEN
+              BEGIN
+                 /* have to calculate the next ssn_id to use
+                 */
+                 IF ((WK_GENERATE_SSN_METHOD IS NULL)  ) THEN
+                 BEGIN
+                    ISSN_ID = GEN_ID(ISSN_SSN_ID, 1);
+                    P_SSN_ID = iSSN_ID - 1;
+                    WK_NEW_ISSN_ID = '';
+                    SELECT ISSN_ID FROM GET_ISSN_BARCODE('BARCODE', :P_SSN_ID, 36, :WK_ORIGINAL_WH_ID) INTO :WK_NEW_ISSN_ID;
+                    REFERENCE = WK_NEW_ISSN_ID;
+                 END
+
+              END
+           END
+                
+           IF (:QTY < :ICURRENT_QTY) THEN
+           BEGIN
+              /* SSN not exists, then update */
+              IF (SSN_NEW_EXIST = 1) THEN
+              BEGIN 
+                 /* Update record in ISSN table */
+                 UPDATE ISSN   
+                    SET ORIGINAL_SSN = :STRORIGINAL_SSN , 
+                        WH_ID = :WH_ID , 
+                        LOCN_ID = :LOCN_ID , 
+                        PREV_LOCN_ID = :LOCN_ID , 
+                        CURRENT_QTY = :QTY , 
+                        PREV_QTY = :QTY ,
+                        PREV_DATE = :TRN_DATE , 
+                        ISSN_STATUS = :STRISSN_STATUS , 
+                        STATUS_CODE = :STRISSN_STATUS_CODE , 
+                        INTO_DATE = 'NOW' , 
+                        USER_ID = :PERSON_ID , 
+                        PROD_ID = :STRPROD_ID ,
+                        COMPANY_ID = :WK_COMPANY 
+                    WHERE SSN_ID = :REFERENCE;
+              END 
+              ELSE
+              BEGIN
+                 /* Add new record to ISSN table */
+                 INSERT INTO ISSN   
+                    (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, PREV_LOCN_ID, CURRENT_QTY, PREV_QTY,
+                     PREV_DATE, ISSN_STATUS, STATUS_CODE, CREATE_DATE, USER_ID, PROD_ID, ORIGINAL_QTY, COMPANY_ID, ORIGINAL_WH_ID)
+
+                    VALUES (:REFERENCE, 
+                       :STRORIGINAL_SSN,
+                       :WH_ID, 
+                       :LOCN_ID, 
+                       :LOCN_ID, 
+                       :QTY, 
+                       :QTY,
+                       :TRN_DATE, 
+                       :STRISSN_STATUS,
+                       :STRISSN_STATUS_CODE,
+                       'NOW',
+                       :PERSON_ID, 
+                       :STRPROD_ID,
+                       0,
+                       :WK_COMPANY,
+                       :WK_ORIGINAL_WH_ID);
+              END /* new issn */
+
+              /* Update Current_Qty */
+              EXECUTE PROCEDURE UPDATE_SSN_QTY_TROL (:OBJECT, :ISUB_QTY);
+
+              STRAUDIT_DESC = 'Transfered partial qty ' || :QTY || ' into ssn ' || :REFERENCE; 
+           END /* qty less */
+           ELSE IF (:QTY >= :ICURRENT_QTY) THEN
+           BEGIN
+               ISUB_QTY = (-1) * :ICURRENT_QTY;
+              /* SSN not exists, then update */
+              IF (SSN_NEW_EXIST = 1) THEN
+              BEGIN 
+                 /* Update record in ISSN table */
+                 UPDATE ISSN   
+                    SET ORIGINAL_SSN = :STRORIGINAL_SSN , 
+                        WH_ID = :WH_ID , 
+                        LOCN_ID = :LOCN_ID , 
+                        PREV_LOCN_ID = :LOCN_ID , 
+                        CURRENT_QTY = :QTY , 
+                        PREV_QTY = :QTY ,
+                        PREV_DATE = :TRN_DATE , 
+                        ISSN_STATUS = :STRISSN_STATUS , 
+                        STATUS_CODE = :STRISSN_STATUS_CODE , 
+                        INTO_DATE = 'NOW' , 
+                        USER_ID = :PERSON_ID , 
+                        PROD_ID = :STRPROD_ID ,
+                        COMPANY_ID = :WK_COMPANY 
+                    WHERE SSN_ID = :REFERENCE;
+              END 
+              ELSE
+              BEGIN
+                 /* Add new record to ISSN table */
+                 INSERT INTO ISSN   
+                    (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, PREV_LOCN_ID, CURRENT_QTY, PREV_QTY,
+                     PREV_DATE, ISSN_STATUS, STATUS_CODE, CREATE_DATE, USER_ID, PROD_ID, COMPANY_ID, ORIGINAL_WH_ID)
+
+                    VALUES (:REFERENCE, :STRORIGINAL_SSN, :WH_ID, :LOCN_ID,:LOCN_ID, :QTY, :QTY,
+                    :TRN_DATE, :STRISSN_STATUS, :STRISSN_STATUS_CODE, 'NOW', :PERSON_ID, :STRPROD_ID, :WK_COMPANY, :WK_ORIGINAL_WH_ID );
+              END /* new issn */
+
+              /* Update Current_Qty */
+              EXECUTE PROCEDURE UPDATE_SSN_QTY_TROL (:OBJECT, :ISUB_QTY);
+              STRAUDIT_DESC = 'Transfered all qty  ' || :QTY || ' into ssn ' || :REFERENCE ; 
+           END
+
+           /* Update transactions table */               
+           /* EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully'); */
+           WK_ERROR_TEXT = 'Processed successfully|' || STRAUDIT_DESC || '|' || REFERENCE;
+           EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', :WK_ERROR_TEXT );
+
+           /* Add transaction history */                                                                                     
+           EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                          :STRAUDIT_DESC, :REFERENCE, :QTY,  :PERSON_ID, :DEVICE_ID);
+       
+     END /* else */ 
+
+     IF (:TRN_CODE = 'X') THEN
+     BEGIN                         
+        /* here we split the prev qty of a zero qty issn */
+           SSN_EXIST = 0;
+           SSN_NEW_EXIST = 0;
+           ICURRENT_QTY = -1; 
+           WK_IPREV_QTY = -0; 
+           ISUB_QTY = (-1) * :QTY;
+           STRISSN_STATUS = '';
+           STRISSN_STATUS_CODE = '';
+
+           /* Check From SSN */
+           SELECT 1, CURRENT_QTY, ISSN_STATUS, STATUS_CODE, PROD_ID, ORIGINAL_SSN, COMPANY_ID, PREV_QTY, ORIGINAL_WH_ID
+           FROM ISSN
+           WHERE SSN_ID = :OBJECT
+           INTO :SSN_EXIST, :ICURRENT_QTY, :STRISSN_STATUS, :STRISSN_STATUS_CODE, :STRPROD_ID , :STRORIGINAL_SSN, :WK_COMPANY, :WK_IPREV_QTY, :WK_ORIGINAL_WH_ID ;
+                
+           /* SSN not exists, then exit */
+           IF (SSN_EXIST = 0) THEN
+           BEGIN 
+             /* Update transactions table */        
+             EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'SSN is not in the database');
+             EXIT;
+           END 
+           /* Check new SSN */
+           SELECT 1
+           FROM ISSN
+           WHERE SSN_ID = :REFERENCE
+           INTO :SSN_NEW_EXIST;
+           IF (SSN_NEW_EXIST = 0) THEN
+           BEGIN 
+              IF (REFERENCE = '') THEN
+              BEGIN
+                 /* have to calculate the next ssn_id to use
+                    and use the original issn's original_wh_id
+                 */
+              END
+           END
+                
+           IF (:QTY < :WK_IPREV_QTY) THEN
+           BEGIN
+              /* SSN not exists, then update */
+              IF (SSN_NEW_EXIST = 1) THEN
+              BEGIN 
+                 /* Update record in ISSN table */
+                 UPDATE ISSN   
+                    SET ORIGINAL_SSN = :STRORIGINAL_SSN , 
+                        WH_ID = :WH_ID , 
+                        LOCN_ID = :LOCN_ID , 
+                        PREV_LOCN_ID = :LOCN_ID , 
+                        CURRENT_QTY = :ICURRENT_QTY , 
+                        PREV_QTY = :QTY ,
+                        PREV_DATE = :TRN_DATE , 
+                        ISSN_STATUS = :STRISSN_STATUS , 
+                        STATUS_CODE = :STRISSN_STATUS_CODE , 
+                        INTO_DATE = 'NOW' , 
+                        USER_ID = :PERSON_ID , 
+                        PROD_ID = :STRPROD_ID ,
+                        COMPANY_ID = :WK_COMPANY 
+                    WHERE SSN_ID = :REFERENCE;
+              END 
+              ELSE
+              BEGIN
+                 /* Add new record to ISSN table */
+                 INSERT INTO ISSN   
+                    (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, PREV_LOCN_ID, CURRENT_QTY, PREV_QTY,
+                     PREV_DATE, ISSN_STATUS, STATUS_CODE, CREATE_DATE, USER_ID, PROD_ID, ORIGINAL_QTY, COMPANY_ID, ORIGINAL_WH_ID)
+
+                    VALUES (:REFERENCE, 
+                       :STRORIGINAL_SSN,
+                       :WH_ID, 
+                       :LOCN_ID, 
+                       :LOCN_ID, 
+                       :ICURRENT_QTY, 
+                       :QTY,
+                       :TRN_DATE, 
+                       :STRISSN_STATUS,
+                       :STRISSN_STATUS_CODE,
+                       'NOW',
+                       :PERSON_ID, 
+                       :STRPROD_ID,
+                       0,
+                       :WK_COMPANY,
+                       :WK_ORIGINAL_WH_ID);
+              END /* new issn */
+
+              /* Update Current_Qty */
+              /* EXECUTE PROCEDURE UPDATE_SSN_QTY_TROL (:OBJECT, :ISUB_QTY); */
+              /* Update record in ISSN table */
+              UPDATE ISSN   
+                 SET PREV_QTY = PREV_QTY + (:ISUB_QTY)
+                 WHERE SSN_ID = :OBJECT;
+              
+
+              STRAUDIT_DESC = 'Transfered partial qty ' || :QTY || ' into ssn ' || :REFERENCE; 
+           END /* qty less */
+           ELSE IF (:QTY >= :WK_IPREV_QTY) THEN
+           BEGIN
+               ISUB_QTY = (-1) * :WK_IPREV_QTY;
+              /* SSN not exists, then update */
+              IF (SSN_NEW_EXIST = 1) THEN
+              BEGIN 
+                 /* Update record in ISSN table */
+                 UPDATE ISSN   
+                    SET ORIGINAL_SSN = :STRORIGINAL_SSN , 
+                        WH_ID = :WH_ID , 
+                        LOCN_ID = :LOCN_ID , 
+                        PREV_LOCN_ID = :LOCN_ID , 
+                        CURRENT_QTY = :ICURRENT_QTY , 
+                        PREV_QTY = :QTY ,
+                        PREV_DATE = :TRN_DATE , 
+                        ISSN_STATUS = :STRISSN_STATUS , 
+                        STATUS_CODE = :STRISSN_STATUS_CODE , 
+                        INTO_DATE = 'NOW' , 
+                        USER_ID = :PERSON_ID , 
+                        PROD_ID = :STRPROD_ID ,
+                        COMPANY_ID = :WK_COMPANY 
+                    WHERE SSN_ID = :REFERENCE;
+              END 
+              ELSE
+              BEGIN
+                 /* Add new record to ISSN table */
+                 INSERT INTO ISSN   
+                    (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, PREV_LOCN_ID, CURRENT_QTY, PREV_QTY,
+                     PREV_DATE, ISSN_STATUS, STATUS_CODE, CREATE_DATE, USER_ID, PROD_ID, COMPANY_ID, ORIGINAL_WH_ID)
+
+                    VALUES (:REFERENCE, :STRORIGINAL_SSN, :WH_ID, :LOCN_ID,:LOCN_ID, :ICURRENT_QTY, :QTY,
+                    :TRN_DATE, :STRISSN_STATUS, :STRISSN_STATUS_CODE, 'NOW', :PERSON_ID, :STRPROD_ID, :WK_COMPANY , :WK_ORIGINAL_WH_ID);
+              END /* new issn */
+
+              /* Update Current_Qty */
+              /* EXECUTE PROCEDURE UPDATE_SSN_QTY_TROL (:OBJECT, :ISUB_QTY); */
+              /* Update record in ISSN table */
+              UPDATE ISSN   
+                 SET PREV_QTY = PREV_QTY + (:ISUB_QTY)
+                 WHERE SSN_ID = :OBJECT;
+              STRAUDIT_DESC = 'Transfered all qty  ' || :QTY || ' into ssn ' || :REFERENCE ; 
+           END
+
+           /* Update transactions table */               
+           /* EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully'); */
+           WK_ERROR_TEXT = 'Processed successfully|' || STRAUDIT_DESC || '|' || REFERENCE;
+           EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', :WK_ERROR_TEXT );
+
+           /* Add transaction history */                                                                                     
+           EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                          :STRAUDIT_DESC, :REFERENCE, :QTY,  :PERSON_ID, :DEVICE_ID);
+       
+     END /* else */ 
+  END /* TRN_TYPE = 'TRSS' */
+      
+  SUSPEND;  
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

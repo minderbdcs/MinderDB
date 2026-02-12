@@ -1,0 +1,19 @@
+in PKCA and PKCN 
+want the cancel_pick_order to unpick DS items (use PKCN for device XC) - uses the field in the control table for this
+	so in the PKCN set the qty to -1 then uses the field x in control for this
+
+but in picking screens only PL and PG (no DS)
+here the qty = 0 so use a second control table field
+
+does the PKIL G change the device_id (no)
+
+for bhp
+control.1 = ',PG,PL,'
+control.2 = ',PG,PL,DS,'
+
+most
+control.1 = control.2 = ',PG,PL,DS,'
+
+fpg 
+control.1 = control.2 = ',PG,PL,DS,DC,'
+

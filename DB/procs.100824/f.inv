@@ -1,0 +1,2 @@
+alter table pick_invoice add pdf_image pdf_description;
+

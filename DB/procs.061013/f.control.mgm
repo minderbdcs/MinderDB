@@ -1,0 +1,1 @@
+update  CONTROL set TRANSFER_PROD_TO_method = 'PRODLOCN';

@@ -1,0 +1,7 @@
+
+
+alter table grn add grn_legacy_internal_id varchar(20);
+alter table grn add grn_legacy_memo varchar(1024);
+alter table grn add wh_id wh_id;
+alter table grn add grn_posting_period varchar(20);
+

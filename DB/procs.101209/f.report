@@ -1,0 +1,20 @@
+/* change query and description from blob text to vc 8k */
+
+CREATE DOMAIN CODE_8K AS VARCHAR(8196);
+
+/*
+ALTER TABLE REPORTS ALTER DESCRIPTION TO SAVE_DESCRIPTION;
+ALTER TABLE REPORTS ALTER QUERY TO SAVE_QUERY;
+ALTER TABLE REPORTS ADD DESCRIPTION CODE_8K;
+ALTER TABLE REPORTS ADD QUERY CODE_8K;
+*/
+
+/*
+UPDATE REPORTS SET DESCRIPTION = SAVE_DESCRIPTION,QUERY = SAVE_QUERY;
+*/
+
+/*
+update reports set query =  substring( save_query from 1 for 8196) ;
+update reports set description =  substring( save_description from 1 for 8196) ;
+*/
+

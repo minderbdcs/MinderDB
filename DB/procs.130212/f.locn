@@ -1,0 +1,4 @@
+create domain locn_id2 varchar(20);
+alter table location add locn_check_digits code_6;
+alter table location add locn_id2 locn_id2;
+

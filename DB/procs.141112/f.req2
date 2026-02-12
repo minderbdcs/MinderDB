@@ -1,0 +1,5 @@
+/*
+add run no to transfer request so can track updates ive done 
+*/
+alter table transfer_request add trn_run_no kit_run;
+create generator TRANSFER_REQUEST_RUN_NO;

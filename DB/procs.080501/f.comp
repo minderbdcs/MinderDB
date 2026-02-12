@@ -1,0 +1,2 @@
+alter table company add company_id_prefix varchar(2);
+

@@ -1,0 +1,3 @@
+alter table sys_screen_button add ssb_button_type code_two ;
+
+

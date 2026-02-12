@@ -1,0 +1,3 @@
+alter table control add reimport_pick_by_priority value_tf;
+update control set reimport_pick_by_priority = 'F';
+

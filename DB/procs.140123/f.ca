@@ -1,0 +1,1 @@
+alter table carrier_warehouse add CARRIER_DESPATCH_ZONE DESCR;

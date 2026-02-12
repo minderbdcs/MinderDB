@@ -1,0 +1,2 @@
+alter table sys_user add approve char(1);
+

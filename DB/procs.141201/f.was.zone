@@ -1,0 +1,81 @@
+/*
+add despatch printers from like in company
+DESPATCH_CREATE_PACKING_SLIP    (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+DEFAULT_DESPATCH_PRINTER        (DEVICE_ID) CHAR(2) Nullable
+DESPATCH_LABEL_PRINTER          (DEVICE_ID) CHAR(2) Nullable 
+DESPATCH_LABEL_PALLET_PRINTER   (DEVICE_ID) CHAR(2) Nullable 
+DESPATCH_LABEL_CARTON_PRINTER   (DEVICE_ID) CHAR(2) Nullable 
+DESPATCH_LABEL_SATCHEL_PRINTER  (DEVICE_ID) CHAR(2) Nullable 
+DESPATCH_LABEL_OTHER_PRINTER    (DEVICE_ID) CHAR(2) Nullable 
+
+DEFAULT_PICK_PRINTER            CHAR(2) Nullable 
+DEFAULT_LOCATION_PRINTER        (DEVICE_ID) CHAR(2) Nullable 
+DEFAULT_BORROWER_PRINTER        (DEVICE_ID) CHAR(2) Nullable 
+DEFAULT_RECEIVE_PRINTER         (DEVICE_ID) CHAR(2) Nullable 
+
+at system wide have the control table
+then for warehouse
+then for company
+
+zone is a subset of a warehouse
+this is not a subset of a company!
+so have a company_zone table - I already have company in the zone table but its just a default
+then a company_zone with specific printers for the combination of wh company zone
+
+in the pick screen can change the current zone and company.
+add the zone to the receive menu
+(and use this in the location selection)
+when a device is moved ie does a transfer 
+then use the new zone of that location as the current zone. Overwright the session variables current zone record
+
+the new table sys_device_options is about adding restrictions to a device
+eg adding to the list of zones that a device can use
+
+the current zone variable is never reset.
+for a pc device 
+it would be nice to have a screen somewhwere that would set the current zone as in the handheld.
+
+then in awaiting checking the pack printer  is first 
+to be tried from the company_zone
+if no result try the company
+if no result try the warehouse
+if no result try the control
+
+- Glen has chosen the 2nd alternative that I had mentioned
+that is to have
+despatch_printer
+despatch label printer 
+receive label printer
+for each device
+if there is none then use the company then warehouse the system wide defaults.
+If there is more than one printer for a type for the device use the first ordered by device_id.
+I can use the sys_equip_device_options for this.
+Lets use CODES 
+'RECEIVE LABEL PRINTER'
+'RECEIVE PRINTER'
+'DESPATCH LABEL PRINTER'
+'DESPATCH PRINTER'
+'PICK LABEL PRINTER'
+'PICK PRINTER'
+'LOCATION LABEL PRINTER'
+'LOCATION PRINTER'
+'BORROWER LABEL PRINTER'
+'BORROWER PRINTER'
+
+The company printers are designed around  working on a company within some part of a warehouse.
+
+*/
+
+ALTER TABLE COMPANY_ZONE ADD DESPATCH_CREATE_PACKING_SLIP    VALUE_TF;
+ALTER TABLE COMPANY_ZONE ADD DEFAULT_DESPATCH_PRINTER        DEVICE_ID;
+ALTER TABLE COMPANY_ZONE ADD DESPATCH_LABEL_PRINTER          DEVICE_ID;
+ALTER TABLE COMPANY_ZONE ADD DESPATCH_LABEL_PALLET_PRINTER   DEVICE_ID;
+ALTER TABLE COMPANY_ZONE ADD DESPATCH_LABEL_CARTON_PRINTER   DEVICE_ID;
+ALTER TABLE COMPANY_ZONE ADD DESPATCH_LABEL_SATCHEL_PRINTER  DEVICE_ID;
+ALTER TABLE COMPANY_ZONE ADD DESPATCH_LABEL_OTHER_PRINTER    DEVICE_ID;
+
+ALTER TABLE COMPANY_ZONE ADD DEFAULT_PICK_PRINTER            DEVICE_ID; 
+ALTER TABLE COMPANY_ZONE ADD DEFAULT_LOCATION_PRINTER        DEVICE_ID;
+ALTER TABLE COMPANY_ZONE ADD DEFAULT_BORROWER_PRINTER        DEVICE_ID;
+ALTER TABLE COMPANY_ZONE ADD DEFAULT_RECEIVE_PRINTER         DEVICE_ID;
+

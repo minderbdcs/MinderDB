@@ -1,0 +1,2 @@
+alter table company add import_directory descr;
+alter table company add import_pick_zone code_two;

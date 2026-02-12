@@ -1,0 +1,6 @@
+change stock for zone AZ = all zones
+	have pick_order_sub_type.restrict by zone to get all
+	but for non order related available qtys need somthing in the zone to not restrict
+
+when move DX item to a ST move stat location then move to ST status and revert the qty (when the qty is null or 0)
+

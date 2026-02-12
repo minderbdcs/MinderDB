@@ -1,0 +1,111 @@
+DROP TRIGGER RUN_TRANSACTION_NINB ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_NINB FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 80 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_OBJECT VARCHAR(30);
+DECLARE VARIABLE WK_NOTE VARCHAR(120);
+DECLARE VARIABLE WK_SSN VARCHAR(30);
+DECLARE VARIABLE WK_OLD_NOTE BLOB ;
+DECLARE VARIABLE WK_NOTE_STR VARCHAR(514);
+DECLARE VARIABLE WK_NOTE_STR2 VARCHAR(514);
+DECLARE VARIABLE WK_NOTE_STR3 VARCHAR(514);
+DECLARE VARIABLE WK_START_POSN INTEGER;
+DECLARE VARIABLE WK_END_POSN INTEGER;
+DECLARE VARIABLE WK_LEN INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP ;
+DECLARE VARIABLE WK_LEN1 INTEGER;
+DECLARE VARIABLE WK_LEN_TOGET INTEGER;
+DECLARE VARIABLE WK_RES INTEGER;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'NINB') THEN
+  BEGIN
+     WK_RECORD = NEW.RECORD_ID;
+     WK_OBJECT = ALLTRIM(SUBSTR(NEW.OBJECT,1,20));
+     WK_DATE = NEW.TRN_DATE;
+     WK_NOTE = CAST(WK_DATE AS CHAR(22))  || 
+        ' ' || NEW.DEVICE_ID || 
+        ' ' || NEW.PERSON_ID || 
+        CHR(10) ||
+        ALLTRIM(SUBSTR(NEW.OBJECT,21,10) || 
+        NONULL(NEW.WH_ID) ||
+        ALLTRIM(NONULL(NEW.LOCN_ID)) ||
+        NONULL(NEW.SUB_LOCN_ID) ||
+        NONULL(NEW.REFERENCE)) ||
+        CHR(10) ;
+     SELECT 1, SSN.SSN_ID, SSN.NOTES
+        FROM ISSN JOIN SSN ON SSN.SSN_ID = ISSN.ORIGINAL_SSN
+        WHERE ISSN.SSN_ID = :WK_OBJECT
+        INTO :WK_FOUND, WK_SSN, WK_OLD_NOTE;
+      IF (WK_OLD_NOTE IS NULL) THEN
+      BEGIN
+         UPDATE SSN SET NOTES = :WK_NOTE
+            WHERE SSN_ID = :WK_SSN;
+      END 
+      ELSE
+      BEGIN
+         /* get notes by 255 */
+         WK_START_POSN = 1;
+         WK_END_POSN = BLOB_BYTECOUNT(:WK_OLD_NOTE);
+         WK_NOTE_STR = '';
+         WHILE (WK_START_POSN < WK_END_POSN)
+         DO
+         BEGIN
+            /* note len has a max str of 255
+               cstrdel has a max str of 255 */
+            WK_LEN_TOGET = WK_END_POSN - WK_START_POSN + 1;
+            IF (WK_LEN_TOGET > 255) THEN
+            BEGIN
+               WK_LEN_TOGET = 255;
+            END
+            WK_RES = FILE_WRITELN('ninb.txt','before blob substr');
+            WK_RES = FILE_WRITELN('ninb.txt',chr(10));
+/*
+            WK_NOTE_STR2 = ALLTRIM(BLOB_SUBSTR(:WK_OLD_NOTE, :WK_START_POSN, :WK_START_POSN + :WK_LEN_TOGET));
+*/
+            WK_NOTE_STR2 = BLOB_SUBSTR(:WK_OLD_NOTE, :WK_START_POSN, :WK_START_POSN + :WK_LEN_TOGET);
+            WK_RES = FILE_WRITELN('ninb.txt','after blob substr');
+            WK_RES = FILE_WRITELN('ninb.txt',chr(10));
+            WK_LEN = STRLEN(WK_NOTE_STR) + STRLEN(WK_NOTE_STR2);
+            WK_RES = FILE_WRITELN('ninb.txt','after wk_len ');
+            WK_RES = FILE_WRITELN('ninb.txt',chr(10));
+            IF (WK_LEN <= 255) THEN
+            BEGIN 
+               WK_NOTE_STR = WK_NOTE_STR || WK_NOTE_STR2;
+            END
+            ELSE
+            BEGIN
+               WK_LEN1 = STRLEN(:WK_NOTE_STR2);
+               WK_NOTE_STR3 = '';
+               WK_RES = FILE_WRITELN('ninb.txt','before cstrdel ');
+               WK_RES = FILE_WRITELN('ninb.txt',chr(10));
+               WK_NOTE_STR3 = CSTRDEL(:WK_NOTE_STR, 0, :WK_LEN1 ); 
+               WK_RES = FILE_WRITELN('ninb.txt','after cstrdel ');
+               WK_RES = FILE_WRITELN('ninb.txt',chr(10));
+               WK_NOTE_STR = :WK_NOTE_STR3 || :WK_NOTE_STR2;
+            END
+            WK_START_POSN = WK_START_POSN + WK_LEN_TOGET;
+            WK_RES = FILE_WRITELN('ninb.txt','while loop ');
+            WK_RES = FILE_WRITELN('ninb.txt',chr(10));
+         END
+         UPDATE SSN SET NOTES = :WK_NOTE_STR || :WK_NOTE
+            WHERE SSN_ID = :WK_SSN;
+         WK_RES = FILE_WRITELN('ninb.txt','after update');
+         WK_RES = FILE_WRITELN('ninb.txt',chr(10));
+      END
+
+      EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+      EXECUTE PROCEDURE TRAN_ARCHIVE;
+      WK_RES = FILE_WRITELN('ninb.txt','end procedure');
+      WK_RES = FILE_WRITELN('ninb.txt',chr(10));
+  END
+ END
+END ^
+ 

@@ -1,0 +1,9 @@
+insert into options(group_code,code,description) values('PICK_STATU','DA','Appoved for Despatch');
+insert into options(group_code,code,description) values('PICK_STATU','CF','Confirmed');
+insert into options(group_code,code,description) values('PICK_STATU','UC','Unconfirmed');
+insert into options(group_code,code,description) values('PICK_STATU','DC','Connote Prepared');
+insert into options(group_code,code,description) values('PICK_STATU','PG','Picking in Progress');
+insert into options(group_code,code,description) values('PICK_STATU','PL','Picked to Temporary Location');
+insert into options(group_code,code,description) values('ISSN_STATU','DC','Connote Prepared');
+insert into options(group_code,code,description) values('ISSN_STATU','PG','Picking in Progress');
+insert into options(group_code,code,description) values('ISSN_STATU','PL','Picked to Temporary Location');

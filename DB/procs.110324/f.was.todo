@@ -1,0 +1,12 @@
+add to pick_despatch the manifest no for the export.
+
+then in manifest export want status 'DX'
+	pickd_carrier_id in the passed list
+the manifest_no is null or for a reprint pass the manifest_no to use
+
+
+IsTransitCoverRequired Y/N
+TransitCoverAmount ?
+ContainsDangerousGoods true/false
+IsInternationalDelivery true/false
+

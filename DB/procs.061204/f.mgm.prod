@@ -1,0 +1,14 @@
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('150W KIDZ','150W Kidz','150W Kidz','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('400W KARVER','400W Karver','400W Karver','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('600W KARVER','600W Karver','600W Karver','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('600W KRUSER','600W Kruser','600W Kruser','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('600W XTREME','600W Xtreme','600W Xtreme','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('800W KUTTER','800W Kutter','800W Kutter','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('800W KARVER','800W Karver','800W Karver','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('C150W KIDZ','C150W Kidz','C150W Kidz','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('C400W KARVER','C400W Karver','C400W Karver','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('C600W KARVER','C600W Karver','C600W Karver','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('C600W KRUSER','C600W Kruser','C600W Kruser','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('C600W XTREME','C600W Xtreme','C600W Xtreme','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('C800W KUTTER','C800W Kutter','C800W Kutter','MM','BW','0');
+insert into prod_profile(prod_id,short_desc,logn_desc,company_id,alternate_company_id,stock) values ('C800W KARVER','C800W Karver','C800W Karver','MM','BW','0');

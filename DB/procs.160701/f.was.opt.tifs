@@ -1,0 +1,6 @@
+update or insert  into OPTIONS (group_code, code,description, comments)
+values ( 'REP_CODE',
+   'PROD_PROFILE_TEMP.S_CREATE_TRAN',
+   'STPA',
+   'Transaction to use in PROD_PROFILE_TEMP import')
+;

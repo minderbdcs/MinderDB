@@ -1,0 +1,2 @@
+update control set replenish_method=',RP01,RP02,,';
+

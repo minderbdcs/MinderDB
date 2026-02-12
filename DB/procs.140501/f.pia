@@ -1,0 +1,4 @@
+
+alter table pick_item_address add PS_DEL_TO_STORE_IN_HOUSE_NO EDI_LOCN_NO;
+alter table pick_item_address add PS_DEL_TO_DC_IN_HOUSE_NO        EDI_LOCN_NO;
+alter table pick_item_address add PS_CUSTOMER_EDI_NO EDI_NO;

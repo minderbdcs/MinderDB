@@ -1,0 +1,1 @@
+alter table location add locn_layers integer;

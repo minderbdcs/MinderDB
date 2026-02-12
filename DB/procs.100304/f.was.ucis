@@ -1,0 +1,133 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP TRIGGER RUN_TRANSACTION_UCIS ^
+COMMIT^
+
+CREATE TRIGGER RUN_TRANSACTION_UCIS FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 3 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_ORDER_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'UCIS') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the order 
+            field 2 is the retrieve status 
+         */
+         WK_ORDER = '';
+         WK_STATUS = '';
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'ContactInstanceID') THEN
+            BEGIN
+               WK_ORDER = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'UpdateContactInstanceStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         /* does order exist */
+         WK_FOUND = 0;
+         SELECT 1, PICK_RETRIEVE_STATUS  FROM PICK_ORDER
+         WHERE PICK_ORDER = :WK_ORDER
+         INTO :WK_FOUND, :WK_ORDER_STATUS;
+         IF (WK_ORDER_STATUS IS NULL) THEN
+         BEGIN
+            WK_ORDER_STATUS = 'F';
+         END
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            IF (WK_STATUS = 'T') THEN
+            BEGIN
+               /* no order - so probably an urgent */
+               INSERT INTO PICK_ORDER(PICK_ORDER, PICK_STATUS, PICK_RETRIEVE_STATUS)
+               VALUES (:WK_ORDER, 'DA', :WK_STATUS );
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+            ELSE
+            BEGIN
+               INSERT INTO PICK_ORDER(PICK_ORDER, PICK_STATUS, PICK_RETRIEVE_STATUS)
+               VALUES (:WK_ORDER, 'DA', :WK_STATUS );
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+         END
+         ELSE
+         BEGIN
+            IF (WK_STATUS = 'F') THEN
+            BEGIN
+               /* SET PICK_STATUS='HD', */
+               UPDATE PICK_ORDER
+               SET PICK_RETRIEVE_STATUS = :WK_STATUS
+               WHERE PICK_ORDER = :WK_ORDER;
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+         END
+         /* if the status changed to true must recalc the orders retrieve status */
+         IF ((WK_STATUS = 'T') AND (WK_ORDER_STATUS = 'F')) THEN
+         BEGIN
+            WK_FOUND = 0;
+            SELECT FIRST 1 1
+            FROM PICK_ITEM 
+            WHERE PICK_ORDER = :WK_ORDER
+              AND (PICK_LINE_STATUS IN ('UC','CF','OP')
+              OR PICK_LINE_STATUS IS NULL)
+              AND (PICK_RETRIEVE_STATUS = 'F'
+              OR PICK_RETRIEVE_STATUS IS NULL)
+            INTO :WK_FOUND;
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               /* have no more failures */
+               UPDATE PICK_ORDER
+               SET PICK_STATUS='DA',
+                   PICK_RETRIEVE_STATUS = :WK_STATUS
+               WHERE PICK_ORDER = :WK_ORDER;
+            END
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

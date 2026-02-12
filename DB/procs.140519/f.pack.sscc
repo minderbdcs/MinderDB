@@ -1,0 +1,2 @@
+alter table pack_sscc add ps_legacy_pick_order pick_order_25;
+alter table pack_sscc_temp add P_PS_LEGACY_PICK_ORDER  PICK_ORDER_25;

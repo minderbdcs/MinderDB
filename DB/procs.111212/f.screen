@@ -1,0 +1,2 @@
+alter table sys_screen add ss_view_by_max integer;
+

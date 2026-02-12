@@ -1,0 +1,15 @@
+SELECT PERSON_ID, PICK_STATUS, CONTACT_NAME, '+
+                ' PICK_PRIORITY, PICK_DUE_DATE, SHIP_VIA, CREATED_BY, '+
+                ' PARTIAL_PICK_ALLOWED, SPECIAL_INSTRUCTIONS1, SPECIAL_INSTRUCTIONS2, '+
+                ' CREATE_DATE, CUSTOMER_PO_WO, INV_WITH_GOODS, '+
+                ' Pick_Item_Detail.Despatch_Location As Despatch_Location, pick_item.pick_order ' +
+                ' from pick_item_detail ' +
+                ' join pick_item on pick_item.pick_label_no = pick_item_detail.pick_label_no ' +
+                ' join pick_order on pick_order.pick_order = pick_item.Pick_Order ' +
+                ' Where pick_item_detail.Pick_Detail_Status = ''DS'' ' +
+                ' And Pick_Item_Detail.Despatch_Location = :LOCATION ' +
+                ' group by Pick_Item_Detail.Despatch_Location, pick_item.pick_order, ' +
+                ' PERSON_ID, PICK_STATUS, CONTACT_NAME, '+
+                ' PICK_PRIORITY, PICK_DUE_DATE, SHIP_VIA, CREATED_BY, '+
+                ' PARTIAL_PICK_ALLOWED, SPECIAL_INSTRUCTIONS1, SPECIAL_INSTRUCTIONS2, '+
+                ' CREATE_DATE, CUSTOMER_PO_WO, INV_WITH_GOODS '

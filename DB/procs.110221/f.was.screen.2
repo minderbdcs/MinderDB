@@ -1,0 +1,7 @@
+alter index  SYS_SCREEN_TABLE_NAME_IDX inactive;
+drop  index  SYS_SCREEN_TABLE_NAME_IDX ;
+
+alter table sys_screen_table alter sst_table type code_128;
+
+
+CREATE INDEX SYS_SCREEN_TABLE_NAME_IDX ON SYS_SCREEN_TABLE (SST_TABLE);

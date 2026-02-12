@@ -1,0 +1,31 @@
+/*
+TABLE = SSN_LOCN 
+This Table is designed to hold all SSN Location properties where it has the following fields (again can we prefix all field names with SSN_?):
+
+*SSN_ID
+WH_ID				-> SSN_WH_ID
+LOCN_ID				-> SSN_LOCN_ID
+INTO_DATE			-> SSN_INTO_DATE
+CURRENT_QTY     		-> SSN_CURRENT_QTY      
+– I agree this may not seem obvious in this table but where else?
+PREV_WH_ID			-> SSN_PREV_WH_ID
+PREV_LOCN_ID			-> SSN_PREV_LOCN_ID
+DT_PREV_INTO			-> SSN_DT_PREV_INTO
+PREV_LOCN_DATE   		-> SSN_PREV_LOCN_DATE   
+- is this duplication of DT_PREV_INTO?
+PARENT_LOCN_ID		-> SSN_PARENT_LOCN_ID
+HOME_LOCN_ID			-> SSN_HOME_LOCN_ID
+IP_ADDRESS 			-> SSN_IP_ADDRESS 
+- Make sure it holds IPV6?
+AUDITED				-> SSN_AUDITED
+AUDITED_DATE			-> SSN_AUDITED_DATE
+AUDIT_RECOUNT_QTY		-> SSN_AUDIT_RECOUNT_QTY
+AUDIT_RECOUNT_DATE  	-> SSN_AUDIT_RECOUNT_DATE
+AUDIT_RECOUNT_BY		-> SSN_AUDIT_RECOUNT_BY
+LABEL_LOCN			-> SSN_LABEL_LOCN
+LABEL_DATE			-> SSN_LABEL_DATE
+PRINTED_BY			-> SSN_PRINTED_BY
+SSN_LOCN_LAST_UPDTD_BY
+SSN_LOCN_LAST_UPDTD_DATE
+SSN_LOCN_LAST_UPDTD_DEVICE
+*/

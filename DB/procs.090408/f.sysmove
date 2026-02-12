@@ -1,0 +1,2 @@
+alter table sys_moves add move_question_id record_id;
+

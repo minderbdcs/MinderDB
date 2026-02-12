@@ -1,0 +1,23 @@
+alter table carrier add despatch_label_printer device_id;
+alter table carrier add despatch_label_pallet_printer device_id;
+alter table carrier add despatch_label_carton_printer device_id;
+alter table carrier add despatch_label_satchel_printer device_id;
+alter table carrier add despatch_label_other_printer device_id;
+
+alter table company add despatch_label_printer device_id;
+alter table company add despatch_label_pallet_printer device_id;
+alter table company add despatch_label_carton_printer device_id;
+alter table company add despatch_label_satchel_printer device_id;
+alter table company add despatch_label_other_printer device_id;
+
+alter table warehouse add despatch_label_printer device_id;
+alter table warehouse add despatch_label_pallet_printer device_id;
+alter table warehouse add despatch_label_carton_printer device_id;
+alter table warehouse add despatch_label_satchel_printer device_id;
+alter table warehouse add despatch_label_other_printer device_id;
+
+alter table control add despatch_label_printer device_id;
+alter table control add despatch_label_pallet_printer device_id;
+alter table control add despatch_label_carton_printer device_id;
+alter table control add despatch_label_satchel_printer device_id;
+alter table control add despatch_label_other_printer device_id;

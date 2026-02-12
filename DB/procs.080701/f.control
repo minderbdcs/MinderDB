@@ -1,0 +1,2 @@
+alter table control add ssn_eq_issn_no value_tf;
+

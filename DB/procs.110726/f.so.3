@@ -1,0 +1,8 @@
+
+alter table pick_order drop legeacy_ledger_sale_code ;
+alter table pick_order drop legacy_ledger_sale_code_ssn_id   ;
+commit;
+
+alter table pick_order add  legacy_ledger_sale_code code ;
+alter table pick_order add  legacy_ledger_sale_ssn_id_code  code ;
+

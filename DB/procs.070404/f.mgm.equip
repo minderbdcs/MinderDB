@@ -1,0 +1,3 @@
+update sys_equip set operating_zone='LS' where device_id='C1';
+update sys_equip set operating_zone='LL' where device_id='C2';
+

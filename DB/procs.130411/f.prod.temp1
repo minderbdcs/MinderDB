@@ -1,0 +1,9 @@
+/*
+add fields for prod_ean to prod_profile_temp 
+PROD_EAN                        (PROD_EAN) VARCHAR(14) Not Null 
+PROD_EAN_EXTENSION              (PROD_EAN_EXTENSION) VARCHAR(6) Not Null 
+PROD_ID                         (PRODUCT) VARCHAR(30) Not Null 
+*/
+alter table prod_profile_temp add g_prod_gs1 varchar(14);
+alter table prod_profile_temp add g_prod_gs1_extension varchar(6);
+

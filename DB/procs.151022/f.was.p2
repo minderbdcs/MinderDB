@@ -1,0 +1,924 @@
+/*
+ALTER PROCEDURE PICK_MODE_P2 (
+single line orders only
+*/
+
+
+CREATE PROCEDURE PICK_MODE_P2 (
+WK_ORDER_TYPES VARCHAR(255) ,
+WK_ORDER_MODES VARCHAR(255) ,
+WK_ORDERS VARCHAR(255) ,
+WK_ORDER_STATUSES VARCHAR(255) ,
+WK_ORDER_PRIORITYS VARCHAR(255) ,
+WK_PARAM_IDS VARCHAR(255) 
+)
+RETURNS( WK_ORDER VARCHAR(15))
+AS 
+ 
+DECLARE VARIABLE WK_DELIM CHAR(1);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_ORDER_TYPE1 VARCHAR(10);
+DECLARE VARIABLE WK_ORDER_TYPE2 VARCHAR(10);
+DECLARE VARIABLE WK_ORDER_TYPE3 VARCHAR(10);
+DECLARE VARIABLE WK_ORDER_TYPE4 VARCHAR(10);
+DECLARE VARIABLE WK_ORDER_TYPE5 VARCHAR(10);
+DECLARE VARIABLE WK_TYPE_CNT INTEGER;
+DECLARE VARIABLE WK_ORDER_STATUS1 VARCHAR(10);
+DECLARE VARIABLE WK_ORDER_STATUS2 VARCHAR(10);
+DECLARE VARIABLE WK_ORDER_STATUS3 VARCHAR(10);
+DECLARE VARIABLE WK_ORDER_STATUS4 VARCHAR(10);
+DECLARE VARIABLE WK_ORDER_STATUS5 VARCHAR(10);
+DECLARE VARIABLE WK_STATUS_CNT INTEGER;
+DECLARE VARIABLE WK_PRIORITY1 INTEGER;
+DECLARE VARIABLE WK_PRIORITY2 INTEGER;
+DECLARE VARIABLE WK_PRIORITY3 INTEGER;
+DECLARE VARIABLE WK_PRIORITY4 INTEGER;
+DECLARE VARIABLE WK_PRIORITY5 INTEGER;
+DECLARE VARIABLE WK_PRIORITY_CNT INTEGER;
+DECLARE VARIABLE WK_ORDER_CNT INTEGER;
+DECLARE VARIABLE WK_IDX INTEGER;
+DECLARE VARIABLE WK_COND VARCHAR(35);
+DECLARE VARIABLE WK_ORDER1 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER2 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER3 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER4 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER5 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER6 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER7 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER8 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER9 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER10 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER11 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER12 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER13 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER14 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER15 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER16 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER17 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER18 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER19 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER20 VARCHAR(15);
+
+BEGIN
+   WK_DELIM = '|';
+   WK_ORDER_TYPE1 = '';
+   WK_ORDER_TYPE2 = '';
+   WK_ORDER_TYPE3 = '';
+   WK_ORDER_TYPE4 = '';
+   WK_ORDER_TYPE5 = '';
+   WK_ORDER_STATUS1 = '';
+   WK_ORDER_STATUS2 = '';
+   WK_ORDER_STATUS3 = '';
+   WK_ORDER_STATUS4 = '';
+   WK_ORDER_STATUS5 = '';
+   WK_ORDER1 = '';
+   WK_ORDER2 = '';
+   WK_ORDER3 = '';
+   WK_ORDER4 = '';
+   WK_ORDER5 = '';
+   WK_ORDER6 = '';
+   WK_ORDER7 = '';
+   WK_ORDER8 = '';
+   WK_ORDER9 = '';
+   WK_ORDER10 = '';
+   WK_ORDER11 = '';
+   WK_ORDER12 = '';
+   WK_ORDER13 = '';
+   WK_ORDER14 = '';
+   WK_ORDER15 = '';
+   WK_ORDER16 = '';
+   WK_ORDER17 = '';
+   WK_ORDER18 = '';
+   WK_ORDER19 = '';
+   WK_ORDER20 = '';
+   WK_PRIORITY1 = -32000;
+   WK_PRIORITY2 = -32000;
+   WK_PRIORITY3 = -32000;
+   WK_PRIORITY4 = -32000;
+   WK_PRIORITY5 = -32000;
+   /* normally only one order type but glen wants several or GETALL */
+   IF (WK_ORDER_TYPES = 'GETALL') THEN
+   BEGIN
+      WK_ORDER_TYPE1 = 'GETALL';
+      WK_TYPE_CNT = 1;
+   END
+   ELSE
+   BEGIN
+      /* allow up to 5 types */
+      WK_TYPE_CNT = 0;
+      WK_IDX = 1;
+      WK_COND = ALLTRIM(PARSE(:WK_ORDER_TYPES,:WK_DELIM,:WK_IDX));
+      WHILE (WK_COND <> 'Token to long in parse') DO 
+      BEGIN
+         WK_TYPE_CNT = WK_TYPE_CNT + 1;
+         IF (WK_TYPE_CNT = 1) THEN
+            WK_ORDER_TYPE1 = WK_COND;
+         ELSE
+         IF (WK_TYPE_CNT = 2) THEN
+            WK_ORDER_TYPE2 = WK_COND;
+         ELSE
+         IF (WK_TYPE_CNT = 3) THEN
+            WK_ORDER_TYPE3 = WK_COND;
+         ELSE
+         IF (WK_TYPE_CNT = 4) THEN
+            WK_ORDER_TYPE4 = WK_COND;
+         ELSE
+         IF (WK_TYPE_CNT = 5) THEN
+            WK_ORDER_TYPE5 = WK_COND;
+         /* get next type */
+         WK_IDX = WK_IDX + 1;
+         WK_COND = ALLTRIM(PARSE(:WK_ORDER_TYPES,:WK_DELIM,:WK_IDX));
+      END
+   END
+
+   /* normally GETALL in the mode - unused field */
+
+   /* order statuses - why this ?? - must be confirmed lines OP or UP */
+   IF (WK_ORDER_STATUSES = 'GETALL') THEN
+   BEGIN
+      WK_ORDER_STATUS1 = 'GETALL';
+      WK_STATUS_CNT = 1;
+   END
+   ELSE
+   BEGIN
+      /* allow up to 5 STATUSs */
+      WK_STATUS_CNT = 0;
+      WK_IDX = 1;
+      WK_COND = ALLTRIM(PARSE(:WK_ORDER_STATUSES,:WK_DELIM,:WK_IDX));
+      WHILE (WK_COND <> 'Token to long in parse') DO 
+      BEGIN
+         WK_STATUS_CNT = WK_STATUS_CNT + 1;
+         IF (WK_STATUS_CNT = 1) THEN
+            WK_ORDER_STATUS1 = WK_COND;
+         ELSE
+         IF (WK_STATUS_CNT = 2) THEN
+            WK_ORDER_STATUS2 = WK_COND;
+         ELSE
+         IF (WK_STATUS_CNT = 3) THEN
+            WK_ORDER_STATUS3 = WK_COND;
+         ELSE
+         IF (WK_STATUS_CNT = 4) THEN
+            WK_ORDER_STATUS4 = WK_COND;
+         ELSE
+         IF (WK_STATUS_CNT = 5) THEN
+            WK_ORDER_STATUS5 = WK_COND;
+         /* get next STATUS */
+         WK_IDX = WK_IDX + 1;
+         WK_COND = ALLTRIM(PARSE(:WK_ORDER_STATUSES,:WK_DELIM,:WK_IDX));
+      END
+   END
+
+   /* ordno is a list of orders or GETALL */
+   /* orders are length 9 or 10 for internal */
+   /* so can have a maximum of 255 = (1 + n*10) */   
+   /* thus n = 25 */
+   /* calc orders 1 - 25 */
+   /* but only allow upto 20 */
+   IF (WK_ORDERS = 'GETALL') THEN
+   BEGIN
+      WK_ORDER1 = 'GETALL';
+      WK_ORDER_CNT = 1;
+   END
+   ELSE
+   BEGIN
+      WK_ORDER_CNT = 0;
+      WK_IDX = 1;
+      WK_COND = ALLTRIM(PARSE(:WK_ORDERS,:WK_DELIM,:WK_IDX));
+      WHILE (WK_COND <> 'Token to long in parse') DO 
+      BEGIN
+         WK_ORDER_CNT = WK_ORDER_CNT + 1;
+         IF (WK_ORDER_CNT = 1) THEN
+            WK_ORDER1 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 2) THEN
+            WK_ORDER2 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 3) THEN
+            WK_ORDER3 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 4) THEN
+            WK_ORDER4 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 5) THEN
+            WK_ORDER5 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 6) THEN
+            WK_ORDER6 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 7) THEN
+            WK_ORDER7 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 8) THEN
+            WK_ORDER8 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 9) THEN
+            WK_ORDER9 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 10) THEN
+            WK_ORDER10 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 11) THEN
+            WK_ORDER11 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 12) THEN
+            WK_ORDER12 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 13) THEN
+            WK_ORDER13 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 14) THEN
+            WK_ORDER14 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 15) THEN
+            WK_ORDER15 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 16) THEN
+            WK_ORDER16 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 17) THEN
+            WK_ORDER17 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 18) THEN
+            WK_ORDER18 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 19) THEN
+            WK_ORDER19 = WK_COND;
+         ELSE
+         IF (WK_ORDER_CNT = 20) THEN
+            WK_ORDER20 = WK_COND;
+         /* get next order */
+         WK_IDX = WK_IDX + 1;
+         WK_COND = ALLTRIM(PARSE(:WK_ORDERS,:WK_DELIM,:WK_IDX));
+      END
+   END
+
+   /* order priorities 0 = GETALL or a specific priority */
+   /* priorities are small int - range -32768 - +32767 */
+   /* but really 0 - 9 and -9 - -1 since a 1 char display */
+   /* so a max of 19 */
+   /* but only allow upto 2 */
+
+   IF (WK_ORDER_PRIORITYS = 'GETALL') THEN
+   BEGIN
+      WK_PRIORITY1 = 0;
+      WK_STATUS_CNT = 1;
+   END
+   ELSE
+   BEGIN
+      /* allow up to 2 Prioritys */
+      WK_PRIORITY_CNT = 0;
+      WK_IDX = 1;
+      WK_COND = ALLTRIM(PARSE(:WK_ORDER_PRIORITYS,:WK_DELIM,:WK_IDX));
+      WHILE (WK_COND <> 'Token to long in parse') DO 
+      BEGIN
+         WK_PRIORITY_CNT = WK_PRIORITY_CNT + 1;
+         IF (WK_PRIORITY_CNT = 1) THEN
+            WK_PRIORITY1 = WK_COND;
+         ELSE
+         IF (WK_PRIORITY_CNT = 2) THEN
+            WK_PRIORITY2 = WK_COND;
+         ELSE
+         IF (WK_PRIORITY_CNT = 3) THEN
+            WK_PRIORITY3 = WK_COND;
+         ELSE
+         IF (WK_PRIORITY_CNT = 4) THEN
+            WK_PRIORITY4 = WK_COND;
+         ELSE
+         IF (WK_PRIORITY_CNT = 5) THEN
+            WK_PRIORITY5 = WK_COND;
+         /* get next Priority */
+         WK_IDX = WK_IDX + 1;
+         WK_COND = ALLTRIM(PARSE(:WK_ORDER_PRIORITYS,:WK_DELIM,:WK_IDX));
+      END
+   END
+
+   /* parms for a specifiy procedure either GETALL or a LIST */
+   /* for P1 this is GETALL */
+   /* only want single line orders */
+
+   IF ((WK_ORDER1 = 'GETALL') AND
+       (WK_ORDER_TYPE1 = 'GETALL') AND
+       (WK_ORDER_STATUS1 = 'GETALL') AND
+       (WK_PRIORITY1 = 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE P1.PICK_LINE_STATUS IN ('OP','UP') 
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER1 = 'GETALL') AND
+       (WK_ORDER_TYPE1 = 'GETALL') AND
+       (WK_ORDER_STATUS1 = 'GETALL') AND
+       (WK_PRIORITY_CNT > 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE P1.PICK_LINE_STATUS IN ('OP','UP') 
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           AND (P2.PICK_PRIORITY = :WK_PRIORITY1 
+                OR P2.PICK_PRIORITY = :WK_PRIORITY2
+                OR P2.PICK_PRIORITY = :WK_PRIORITY3
+                OR P2.PICK_PRIORITY = :WK_PRIORITY4
+                OR P2.PICK_PRIORITY = :WK_PRIORITY5)
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER1 = 'GETALL') AND
+       (WK_ORDER_TYPE1 = 'GETALL') AND
+       (WK_STATUS_CNT > 0) AND
+       (WK_PRIORITY1 = 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE (P1.PICK_LINE_STATUS = :WK_ORDER_STATUS1 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS2 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS3 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS4 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS5) 
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER1 = 'GETALL') AND
+       (WK_ORDER_TYPE1 = 'GETALL') AND
+       (WK_STATUS_CNT > 0) AND
+       (WK_PRIORITY_CNT > 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE (P1.PICK_LINE_STATUS = :WK_ORDER_STATUS1 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS2 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS3 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS4 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS5) 
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           AND (P2.PICK_PRIORITY = :WK_PRIORITY1 
+                OR P2.PICK_PRIORITY = :WK_PRIORITY2
+                OR P2.PICK_PRIORITY = :WK_PRIORITY3
+                OR P2.PICK_PRIORITY = :WK_PRIORITY4
+                OR P2.PICK_PRIORITY = :WK_PRIORITY5)
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER1 = 'GETALL') AND
+       (WK_TYPE_CNT > 0) AND
+       (WK_ORDER_STATUS1 = 'GETALL') AND
+       (WK_PRIORITY1 = 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE P1.PICK_LINE_STATUS IN ('OP','UP') 
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           AND (P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE1
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE2
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE3
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE4
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE5)
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER1 = 'GETALL') AND
+       (WK_TYPE_CNT > 0) AND
+       (WK_ORDER_STATUS1 = 'GETALL') AND
+       (WK_PRIORITY_CNT > 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE P1.PICK_LINE_STATUS IN ('OP','UP') 
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           AND (P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE1
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE2
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE3
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE4
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE5)
+           AND (P2.PICK_PRIORITY = :WK_PRIORITY1 
+                OR P2.PICK_PRIORITY = :WK_PRIORITY2
+                OR P2.PICK_PRIORITY = :WK_PRIORITY3
+                OR P2.PICK_PRIORITY = :WK_PRIORITY4
+                OR P2.PICK_PRIORITY = :WK_PRIORITY5)
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER1 = 'GETALL') AND
+       (WK_TYPE_CNT > 0) AND
+       (WK_STATUS_CNT > 0) AND
+       (WK_PRIORITY1 = 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE (P1.PICK_LINE_STATUS = :WK_ORDER_STATUS1 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS2 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS3 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS4 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS5) 
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           AND (P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE1
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE2
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE3
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE4
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE5)
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER1 = 'GETALL') AND
+       (WK_TYPE_CNT > 0) AND
+       (WK_STATUS_CNT > 0) AND
+       (WK_PRIORITY_CNT > 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE (P1.PICK_LINE_STATUS = :WK_ORDER_STATUS1 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS2 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS3 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS4 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS5) 
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           AND (P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE1
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE2
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE3
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE4
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE5)
+           AND (P2.PICK_PRIORITY = :WK_PRIORITY1 
+                OR P2.PICK_PRIORITY = :WK_PRIORITY2
+                OR P2.PICK_PRIORITY = :WK_PRIORITY3
+                OR P2.PICK_PRIORITY = :WK_PRIORITY4
+                OR P2.PICK_PRIORITY = :WK_PRIORITY5)
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER_CNT > 0) AND
+       (WK_ORDER_TYPE1 = 'GETALL') AND
+       (WK_ORDER_STATUS1 = 'GETALL') AND
+       (WK_PRIORITY1 = 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE P1.PICK_LINE_STATUS IN ('OP','UP') 
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND (P1.PICK_ORDER = :WK_ORDER1
+                OR P1.PICK_ORDER = :WK_ORDER2
+                OR P1.PICK_ORDER = :WK_ORDER3
+                OR P1.PICK_ORDER = :WK_ORDER4
+                OR P1.PICK_ORDER = :WK_ORDER5
+                OR P1.PICK_ORDER = :WK_ORDER6
+                OR P1.PICK_ORDER = :WK_ORDER7
+                OR P1.PICK_ORDER = :WK_ORDER8
+                OR P1.PICK_ORDER = :WK_ORDER9
+                OR P1.PICK_ORDER = :WK_ORDER10
+                OR P1.PICK_ORDER = :WK_ORDER11
+                OR P1.PICK_ORDER = :WK_ORDER12
+                OR P1.PICK_ORDER = :WK_ORDER13
+                OR P1.PICK_ORDER = :WK_ORDER14
+                OR P1.PICK_ORDER = :WK_ORDER15
+                OR P1.PICK_ORDER = :WK_ORDER16
+                OR P1.PICK_ORDER = :WK_ORDER17
+                OR P1.PICK_ORDER = :WK_ORDER18
+                OR P1.PICK_ORDER = :WK_ORDER19
+                OR P1.PICK_ORDER = :WK_ORDER20)
+           AND P2.PICK_STATUS IN ('OP','DA')
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER_CNT > 0) AND
+       (WK_ORDER_TYPE1 = 'GETALL') AND
+       (WK_ORDER_STATUS1 = 'GETALL') AND
+       (WK_PRIORITY_CNT > 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE P1.PICK_LINE_STATUS IN ('OP','UP') 
+           AND (P1.PICK_ORDER = :WK_ORDER1
+                OR P1.PICK_ORDER = :WK_ORDER2
+                OR P1.PICK_ORDER = :WK_ORDER3
+                OR P1.PICK_ORDER = :WK_ORDER4
+                OR P1.PICK_ORDER = :WK_ORDER5
+                OR P1.PICK_ORDER = :WK_ORDER6
+                OR P1.PICK_ORDER = :WK_ORDER7
+                OR P1.PICK_ORDER = :WK_ORDER8
+                OR P1.PICK_ORDER = :WK_ORDER9
+                OR P1.PICK_ORDER = :WK_ORDER10
+                OR P1.PICK_ORDER = :WK_ORDER11
+                OR P1.PICK_ORDER = :WK_ORDER12
+                OR P1.PICK_ORDER = :WK_ORDER13
+                OR P1.PICK_ORDER = :WK_ORDER14
+                OR P1.PICK_ORDER = :WK_ORDER15
+                OR P1.PICK_ORDER = :WK_ORDER16
+                OR P1.PICK_ORDER = :WK_ORDER17
+                OR P1.PICK_ORDER = :WK_ORDER18
+                OR P1.PICK_ORDER = :WK_ORDER19
+                OR P1.PICK_ORDER = :WK_ORDER20)
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           AND (P2.PICK_PRIORITY = :WK_PRIORITY1 
+                OR P2.PICK_PRIORITY = :WK_PRIORITY2
+                OR P2.PICK_PRIORITY = :WK_PRIORITY3
+                OR P2.PICK_PRIORITY = :WK_PRIORITY4
+                OR P2.PICK_PRIORITY = :WK_PRIORITY5)
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER_CNT > 0) AND
+       (WK_ORDER_TYPE1 = 'GETALL') AND
+       (WK_STATUS_CNT > 0) AND
+       (WK_PRIORITY1 = 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE (P1.PICK_LINE_STATUS = :WK_ORDER_STATUS1 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS2 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS3 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS4 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS5) 
+           AND (P1.PICK_ORDER = :WK_ORDER1
+                OR P1.PICK_ORDER = :WK_ORDER2
+                OR P1.PICK_ORDER = :WK_ORDER3
+                OR P1.PICK_ORDER = :WK_ORDER4
+                OR P1.PICK_ORDER = :WK_ORDER5
+                OR P1.PICK_ORDER = :WK_ORDER6
+                OR P1.PICK_ORDER = :WK_ORDER7
+                OR P1.PICK_ORDER = :WK_ORDER8
+                OR P1.PICK_ORDER = :WK_ORDER9
+                OR P1.PICK_ORDER = :WK_ORDER10
+                OR P1.PICK_ORDER = :WK_ORDER11
+                OR P1.PICK_ORDER = :WK_ORDER12
+                OR P1.PICK_ORDER = :WK_ORDER13
+                OR P1.PICK_ORDER = :WK_ORDER14
+                OR P1.PICK_ORDER = :WK_ORDER15
+                OR P1.PICK_ORDER = :WK_ORDER16
+                OR P1.PICK_ORDER = :WK_ORDER17
+                OR P1.PICK_ORDER = :WK_ORDER18
+                OR P1.PICK_ORDER = :WK_ORDER19
+                OR P1.PICK_ORDER = :WK_ORDER20)
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER_CNT > 0) AND
+       (WK_ORDER_TYPE1 = 'GETALL') AND
+       (WK_STATUS_CNT > 0) AND
+       (WK_PRIORITY_CNT > 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE (P1.PICK_LINE_STATUS = :WK_ORDER_STATUS1 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS2 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS3 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS4 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS5) 
+           AND (P1.PICK_ORDER = :WK_ORDER1
+                OR P1.PICK_ORDER = :WK_ORDER2
+                OR P1.PICK_ORDER = :WK_ORDER3
+                OR P1.PICK_ORDER = :WK_ORDER4
+                OR P1.PICK_ORDER = :WK_ORDER5
+                OR P1.PICK_ORDER = :WK_ORDER6
+                OR P1.PICK_ORDER = :WK_ORDER7
+                OR P1.PICK_ORDER = :WK_ORDER8
+                OR P1.PICK_ORDER = :WK_ORDER9
+                OR P1.PICK_ORDER = :WK_ORDER10
+                OR P1.PICK_ORDER = :WK_ORDER11
+                OR P1.PICK_ORDER = :WK_ORDER12
+                OR P1.PICK_ORDER = :WK_ORDER13
+                OR P1.PICK_ORDER = :WK_ORDER14
+                OR P1.PICK_ORDER = :WK_ORDER15
+                OR P1.PICK_ORDER = :WK_ORDER16
+                OR P1.PICK_ORDER = :WK_ORDER17
+                OR P1.PICK_ORDER = :WK_ORDER18
+                OR P1.PICK_ORDER = :WK_ORDER19
+                OR P1.PICK_ORDER = :WK_ORDER20)
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           AND (P2.PICK_PRIORITY = :WK_PRIORITY1 
+                OR P2.PICK_PRIORITY = :WK_PRIORITY2
+                OR P2.PICK_PRIORITY = :WK_PRIORITY3
+                OR P2.PICK_PRIORITY = :WK_PRIORITY4
+                OR P2.PICK_PRIORITY = :WK_PRIORITY5)
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER_CNT > 0) AND
+       (WK_TYPE_CNT > 0) AND
+       (WK_ORDER_STATUS1 = 'GETALL') AND
+       (WK_PRIORITY1 = 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE P1.PICK_LINE_STATUS IN ('OP','UP') 
+           AND (P1.PICK_ORDER = :WK_ORDER1
+                OR P1.PICK_ORDER = :WK_ORDER2
+                OR P1.PICK_ORDER = :WK_ORDER3
+                OR P1.PICK_ORDER = :WK_ORDER4
+                OR P1.PICK_ORDER = :WK_ORDER5
+                OR P1.PICK_ORDER = :WK_ORDER6
+                OR P1.PICK_ORDER = :WK_ORDER7
+                OR P1.PICK_ORDER = :WK_ORDER8
+                OR P1.PICK_ORDER = :WK_ORDER9
+                OR P1.PICK_ORDER = :WK_ORDER10
+                OR P1.PICK_ORDER = :WK_ORDER11
+                OR P1.PICK_ORDER = :WK_ORDER12
+                OR P1.PICK_ORDER = :WK_ORDER13
+                OR P1.PICK_ORDER = :WK_ORDER14
+                OR P1.PICK_ORDER = :WK_ORDER15
+                OR P1.PICK_ORDER = :WK_ORDER16
+                OR P1.PICK_ORDER = :WK_ORDER17
+                OR P1.PICK_ORDER = :WK_ORDER18
+                OR P1.PICK_ORDER = :WK_ORDER19
+                OR P1.PICK_ORDER = :WK_ORDER20)
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           AND (P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE1
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE2
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE3
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE4
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE5)
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER_CNT > 0) AND
+       (WK_TYPE_CNT > 0) AND
+       (WK_ORDER_STATUS1 = 'GETALL') AND
+       (WK_PRIORITY_CNT > 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE P1.PICK_LINE_STATUS IN ('OP','UP') 
+           AND (P1.PICK_ORDER = :WK_ORDER1
+                OR P1.PICK_ORDER = :WK_ORDER2
+                OR P1.PICK_ORDER = :WK_ORDER3
+                OR P1.PICK_ORDER = :WK_ORDER4
+                OR P1.PICK_ORDER = :WK_ORDER5
+                OR P1.PICK_ORDER = :WK_ORDER6
+                OR P1.PICK_ORDER = :WK_ORDER7
+                OR P1.PICK_ORDER = :WK_ORDER8
+                OR P1.PICK_ORDER = :WK_ORDER9
+                OR P1.PICK_ORDER = :WK_ORDER10
+                OR P1.PICK_ORDER = :WK_ORDER11
+                OR P1.PICK_ORDER = :WK_ORDER12
+                OR P1.PICK_ORDER = :WK_ORDER13
+                OR P1.PICK_ORDER = :WK_ORDER14
+                OR P1.PICK_ORDER = :WK_ORDER15
+                OR P1.PICK_ORDER = :WK_ORDER16
+                OR P1.PICK_ORDER = :WK_ORDER17
+                OR P1.PICK_ORDER = :WK_ORDER18
+                OR P1.PICK_ORDER = :WK_ORDER19
+                OR P1.PICK_ORDER = :WK_ORDER20)
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           AND (P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE1
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE2
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE3
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE4
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE5)
+           AND (P2.PICK_PRIORITY = :WK_PRIORITY1 
+                OR P2.PICK_PRIORITY = :WK_PRIORITY2
+                OR P2.PICK_PRIORITY = :WK_PRIORITY3
+                OR P2.PICK_PRIORITY = :WK_PRIORITY4
+                OR P2.PICK_PRIORITY = :WK_PRIORITY5)
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER_CNT > 0) AND
+       (WK_TYPE_CNT > 0) AND
+       (WK_STATUS_CNT > 0) AND
+       (WK_PRIORITY1 = 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE (P1.PICK_LINE_STATUS = :WK_ORDER_STATUS1 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS2 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS3 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS4 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS5) 
+           AND (P1.PICK_ORDER = :WK_ORDER1
+                OR P1.PICK_ORDER = :WK_ORDER2
+                OR P1.PICK_ORDER = :WK_ORDER3
+                OR P1.PICK_ORDER = :WK_ORDER4
+                OR P1.PICK_ORDER = :WK_ORDER5
+                OR P1.PICK_ORDER = :WK_ORDER6
+                OR P1.PICK_ORDER = :WK_ORDER7
+                OR P1.PICK_ORDER = :WK_ORDER8
+                OR P1.PICK_ORDER = :WK_ORDER9
+                OR P1.PICK_ORDER = :WK_ORDER10
+                OR P1.PICK_ORDER = :WK_ORDER11
+                OR P1.PICK_ORDER = :WK_ORDER12
+                OR P1.PICK_ORDER = :WK_ORDER13
+                OR P1.PICK_ORDER = :WK_ORDER14
+                OR P1.PICK_ORDER = :WK_ORDER15
+                OR P1.PICK_ORDER = :WK_ORDER16
+                OR P1.PICK_ORDER = :WK_ORDER17
+                OR P1.PICK_ORDER = :WK_ORDER18
+                OR P1.PICK_ORDER = :WK_ORDER19
+                OR P1.PICK_ORDER = :WK_ORDER20)
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           AND (P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE1
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE2
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE3
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE4
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE5)
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   ELSE
+   IF ((WK_ORDER_CNT > 0) AND
+       (WK_TYPE_CNT > 0) AND
+       (WK_STATUS_CNT > 0) AND
+       (WK_PRIORITY_CNT > 0)) THEN
+   BEGIN
+      FOR 
+         SELECT P1.PICK_ORDER 
+         FROM PICK_ITEM P1 
+             JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+         WHERE (P1.PICK_LINE_STATUS = :WK_ORDER_STATUS1 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS2 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS3 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS4 
+            OR P1.PICK_LINE_STATUS = :WK_ORDER_STATUS5) 
+           AND (P1.PICK_ORDER = :WK_ORDER1
+                OR P1.PICK_ORDER = :WK_ORDER2
+                OR P1.PICK_ORDER = :WK_ORDER3
+                OR P1.PICK_ORDER = :WK_ORDER4
+                OR P1.PICK_ORDER = :WK_ORDER5
+                OR P1.PICK_ORDER = :WK_ORDER6
+                OR P1.PICK_ORDER = :WK_ORDER7
+                OR P1.PICK_ORDER = :WK_ORDER8
+                OR P1.PICK_ORDER = :WK_ORDER9
+                OR P1.PICK_ORDER = :WK_ORDER10
+                OR P1.PICK_ORDER = :WK_ORDER11
+                OR P1.PICK_ORDER = :WK_ORDER12
+                OR P1.PICK_ORDER = :WK_ORDER13
+                OR P1.PICK_ORDER = :WK_ORDER14
+                OR P1.PICK_ORDER = :WK_ORDER15
+                OR P1.PICK_ORDER = :WK_ORDER16
+                OR P1.PICK_ORDER = :WK_ORDER17
+                OR P1.PICK_ORDER = :WK_ORDER18
+                OR P1.PICK_ORDER = :WK_ORDER19
+                OR P1.PICK_ORDER = :WK_ORDER20)
+           AND  P1.PICK_ORDER_QTY > 0   
+           AND P2.PICK_STATUS IN ('OP','DA')
+           AND (P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE1
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE2
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE3
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE4
+                OR P2.PICK_ORDER_TYPE = :WK_ORDER_TYPE5)
+           AND (P2.PICK_PRIORITY = :WK_PRIORITY1 
+                OR P2.PICK_PRIORITY = :WK_PRIORITY2
+                OR P2.PICK_PRIORITY = :WK_PRIORITY3
+                OR P2.PICK_PRIORITY = :WK_PRIORITY4
+                OR P2.PICK_PRIORITY = :WK_PRIORITY5)
+           GROUP BY P1.PICK_ORDER
+           HAVING COUNT(*) = 1
+           ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+         INTO :WK_ORDER 
+      DO
+      BEGIN
+         SUSPEND;
+      END
+   END
+   EXIT;
+END^
+

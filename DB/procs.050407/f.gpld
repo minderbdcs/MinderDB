@@ -1,0 +1,626 @@
+DROP TRIGGER RUN_TRANSACTION_GPLD ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GPLD FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 7 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_MODE VARCHAR(10);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_ORDER_DATE VARCHAR(20);
+DECLARE VARIABLE WK_ORDER_DATE2 VARCHAR(20);
+DECLARE VARIABLE WK_ORDER_DATET TIMESTAMP;
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_PROD1 VARCHAR(30);
+DECLARE VARIABLE WK_PROD2 VARCHAR(30);
+DECLARE VARIABLE WK_PROD3 VARCHAR(30);
+DECLARE VARIABLE WK_PROD4 VARCHAR(30);
+DECLARE VARIABLE WK_PROD5 VARCHAR(30);
+DECLARE VARIABLE WK_PROD6 VARCHAR(30);
+DECLARE VARIABLE WK_PROD7 VARCHAR(30);
+DECLARE VARIABLE WK_PROD8 VARCHAR(30);
+DECLARE VARIABLE WK_PROD9 VARCHAR(30);
+DECLARE VARIABLE WK_PROD10 VARCHAR(30);
+DECLARE VARIABLE WK_EXTENSION1 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION2 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION3 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION4 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION5 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION6 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION7 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION8 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION9 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION10 VARCHAR(6);
+DECLARE VARIABLE WK_QTY_X VARCHAR(10);
+DECLARE VARIABLE WK_QTY1 INTEGER;
+DECLARE VARIABLE WK_QTY2 INTEGER;
+DECLARE VARIABLE WK_QTY3 INTEGER;
+DECLARE VARIABLE WK_QTY4 INTEGER;
+DECLARE VARIABLE WK_QTY5 INTEGER;
+DECLARE VARIABLE WK_QTY6 INTEGER;
+DECLARE VARIABLE WK_QTY7 INTEGER;
+DECLARE VARIABLE WK_QTY8 INTEGER;
+DECLARE VARIABLE WK_QTY9 INTEGER;
+DECLARE VARIABLE WK_QTY10 INTEGER;
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_SUPPLIERLIST VARCHAR(5);
+DECLARE VARIABLE WK_SPECIALMAIL VARCHAR(5);
+DECLARE VARIABLE WK_PRIORITY VARCHAR(5);
+DECLARE VARIABLE WK_PICK_PRIORITY SMALLINT;
+DECLARE VARIABLE WK_ORDER_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_LINE_NO1 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO2 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO3 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO4 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO5 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO6 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO7 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO8 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO9 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO10 VARCHAR(4);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_PICK_LABEL VARCHAR(7);
+DECLARE VARIABLE WK_LABEL_LENGTH INTEGER;
+DECLARE VARIABLE WK_LAST_LINE INTEGER;
+DECLARE VARIABLE WK_LEN_LINE_NO INTEGER;
+DECLARE VARIABLE WK_PICK_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_L_PICK_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_POSN INTEGER;
+DECLARE VARIABLE WK_LAST_LINE_NO INTEGER;
+DECLARE VARIABLE WK_ORDER_TYPE CHAR(2);
+DECLARE VARIABLE WK_PICK_STATUS CHAR(2);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GPLD') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            for multiple lines have
+            field 1 is the picking mode
+            field 2 is the warehouse id 
+            *field 3 is the retrieve status 
+            *field 4 is the order 
+            field 5 is the order date time 
+            field 6 is the supplier list flag
+            field 7 is the special mailout flag
+            field 8 is the order priority (maybe empty)
+            up to 10 lines
+            field 9 is the pick line no (maybe empty)
+            *field 10 is the product code (EAN)
+            *field 11 is the Extension (EAN Extension)
+            *field 12 is the quantity 
+         */
+         WK_ORDER_TYPE = 'SO';
+         WK_MODE = '';
+         WK_WH_ID = '';
+         WK_ORDER = '';
+         WK_ORDER_DATET = 'NOW';
+         WK_STATUS = '';
+         WK_SUPPLIERLIST = '';
+         WK_SPECIALMAIL = '';
+         WK_PRIORITY = '';
+         WK_LINE_NO1 = '';
+         WK_LINE_NO2 = '';
+         WK_LINE_NO3 = '';
+         WK_LINE_NO4 = '';
+         WK_LINE_NO5 = '';
+         WK_LINE_NO6 = '';
+         WK_LINE_NO7 = '';
+         WK_LINE_NO8 = '';
+         WK_LINE_NO9 = '';
+         WK_LINE_NO10 = '';
+         WK_PROD1 = 'NOPROD';
+         WK_PROD2 = '';
+         WK_PROD3 = '';
+         WK_PROD4 = '';
+         WK_PROD5 = '';
+         WK_PROD6 = '';
+         WK_PROD7 = '';
+         WK_PROD8 = '';
+         WK_PROD9 = '';
+         WK_PROD10 = '';
+         WK_QTY_X = '';
+         WK_QTY1 = 0;
+         WK_QTY2 = 0;
+         WK_QTY3 = 0;
+         WK_QTY4 = 0;
+         WK_QTY5 = 0;
+         WK_QTY6 = 0;
+         WK_QTY7 = 0;
+         WK_QTY8 = 0;
+         WK_QTY9 = 0;
+         WK_QTY10 = 0;
+         WK_EXTENSION1 = '';
+         WK_EXTENSION2 = '';
+         WK_EXTENSION3 = '';
+         WK_EXTENSION4 = '';
+         WK_EXTENSION5 = '';
+         WK_EXTENSION6 = '';
+         WK_EXTENSION7 = '';
+         WK_EXTENSION8 = '';
+         WK_EXTENSION9 = '';
+         WK_EXTENSION10 = '';
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'PickingMode') THEN
+            BEGIN
+               WK_MODE = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'WareHouseID') THEN
+            BEGIN
+               WK_WH_ID = WK_WORK_DATA;
+            END
+/*
+            //IF (WK_WORK_LABEL = 'PickingListDetailRetrieveStatus') THEN
+*/
+            IF (WK_WORK_LABEL = 'RetrieveStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'ContactInstanceID') THEN
+            BEGIN
+               WK_ORDER = WK_WORK_DATA;
+               WK_LAST_LINE_NO = 0;
+            END
+            IF (WK_WORK_LABEL = 'OrderDateTime') THEN
+            BEGIN
+               WK_ORDER_DATE = WK_WORK_DATA;
+               WK_POSN = POS(WK_ORDER_DATE, 'T', 0, 1);
+               WK_ORDER_DATE2 = SUBSTR(WK_ORDER_DATE, 1, WK_POSN) || ' ' ||
+               SUBSTR(WK_ORDER_DATE, WK_POSN + 2, LEN(WK_ORDER_DATE));
+               WK_ORDER_DATET = CAST(WK_ORDER_DATE2 AS TIMESTAMP);
+
+            END
+            IF (WK_WORK_LABEL = 'SupplierListFlag') THEN
+            BEGIN
+               WK_SUPPLIERLIST = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'SpecialMailoutFlag') THEN
+            BEGIN
+               WK_SPECIALMAIL = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'OrderPriority') THEN
+            BEGIN
+               WK_PRIORITY = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'PickLineNumber') THEN
+            BEGIN
+               WK_LAST_LINE_NO = WK_LAST_LINE_NO + 1;
+               IF (WK_LAST_LINE_NO = 1) THEN
+                  WK_LINE_NO1 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 2) THEN
+                  WK_LINE_NO2 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 3) THEN
+                  WK_LINE_NO3 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 4) THEN
+                  WK_LINE_NO4 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 5) THEN
+                  WK_LINE_NO5 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 6) THEN
+                  WK_LINE_NO6 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 7) THEN
+                  WK_LINE_NO7 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 8) THEN
+                  WK_LINE_NO8 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 9) THEN
+                  WK_LINE_NO9 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 10) THEN
+                  WK_LINE_NO10 = WK_WORK_DATA;
+            END
+
+            IF (WK_WORK_LABEL = 'EANNumber') THEN
+            BEGIN
+               IF (WK_LAST_LINE_NO = 1) THEN
+                  WK_PROD1 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 2) THEN
+                  WK_PROD2 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 3) THEN
+                  WK_PROD3 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 4) THEN
+                  WK_PROD4 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 5) THEN
+                  WK_PROD5 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 6) THEN
+                  WK_PROD6 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 7) THEN
+                  WK_PROD7 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 8) THEN
+                  WK_PROD8 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 9) THEN
+                  WK_PROD9 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 10) THEN
+                  WK_PROD10 = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'Quantity') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               IF (WK_LAST_LINE_NO = 1) THEN
+                  WK_QTY1 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 2) THEN
+                  WK_QTY2 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 3) THEN
+                  WK_QTY3 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 4) THEN
+                  WK_QTY4 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 5) THEN
+                  WK_QTY5 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 6) THEN
+                  WK_QTY6 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 7) THEN
+                  WK_QTY7 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 8) THEN
+                  WK_QTY8 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 9) THEN
+                  WK_QTY9 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 10) THEN
+                  WK_QTY10 = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'EANExtension') THEN
+            BEGIN
+               IF (WK_LAST_LINE_NO = 1) THEN
+                  WK_EXTENSION1 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 2) THEN
+                  WK_EXTENSION2 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 3) THEN
+                  WK_EXTENSION3 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 4) THEN
+                  WK_EXTENSION4 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 5) THEN
+                  WK_EXTENSION5 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 6) THEN
+                  WK_EXTENSION6 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 7) THEN
+                  WK_EXTENSION7 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 8) THEN
+                  WK_EXTENSION8 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 9) THEN
+                  WK_EXTENSION9 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 10) THEN
+                  WK_EXTENSION10 = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         IF (WK_SUPPLIERLIST = 'true') THEN
+         BEGIN
+            WK_SUPPLIERLIST = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_SUPPLIERLIST = 'F';
+         END
+         IF (WK_SPECIALMAIL = 'true') THEN
+         BEGIN
+            WK_SPECIALMAIL = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_SPECIALMAIL = 'F';
+         END
+         IF (WK_PRIORITY = '') THEN
+         BEGIN
+            SELECT DEFAULT_PICK_PRIORITY 
+            FROM CONTROL
+            INTO :WK_PICK_PRIORITY;
+         END
+         ELSE
+         BEGIN
+            WK_PICK_PRIORITY = CAST(WK_PRIORITY AS INTEGER);
+         END
+/*====================================================================*/
+         /* does order exist */
+         WK_FOUND = 0;
+         SELECT 1, PICK_RETRIEVE_STATUS, PICK_STATUS
+         FROM PICK_ORDER
+         WHERE PICK_ORDER = :WK_ORDER
+         INTO :WK_FOUND, :WK_ORDER_STATUS, :WK_PICK_STATUS;
+         IF (WK_ORDER_STATUS IS NULL) THEN
+         BEGIN
+            WK_ORDER_STATUS = 'F';
+         END
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            IF (WK_STATUS = 'T') THEN
+            BEGIN
+               /* no order  */
+               INSERT INTO PICK_ORDER(PICK_ORDER, 
+                  PICK_STATUS, 
+                  PICK_RETRIEVE_STATUS,
+                  PICK_PRIORITY,
+                  SUPPLIER_LIST,
+                  SPECIAL_INSTRUCTIONS,
+                  CREATE_DATE,
+                  CREATED_BY,
+                  PICK_DUE_DATE,
+                  PICK_ORDER_TYPE,
+                  WH_ID,
+                  UPDATE_ID)
+               VALUES (:WK_ORDER, 
+                  'DA', 
+                  :WK_STATUS,
+                  :WK_PICK_PRIORITY,
+                  :WK_SUPPLIERLIST,
+                  :WK_SPECIALMAIL,
+                  NEW.TRN_DATE,
+                  NEW.PERSON_ID,
+                  :WK_ORDER_DATE2,
+                  :WK_ORDER_TYPE,
+                  :WK_WH_ID,
+                  NEW.MESSAGE_ID );
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+            ELSE
+            BEGIN
+               INSERT INTO PICK_ORDER(PICK_ORDER, PICK_STATUS, PICK_RETRIEVE_STATUS, PICK_ORDER_TYPE, CREATE_DATE, CREATED_BY, UPDATE_ID)
+               VALUES (:WK_ORDER, 'DA', :WK_STATUS ,:WK_ORDER_TYPE, NEW.TRN_DATE, NEW.PERSON_ID , NEW.MESSAGE_ID );
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+         END
+         ELSE
+         BEGIN
+            IF (WK_STATUS = 'F') THEN
+            BEGIN
+               UPDATE PICK_ORDER
+               SET PICK_STATUS='DA',
+                   PICK_RETRIEVE_STATUS = :WK_STATUS,
+                   UPDATE_ID = NEW.MESSAGE_ID
+               WHERE PICK_ORDER = :WK_ORDER;
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+            ELSE
+            BEGIN
+               IF ( (WK_PICK_STATUS IS NULL)) THEN
+               BEGIN
+                  UPDATE PICK_ORDER
+                  SET PICK_STATUS='DA',
+                      PICK_RETRIEVE_STATUS = :WK_STATUS,
+                      WH_ID = :WK_WH_ID,
+                      PICK_PRIORITY = :WK_PICK_PRIORITY,
+                      SUPPLIER_LIST = :WK_SUPPLIERLIST,
+                      SPECIAL_INSTRUCTIONS = :WK_SPECIALMAIL,
+                      PICK_DUE_DATE = :WK_ORDER_DATE2,
+                      PICK_ORDER_TYPE = :WK_ORDER_TYPE,
+                      UPDATE_ID = NEW.MESSAGE_ID
+                  WHERE PICK_ORDER = :WK_ORDER;
+               END
+               ELSE
+               BEGIN
+                  UPDATE PICK_ORDER
+                  SET PICK_RETRIEVE_STATUS = :WK_STATUS,
+                      WH_ID = :WK_WH_ID,
+                      PICK_PRIORITY = :WK_PICK_PRIORITY,
+                      SUPPLIER_LIST = :WK_SUPPLIERLIST,
+                      SPECIAL_INSTRUCTIONS = :WK_SPECIALMAIL,
+                      PICK_DUE_DATE = :WK_ORDER_DATE2,
+                      PICK_ORDER_TYPE = :WK_ORDER_TYPE,
+                      UPDATE_ID = NEW.MESSAGE_ID
+                  WHERE PICK_ORDER = :WK_ORDER;
+               END
+            END
+         END
+
+/*====================================================================*/
+         /* do line stuff */
+         INSERT INTO LOG(DESCRIPTION) VALUES('about to add prod line');
+         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_PROD1);
+         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_PROD2);
+         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_PROD3);
+         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_PROD4);
+         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_PROD5);
+         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_PROD6);
+         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_PROD7);
+         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_PROD8);
+         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_PROD9);
+         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_PROD10);
+         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_STATUS);
+         IF (WK_PROD1 = '') THEN
+         BEGIN
+            WK_PROD1 = 'NOPROD';
+            IF (WK_QTY1 = 0) THEN
+            BEGIN
+               WK_QTY1 = 1;
+            END
+         END
+         IF (WK_PROD1 > '') THEN
+         BEGIN
+            INSERT INTO LOG(DESCRIPTION) VALUES('add prod line');
+            INSERT INTO LOG(DESCRIPTION) VALUES(:WK_PROD1);
+            INSERT INTO LOG(DESCRIPTION) VALUES(:WK_STATUS);
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD1 ,
+               WK_EXTENSION1 ,
+               WK_LINE_NO1 ,
+               WK_QTY1 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD2 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD2 ,
+               WK_EXTENSION2 ,
+               WK_LINE_NO2 ,
+               WK_QTY2 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD3 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD3 ,
+               WK_EXTENSION3 ,
+               WK_LINE_NO3 ,
+               WK_QTY3 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD4 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD4 ,
+               WK_EXTENSION4 ,
+               WK_LINE_NO4 ,
+               WK_QTY4 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD5 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD5 ,
+               WK_EXTENSION5 ,
+               WK_LINE_NO5 ,
+               WK_QTY5 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD6 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD6 ,
+               WK_EXTENSION6 ,
+               WK_LINE_NO6 ,
+               WK_QTY6 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD7 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD7 ,
+               WK_EXTENSION7 ,
+               WK_LINE_NO7 ,
+               WK_QTY7 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD8 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD8 ,
+               WK_EXTENSION8 ,
+               WK_LINE_NO8 ,
+               WK_QTY8 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD9 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD9 ,
+               WK_EXTENSION9 ,
+               WK_LINE_NO9 ,
+               WK_QTY9 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD10 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD10 ,
+               WK_EXTENSION10 ,
+               WK_LINE_NO10 ,
+               WK_QTY10 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+/*====================================================================*/
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 

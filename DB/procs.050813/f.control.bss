@@ -1,0 +1,2 @@
+update control set default_issue_from_location = 'FHRC010000';
+

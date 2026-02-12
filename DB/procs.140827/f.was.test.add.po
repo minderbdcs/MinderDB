@@ -1,0 +1,90 @@
+/*
+procedure import_pick_order_item_temp
+Parameters:
+H_ORDER_TYPE                      INPUT VARCHAR(2)
+H_PICK_ORDER_SUB_TYPE             INPUT VARCHAR(2)
+H_ORDER_NO                        INPUT VARCHAR(15)
+H_PERSON_ID                       INPUT VARCHAR(10)
+H_COMPANY_ID                      INPUT VARCHAR(10)
+H_ORDER_DUE_DATE                  INPUT TIMESTAMP
+H_SHIP_VIA                        INPUT VARCHAR(10)
+H_SPECIAL_INSTRUCTIONS1           INPUT VARCHAR(8192)
+H_CONTACT_NAME                    INPUT VARCHAR(50)
+H_PICK_STATUS                     INPUT VARCHAR(2)
+H_WH_ID                           INPUT VARCHAR(2)
+H_PARTIAL_PICK_ALLOWED            INPUT VARCHAR(1)
+H_PICK_PRIORITY                   INPUT SMALLINT
+H_CREATE_DATE                     INPUT TIMESTAMP
+H_OTHER1                          INPUT VARCHAR(50)
+H_OTHER2                          INPUT VARCHAR(50)
+H_OTHER3                          INPUT VARCHAR(50)
+H_OTHER4                          INPUT VARCHAR(50)
+H_OTHER5                          INPUT VARCHAR(50)
+H_OTHER6                          INPUT VARCHAR(50)
+H_OTHER7                          INPUT VARCHAR(50)
+H_OTHER8                          INPUT VARCHAR(50)
+H_OTHER9                          INPUT VARCHAR(255)
+H_SPECIAL_INSTRUCTIONS2           INPUT VARCHAR(255)
+P_FIRST_NAME                      INPUT VARCHAR(50)
+P_PERSON_TYPE                     INPUT VARCHAR(2)
+P_LAST_NAME                       INPUT VARCHAR(50)
+P_ADDRESS_LINE1                   INPUT VARCHAR(100)
+P_ADDRESS_LINE2                   INPUT VARCHAR(50)
+P_ADDRESS_LINE3                   INPUT VARCHAR(50)
+P_ADDRESS_LINE4                   INPUT VARCHAR(50)
+P_CITY                            INPUT VARCHAR(25)
+P_STATE                           INPUT VARCHAR(15)
+P_POST_CODE                       INPUT VARCHAR(10)
+P_COUNTRY                         INPUT VARCHAR(25)
+P_AUST_POST_4STATE_ID             INPUT VARCHAR(255)
+L_PICK_ORDER_LINE_NO              INPUT VARCHAR(4)
+L_PROD_ID                         INPUT VARCHAR(30)
+L_PICK_ORDER_QTY                  INPUT INTEGER
+L_PICK_LINE_DUE_DATE              INPUT TIMESTAMP
+L_EARLIEST_DATE                   INPUT TIMESTAMP
+L_PICK_LOCATION                   INPUT VARCHAR(10)
+*/
+execute procedure import_pick_order_item_temp(
+'TR' ,
+'ID' ,
+'S0000IDT',
+NULL,
+'REBOOT',
+'2014-09-10',
+'TOLL',
+'Import TR and ID',
+'Fred',
+'DA',
+'RP',
+NULL,
+5,
+'TODAY',
+'Test',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'Freddy',
+'CA',
+'Treeman',
+'132 Russel Street',
+'Waterloo',
+'',
+'',
+'TAWOMBA',
+'NSW',
+'2666',
+'AU',
+'',
+'0001',
+'EQC4556',
+'20',
+NULL,
+NULL, 
+NULL
+);

@@ -1,0 +1,1 @@
+alter table pack_customer add cancel_after_days archive_days;

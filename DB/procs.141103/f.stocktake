@@ -1,0 +1,1 @@
+alter table stocktake add ST_EXPORTED_DATE EXPORT_DATE;

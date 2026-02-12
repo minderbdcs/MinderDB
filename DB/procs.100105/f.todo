@@ -1,0 +1,20 @@
+=============================================================
+want a table for tabs in sys_screen
+	with title
+	sequence
+	status
+	active colour
+	inactive colour
+=============================================================
+then put a link to that table in sys_screen_var
+
+also adjust sys_screen_var input method to be varchar 255
+
+
+==============================================================
+adjust table prod_type so that the code_two field becomes varchar 10
+=============================================================
+adjust prod_profile so that the prod_type is varchar(10)
+
+then adjust product detail import for bhp. That generates the next prod_type when none is supplied.
+=============================================================

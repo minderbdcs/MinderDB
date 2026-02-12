@@ -1,0 +1,1 @@
+alter domain order_id type varchar(25);

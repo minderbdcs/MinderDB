@@ -1,0 +1,183 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_PKUB FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 156 
+AS
+/* undo the PKIL to despatch location so that its just PKILed to a temporary location   */
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_DEVICE_FROM CHAR(2);
+DECLARE VARIABLE WK_DEVICE_TO CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_ORDER VARCHAR(30);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_OVER_SIZED VARCHAR(10);
+DECLARE VARIABLE WK_MYREF VARCHAR(40);
+DECLARE VARIABLE WK_CO_PICK_STATUS VARCHAR(30);
+DECLARE VARIABLE WK_CO_WARN_PRIORITY INTEGER;
+DECLARE VARIABLE WK_REFERENCE VARCHAR(255);
+DECLARE VARIABLE WK_ERROR_TEXT VARCHAR(255);
+DECLARE VARIABLE WK_PL_LOCN_ID     VARCHAR(10);
+DECLARE VARIABLE WK_PL_WH_ID       VARCHAR(2);
+DECLARE VARIABLE WK_PID_SSN_ID     VARCHAR(20);
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKUB') THEN
+  BEGIN
+     WK_USER = NEW.PERSON_ID;
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DEVICE_FROM = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+
+     IF (NEW.TRN_CODE = 'B') THEN
+     BEGIN
+        /* take order back to PL status  
+           but use the passed location for the block */
+        WK_ORDER = NEW.OBJECT;
+        /* get an empty block */
+        /* for the pick items in a DS status
+           update them to DS status and despatch_location the block location
+           for the list of issns that arei in the pick_item_detail that are  DS status and qty picked > 0
+                update the issns to be in the new block and PL status
+                update the pick_item_detail to have PL status and despatch_location the new block
+        */
+        /* need to use a free location  and put into the wk-pl_locn_id */
+        WK_PL_WH_ID = NEW.WH_ID;
+        WK_PL_LOCN_ID = NEW.LOCN_ID;
+        WK_MYREF =  'BDCS|' || :WK_DEVICE || '|add location for despatch ';
+         /* do a poal for it */
+           EXECUTE PROCEDURE ADD_TRAN(
+                    :WK_PL_WH_ID,
+                    :WK_PL_LOCN_ID,
+                    :WK_ORDER,
+                    'POAL',
+                    'O',
+                    'NOW',
+                    :WK_MYREF ,
+                    0,
+                    'F',
+                    '',
+                    'MASTER',
+                    0,
+                    'T1',
+                    'SSSSSSSSS',
+                    'BDCS',
+                    :WK_DEVICE);
+        UPDATE PICK_ITEM
+           SET PICK_LINE_STATUS = 'PL',
+               DESPATCH_LOCATION = :WK_PL_LOCN_ID
+           WHERE PICK_ORDER = :WK_ORDER
+           AND PICK_LINE_STATUS IN ( 'DS', 'PL');
+        FOR SELECT  SSN_ID
+            FROM PICK_ITEM_DETAIL
+            WHERE PICK_ORDER = :WK_ORDER
+            AND PICK_DETAIL_STATUS IN ( 'DS', 'PL')
+            AND QTY_PICKED > 0
+        INTO :WK_PID_SSN_ID
+        DO
+        BEGIN
+           UPDATE ISSN 
+           SET ISSN_STATUS = 'PL',
+               LOCN_ID  = :WK_PL_LOCN_ID
+           WHERE SSN_ID = :WK_PID_SSN_ID;
+        END
+        UPDATE PICK_ITEM_DETAIL
+           SET PICK_DETAIL_STATUS = 'PL',
+               DESPATCH_LOCATION = :WK_PL_LOCN_ID
+           WHERE PICK_ORDER = :WK_ORDER
+           AND PICK_DETAIL_STATUS = 'DS'
+           AND QTY_PICKED > 0;
+        
+        WK_ERROR_TEXT = 'Processed successfully using ' || COALESCE(WK_PL_WH_ID,'') || ' ' || COALESCE(WK_PL_LOCN_ID,'NONE');
+        /* EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully'); */
+        EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T',WK_ERROR_TEXT);
+     END /* end of B code */
+     IF (NEW.TRN_CODE = 'O') THEN
+     BEGIN
+        /* take order back to PL status  */
+        WK_ORDER = NEW.OBJECT;
+        /* get an empty block */
+        /* for the pick items in a DS status
+           update them to DS status and despatch_location the block location
+           for the list of issns that arei in the pick_item_detail that are  DS status and qty picked > 0
+                update the issns to be in the new block and PL status
+                update the pick_item_detail to have PL status and despatch_location the new block
+        */
+        /* need to use a free location  and put into the wk-pl_locn_id */
+        SELECT FIRST 1  L1.WH_ID, L1.LOCN_ID    
+        FROM  LOCATION L1   
+        LEFT OUTER JOIN PICK_LOCATION PL ON L1.WH_ID = PL.WH_ID AND L1.LOCN_ID = PL.LOCN_ID AND PL.PICK_LOCATION_STATUS IN ('OP','DS')   
+        WHERE L1.MOVEABLE_LOCN = 'T' 
+        AND   PL.RECORD_ID IS NULL 
+        AND ( NOT EXISTS (SELECT ISSN.SSN_ID FROM ISSN WHERE ISSN.WH_ID = L1.WH_ID AND ISSN.LOCN_ID = L1.LOCN_ID AND ISSN.CURRENT_QTY > 0 ) )
+        ORDER  BY L1.WH_ID, L1.LOCN_ID DESC 
+        INTO :WK_PL_WH_ID, :WK_PL_LOCN_ID;
+        WK_MYREF =  'BDCS|' || :WK_DEVICE || '|add location for despatch ';
+         /* do a poal for it */
+           EXECUTE PROCEDURE ADD_TRAN(
+                    :WK_PL_WH_ID,
+                    :WK_PL_LOCN_ID,
+                    :WK_ORDER,
+                    'POAL',
+                    'O',
+                    'NOW',
+                    :WK_MYREF ,
+                    0,
+                    'F',
+                    '',
+                    'MASTER',
+                    0,
+                    'T1',
+                    'SSSSSSSSS',
+                    'BDCS',
+                    :WK_DEVICE);
+        UPDATE PICK_ITEM
+           SET PICK_LINE_STATUS = 'PL',
+               DESPATCH_LOCATION = :WK_PL_LOCN_ID
+           WHERE PICK_ORDER = :WK_ORDER
+           AND PICK_LINE_STATUS IN ( 'DS', 'PL');
+        FOR SELECT  SSN_ID
+            FROM PICK_ITEM_DETAIL
+            WHERE PICK_ORDER = :WK_ORDER
+            AND PICK_DETAIL_STATUS IN ( 'DS', 'PL')
+            AND QTY_PICKED > 0
+        INTO :WK_PID_SSN_ID
+        DO
+        BEGIN
+           UPDATE ISSN 
+           SET ISSN_STATUS = 'PL',
+               LOCN_ID  = :WK_PL_LOCN_ID
+           WHERE SSN_ID = :WK_PID_SSN_ID;
+        END
+        UPDATE PICK_ITEM_DETAIL
+           SET PICK_DETAIL_STATUS = 'PL',
+               DESPATCH_LOCATION = :WK_PL_LOCN_ID
+           WHERE PICK_ORDER = :WK_ORDER
+           AND PICK_DETAIL_STATUS = 'DS'
+           AND QTY_PICKED > 0;
+        
+        UPDATE TRANSACTIONS SET WH_ID = :WK_PL_WH_ID, LOCN_ID = :WK_PL_LOCN_ID 
+        WHERE RECORD_ID = :WK_RECORD;
+        WK_ERROR_TEXT = 'Processed successfully using ' || COALESCE(WK_PL_WH_ID,'') || ' ' || COALESCE(WK_PL_LOCN_ID,'NONE');
+        /* EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully'); */
+        EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T',WK_ERROR_TEXT);
+     END /* end of O code */
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+  END /* end of PKUB */
+ END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,4 @@
+CREATE DOMAIN FMS_CREATE_DATE TIMESTAMP; 
+alter table pick_order    add CREATE_DATE FMS_CREATE_DATE;
+alter table pick_despatch add CREATE_DATE FMS_CREATE_DATE;
+alter table pack_id add CREATE_DATE FMS_CREATE_DATE;

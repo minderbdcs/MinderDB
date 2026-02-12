@@ -1,0 +1,10 @@
+alter table query_layout add save_desc varchar(255);
+update query_layout set save_desc=description;
+commit;
+alter table query_layout drop description;
+commit;
+alter table query_layout add description varchar(255);
+update query_layout set description=save_desc;
+commit;
+alter table query_layout drop save_desc;
+commit;

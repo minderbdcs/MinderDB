@@ -1,0 +1,132 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^;
+
+
+ALTER PROCEDURE ORDER_ITEM_STATUS_UPDATE 
+(
+  PICK_LABEL_NUMBER VARCHAR(40),
+  STATUS_CODE CHAR(3)
+)
+RETURNS
+(
+  ERRORTEXT VARCHAR(80)
+)
+AS
+BEGIN
+   ERRORTEXT = '';
+   IF (STATUS_CODE = 'CN') THEN
+   BEGIN
+      UPDATE PICK_ITEM 
+      SET DEVICE_ID = 'XC'
+      WHERE PICK_LABEL_NO = :PICK_LABEL_NUMBER;
+      UPDATE PICK_ITEM_DETAIL
+      SET DEVICE_ID = 'XC'
+      WHERE PICK_LABEL_NO = :PICK_LABEL_NUMBER
+      AND DEVICE_ID <> 'XX' 
+      AND DEVICE_ID = UPPER(DEVICE_ID);
+
+      EXECUTE PROCEDURE ADD_TRAN(
+         'XC',
+         '',
+         '',
+         'PKCA',
+         'C',
+         'NOW',
+         '',
+         0,
+         'F',
+         '',
+         'MASTER',
+         0,
+         :PICK_LABEL_NUMBER,
+         'SSSSSSSSS',
+         'BDCS',
+         'XC');
+   END
+   ELSE
+   BEGIN
+      UPDATE PICK_ITEM SET PICK_LINE_STATUS = :STATUS_CODE
+      WHERE PICK_LABEL_NO = :PICK_LABEL_NUMBER;
+   END
+END
+ ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^;
+
+
+
+ALTER PROCEDURE ORDER_STATUS_UPDATE 
+(
+  ORDER_NO VARCHAR(40),
+  STATUS_CODE CHAR(3)
+)
+RETURNS
+(
+  ERRORTEXT VARCHAR(80)
+)
+AS
+DECLARE VARIABLE WK_CURRENT_STATUS CHAR(2);
+BEGIN
+   ERRORTEXT = '';
+   SELECT PICK_STATUS 
+   FROM PICK_ORDER 
+   WHERE PICK_ORDER = :ORDER_NO
+   INTO :WK_CURRENT_STATUS;
+   IF ((STATUS_CODE = 'HD') OR
+       (STATUS_CODE = 'OP') OR 
+       (STATUS_CODE = 'DA') OR 
+       (STATUS_CODE = 'CF') OR 
+       (STATUS_CODE = 'DX') OR 
+       (STATUS_CODE = 'DI') OR 
+       (STATUS_CODE = 'UC')) THEN 
+   BEGIN
+      UPDATE PICK_ORDER SET PICK_STATUS = :STATUS_CODE
+      WHERE PICK_ORDER = :ORDER_NO;
+   END
+   ELSE
+   BEGIN
+      IF (STATUS_CODE = 'CN') THEN
+      BEGIN
+         UPDATE PICK_ITEM 
+         SET DEVICE_ID = 'XC'
+         WHERE PICK_ORDER = :ORDER_NO;
+         UPDATE PICK_ITEM_DETAIL
+         SET DEVICE_ID = 'XC'
+         WHERE PICK_LABEL_NO IN (SELECT PICK_LABEL_NO FROM PICK_ITEM WHERE PICK_ORDER = :ORDER_NO)
+         AND DEVICE_ID <> 'XX' 
+         AND DEVICE_ID = UPPER(DEVICE_ID);
+
+         EXECUTE PROCEDURE ADD_TRAN(
+            'XC',
+            '',
+            '',
+            'PKCA',
+            'C',
+            'NOW',
+            '',
+            0,
+            'F',
+            '',
+            'MASTER',
+            0,
+            '',
+            'SSSSSSSSS',
+            'BDCS',
+            'XC');
+      END
+      ELSE
+      BEGIN
+         ERRORTEXT = 'Cannot Change Order to ' || STATUS_CODE || ' Status';
+      END
+   END
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

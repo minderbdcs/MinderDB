@@ -1,0 +1,176 @@
+
+ALTER PROCEDURE PC_AUOB (RECORD_ID INTEGER,
+WH_ID CHAR(2) CHARACTER SET NONE,
+LOCN_ID VARCHAR(10) CHARACTER SET NONE,
+OBJECT VARCHAR(30) CHARACTER SET NONE,
+TRN_TYPE VARCHAR(4) CHARACTER SET NONE,
+TRN_CODE CHAR(1) CHARACTER SET NONE,
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(40) CHARACTER SET NONE,
+QTY INTEGER,
+PERSON_ID VARCHAR(10) CHARACTER SET NONE,
+DEVICE_ID CHAR(2) CHARACTER SET NONE,
+INSTANCE_ID VARCHAR(10) CHARACTER SET NONE)
+AS 
+                             
+  DECLARE VARIABLE strWH_ID CHAR(2); 
+  DECLARE VARIABLE strINSTANCE VARCHAR(10); 
+  DECLARE VARIABLE strSSN VARCHAR(20);  
+  DECLARE VARIABLE strLOCN_ID VARCHAR(10);  
+  DECLARE VARIABLE strGRN VARCHAR(40);  
+  DECLARE VARIABLE strCurrentGRN VARCHAR(40);  
+  DECLARE VARIABLE strNewGRN VARCHAR(40);  
+  DECLARE VARIABLE strAUDIT_DESC VARCHAR(40); 
+  DECLARE VARIABLE REC_ID INTEGER;    
+  DECLARE VARIABLE LOCN_NAME VARCHAR(50); 
+  DECLARE VARIABLE strLOCN_exists INTEGER;  
+  DECLARE VARIABLE Currentqty INTEGER;  
+  DECLARE VARIABLE diff_qty INTEGER;  
+  
+BEGIN
+    strWH_ID = "";
+    strINSTANCE = "";
+    strSSN = "";
+    strWH_ID = "";
+    strLOCN_ID = "";   
+    strGRN = "";
+    strAUDIT_DESC = "";  
+
+    /* Check trasaction code */
+    IF (:TRN_CODE = 'P') THEN
+    BEGIN
+       /* Update transactions table */               
+       EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid code');
+       EXIT;
+    END 
+
+    /* Assign GRN */
+    IF (:TRN_TYPE = 'NIID') THEN
+    BEGIN
+       strGRN = :REFERENCE;
+    END
+    
+    strLOCN_exists = 0;
+    SELECT 1 FROM LOCATION 
+    WHERE WH_ID = :WH_ID AND LOCN_ID = :LOCN_ID 
+    INTO :strLOCN_exists;
+    IF (strLOCN_exists = 0) THEN /* Location not found */
+    BEGIN
+        LOCN_NAME = LOCN_ID || :TRN_DATE;
+        /* Add new Location record */
+        INSERT INTO LOCATION (LOCN_ID, WH_ID, LOCN_NAME , LAST_UPDATE_DATE, LAST_UPDATE_BY )
+        VALUES (:LOCN_ID, :WH_ID, :LOCN_NAME, :TRN_DATE, :PERSON_ID);
+    END
+
+    /* Check if warehouse exists */
+    SELECT WH_ID, INSTANCE_ID 
+    FROM WAREHOUSE
+    WHERE WH_ID = :WH_ID
+    INTO :strWH_ID, :strINSTANCE;
+
+    /* Check warehouse*/
+    IF (strWH_ID <> '') THEN
+    BEGIN
+          /* Check instance */
+          IF (strINSTANCE = :INSTANCE_ID) THEN  
+          BEGIN
+                /* Check ObjectLocation */
+  /* please check issn first */
+  /* since it may not be in ssn table then update
+  original_ssn */
+  SELECT SD.ORIGINAL_SSN, SD.WH_ID, SD.LOCN_ID, SN.GRN, SN.CURRENT_QTY
+  FROM ISSN SD JOIN SSN SN ON SN.SSN_ID = SD.ORIGINAL_SSN
+                WHERE SD.SSN_ID = :OBJECT
+                INTO :strSSN, :strWH_ID, :strLOCN_ID, :strCurrentGRN, Currentqty;
+                
+                /* Check SSN */
+                IF (strSSN = "") THEN
+                BEGIN
+                /* Object not found */
+                       /* Add SSN */
+                       INSERT INTO SSN (SSN_ID, WH_ID, LOCN_ID, INTO_DATE, AUDITED, GRN, AUDIT_DATE, AUDITED_QTY, CURRENT_QTY)
+                       VALUES (:OBJECT, :WH_ID, :LOCN_ID, :TRN_DATE, 'N', :strGRN, :TRN_DATE, :QTY, :QTY);
+                       INSERT INTO ISSN (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, CURRENT_QTY, AUDITED)
+                       VALUES (:OBJECT, :OBJECT, :WH_ID, :LOCN_ID, :QTY, 'N');
+
+                       strAUDIT_DESC = "New object record created during audit";
+                       strSSN = OBJECT;
+                       strCurrentGRN = strGRN;
+                END
+                ELSE
+                BEGIN
+                      IF (strGRN = "") THEN
+                      BEGIN
+                            strNewGRN = strCurrentGRN;
+                      END
+                      ELSE
+                      BEGIN
+                            strNewGRN = strGRN;
+                      END
+                      diff_qty = QTY - Currentqty;
+                      IF ((strWH_ID <> :WH_ID) OR (strLOCN_ID <> :LOCN_ID)) THEN
+                      BEGIN          
+                            /* item found in different location, update object relocated */
+                            UPDATE ISSN
+                            SET PREV_PREV_WH_ID = PREV_WH_ID, 
+                                PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                                PREV_WH_ID = WH_ID,
+                                PREV_LOCN_ID = LOCN_ID,
+                                WH_ID = :WH_ID, 
+                                LOCN_ID = :LOCN_ID, 
+                                INTO_DATE = :TRN_DATE,
+                                CURRENT_QTY = :QTY,
+                                AUDITED = 'C'
+                            WHERE SSN_ID = :OBJECT;
+                            IF (OBJECT = strSSN) THEN
+                            BEGIN
+                                  UPDATE SSN
+                                  SET WH_ID = :WH_ID, LOCN_ID = :LOCN_ID, INTO_DATE = :TRN_DATE,
+                                      AUDITED = 'C', GRN = :strNewGRN, AUDIT_DATE = :TRN_DATE, AUDITED_QTY = :QTY, CURRENT_QTY = CURRENT_QTY + :diff_qty
+                                  WHERE SSN_ID = :strSSN;
+                            END
+                            ELSE
+                            BEGIN
+                                  UPDATE SSN
+                                  SET CURRENT_QTY = CURRENT_QTY + :diff_qty  
+                                  WHERE SSN_ID = :strSSN;
+                            END
+                            
+                            strAUDIT_DESC = "Item found in different location";  
+                      END
+                      ELSE
+                      BEGIN                           
+                            /* object found in expected location, upload object found */
+                            UPDATE ISSN
+                            SET INTO_DATE = :TRN_DATE,
+                                CURRENT_QTY = :QTY,
+                                AUDITED = 'F'
+                            WHERE SSN_ID = :OBJECT;
+                            IF (OBJECT = strSSN) THEN
+                            BEGIN
+                                  UPDATE SSN
+                                  SET INTO_DATE = :TRN_DATE, AUDITED = 'F',  
+                                      GRN = :strNewGRN, AUDIT_DATE = :TRN_DATE, AUDITED_QTY = :QTY, CURRENT_QTY = CURRENT_QTY + :diff_qty
+                                  WHERE SSN_ID = :strSSN;
+                            END
+                            ELSE
+                            BEGIN
+                                  UPDATE SSN
+                                  SET CURRENT_QTY = CURRENT_QTY + :diff_qty
+                                  WHERE SSN_ID = :strSSN;
+                            END
+
+                            strAUDIT_DESC = "Item found in correct location";
+                      END
+                END
+
+               /* Update transactions table */               
+               EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully'); 
+               
+               /* Add transaction history */                                                                                     
+               EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :strSSN, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY,  :PERSON_ID, :DEVICE_ID);
+          END
+    END
+END ^
+

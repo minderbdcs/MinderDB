@@ -1,0 +1,17 @@
+/*
+alter table generic drop ssn_type ;
+*/
+alter table generic add ssn_type ssn_type ;
+update generic set generic.ssn_type = (select first 1 ssn_type.code from ssn_type ) where generic.ssn_type is null;
+
+/*
+alter table generic drop constraint integ_16;
+alter table generic add constraint generic_pkey primary key (ssn_type, code);
+*/
+
+/*
+alter table generic drop constraint generic_pkey;
+alter table generic add constraint integ_16 primary key (code);
+*/
+create index generic_type_gen_idx on generic(ssn_type, code);
+

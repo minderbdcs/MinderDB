@@ -1,0 +1,22 @@
+1	in import of kit_product want to populate kit
+
+
+4	create connotes via carrier table
+	add fields for ranges of nos
+	generator to use
+	base of no to generate
+	prefix and suffix
+	which param record does this use
+
+Done
+
+5	add ssv_hint to sys_screen_var
+
+3	import of pick orders populate flag to stop populating person table
+insert into options(group_code,code,description) values('REP_CODE','PICK_ORDER_ITEM_TEMP.P_NO_PERSON_UPD','T');
+
+2	in import of pick_item  for kitted items
+	have a record in options or control to
+	control whether to create lines for the kits parts
+	(and change the original status to DX)
+insert into options(group_code,code,description) values('REP_CODE','PICK_ORDER_ITEM_TEMP.L_KIT_PARTS' ,'T');

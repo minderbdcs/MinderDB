@@ -1,0 +1,12 @@
+alter table param drop constraint integ_25;
+
+alter table param add data_brand brand not null;
+
+update param set data_brand = 'DEFAULT' where data_brand is null;
+
+alter table param add data_model model not null;
+update param set data_model = 'DEFAULT' where data_model is null;
+
+commit;
+
+alter table param  add constraint param_primary primary key(data_id, data_brand, data_model);

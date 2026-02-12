@@ -1,0 +1,10 @@
+drop index sys_label_var_name_idx;
+commit;
+
+alter table sys_label_var add slv_sequence sequence_no;
+alter table sys_label_var add sl_name code not null;
+update sys_label_var set sl_name = (select sl.sl_name from sys_label sl where sl.record_id = sys_label_var.sl_record_id);
+
+ alter table sys_label_var drop sl_record_id; 
+
+CREATE INDEX SYS_LABEL_VAR_NAME_IDX ON SYS_LABEL_VAR (SL_NAME, SLV_SEQUENCE, SLV_NAME);

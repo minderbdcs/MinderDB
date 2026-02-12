@@ -1,0 +1,9 @@
+
+update or insert  into  brand(code, description) values('UNKNOWN','Unknown');
+update ssn set brand = upper(brand) where upper(brand) <> brand;
+/* update ssn set brand = 'UNKNOWN'  where coalesce(brand,'') = ''; */
+insert into brand (code,description)
+select s1.brand, s1.brand as s1_desc from ssn s1 left outer join brand s2 on s1.brand = s2.code
+where s2.code is null and (s1.brand is not null)
+group by s1.brand
+;

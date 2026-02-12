@@ -1,0 +1,4 @@
+alter table pick_despatch add SENT_FROM_EMAIL EMAIL;
+alter table pick_despatch add SENT_FROM_PHONE_NO PHONE_NO;
+alter table pick_despatch_dx add SENT_FROM_EMAIL EMAIL;
+alter table pick_despatch_dx add SENT_FROM_PHONE_NO PHONE_NO;

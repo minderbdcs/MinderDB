@@ -1,0 +1,11 @@
+pkua 
+
+1 seems to update the last location and sequence incorrectly
+	done
+
+2 also the check for status are hard coded as ('RS','AL','ST','PA')^M
+  rather than in the control table the pick_import_ssn_status plus RS and AL
+	done
+
+3 also uses the pick order zone - now nobody is using this
+

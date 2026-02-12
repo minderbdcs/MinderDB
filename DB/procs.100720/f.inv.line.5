@@ -1,0 +1,8 @@
+
+alter table pick_invoice_line add INVLINE_PICK_ID                  PICK_ID  ;
+alter table pick_invoice_line add INVLINE_PICK_TYPE                STATUS   ;
+
+alter table pick_invoice_line alter invline_pick_id position 6;
+alter table pick_invoice_line alter invline_pick_type position 7;
+
+

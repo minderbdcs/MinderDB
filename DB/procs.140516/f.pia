@@ -1,0 +1,1 @@
+alter table pick_item_address add PIA_EMAIL    EMAIL;

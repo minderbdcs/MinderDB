@@ -1,0 +1,4 @@
+alter table pick_order add s_suburb city;
+alter table pick_order_dx add s_suburb city;
+alter table pick_order_item_temp add h_s_suburb city;
+

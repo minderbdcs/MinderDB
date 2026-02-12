@@ -1,0 +1,4 @@
+alter table control add send_dsdx value_tf ;
+update control set send_dsdx = 'F';
+
+

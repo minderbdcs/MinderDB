@@ -1,0 +1,11 @@
+--insert into terms(term) values('Prepaid');
+--insert into terms(term) values('Pre-Paid');
+insert into terms(term) values('7 Days');
+insert into terms(term) values('14 Days');
+insert into terms(term) values('21 Days');
+insert into terms(term) values('30 Days');
+insert into terms(term) values('45 Days');
+insert into terms(term) values('60 Days');
+insert into terms(term) values('90 Days');
+insert into terms(term) values('C.O.D.');
+insert into terms(term) values('Prepaid');

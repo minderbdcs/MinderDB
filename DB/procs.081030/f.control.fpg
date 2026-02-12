@@ -1,0 +1,3 @@
+/* update control set pick_cancel_pk_status = ',PG,PL,DS,DC,'; */
+update control set pick_cancel_pk_status = ',PG,PL,DS,';
+

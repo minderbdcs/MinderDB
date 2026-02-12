@@ -1,0 +1,10 @@
+
+alter table pick_despatch add pd_created_date generated always as
+((select 
+substring(1000+extract(year from create_date) from 3 for 2) ||
+substring(100+extract(month from create_date) from 2 for 2) ||
+substring(100+extract(day from create_date) from 2 for 2) ||
+substring(100+extract(hour from create_date) from 2 for 2) ||
+substring(100+extract(minute from create_date) from 2 for 2) ||
+substring(100+extract(second from create_date) from 2 for 2) 
+from pick_despatch where despatch_id = despatch_id)); 

@@ -1,0 +1,1 @@
+CREATE GENERATOR autoexec_transactions;

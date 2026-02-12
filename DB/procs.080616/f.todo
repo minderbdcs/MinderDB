@@ -1,0 +1,6 @@
+1)	in ssn_id creation 
+	use po_legacy_owner_id as prefix when not null 
+	other use the companys prefix
+2)	in options table have a field T or F for writing adjustment to legacy adjustment table for a company
+3)	if issn is LD or LP grnv then stocktake record does not go to legacy adjustment
+

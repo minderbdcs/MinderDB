@@ -1,0 +1,2 @@
+alter  table control add check_approved_lines code_one;
+

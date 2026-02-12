@@ -1,0 +1,15 @@
+done
+add last_update_date to session table and update this via triggers
+
+=================================================================
+in logout users
+we update the device and sys user once all devices for the user are nulled
+
+However the handheld can still continue with its transactions!!
+it is using the stored device id
+so in transactions.php check that the device is ok
+
+also in most screens we use login.inc to check the cookies are still valid
+need to also check that the device is still logged in 
+also the the current ip address is the last stored ip address for the device in the session table
+

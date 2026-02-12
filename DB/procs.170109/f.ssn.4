@@ -1,0 +1,22 @@
+update or insert  into  ssn_sub_type(code, description, ssn_type, generic) values('UNKNOWN','Unknown', 'UNKNOWN', 'UNKNOWN');
+update ssn set ssn_sub_type = upper(ssn_sub_type) where upper(ssn_sub_type) <> ssn_sub_type;
+/*
+update ssn set ssn_sub_type = 'UNKNOWN'  where coalesce(ssn_sub_type,'') = '';
+update ssn set ssn_sub_type = 'UNKNOWN'  where ssn_sub_type = '';
+*/
+update ssn set ssn_sub_type = null  where ssn_sub_type = '';
+update ssn set ssn_sub_type = alltrim(ssn_sub_type)  where ssn_sub_type starting ' ';
+commit;
+insert into ssn_sub_type (code,description, ssn_type, generic)
+select s1.ssn_sub_type, s1.ssn_sub_type as descr , s1.ssn_type , s1.generic
+from ssn s1 
+left outer join ssn_sub_type s2 on 
+s2.ssn_type = s1.ssn_type and 
+s2.generic  = s1.generic and
+s2.code    = s1.ssn_sub_type
+where s2.code is null
+and (s1.ssn_sub_type is not null)
+and (s1.generic is not null)
+and (s1.ssn_type is not null)
+group by s1.ssn_type, s1.generic, s1.ssn_sub_type, descr
+;

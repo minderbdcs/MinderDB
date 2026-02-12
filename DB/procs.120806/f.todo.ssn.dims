@@ -1,0 +1,21 @@
+/*
+TABLE = SSN_DIMS
+Holds dimensions and UoMs and which has the following fields (again can we prefix all field names with SSN_?):
+
+*SSN_ID
+DIMENSION_X		-> SSN_DIMENSION_X
+DIMENSION_Y		-> SSN_DIMENSION_Y
+DIMENSION_Z		-> SSN_DIMENSION_Z
+DIMENSION_INNER_DIA  WIDTH (DOUBLE PRECISION) - new field required
+DIMENSION_OUTER_DIA  WIDTH (DOUBLE PRECISION) - new field required
+DIMENSION_X_UOM 	- > SSN_DIMENSION_UOM and used for all Dimensions?
+UOM 				->SSN_ORDER_UOM 
+ - So that it's not confused with PROD_PROFILE UOM's?
+SSN_SALE_UOM 
+STORAGE_UOM		-> SSN_STORAGE_UOM
+NET_WEIGHT 		-> SSN_NET_WEIGHT
+NET_WEIGHT_UOM	-> SSN_NET_WEIGHT_UOM
+SSN_DIMS_LAST_UPDTD_BY
+SSN_DIMS_LAST_UPDTD_DATE
+SSN_DIMS_LAST_UPDTD_DEVICE  /* length = 26 characters */
+*/

@@ -1,0 +1,4 @@
+insert into options(group_code, code, description) values ('PROD_STOCK','C', 'Current');
+insert into options(group_code, code, description) values ('PROD_STOCK','D', 'Draft');
+insert into options(group_code, code, description) values ('PROD_STOCK','O', 'Obsolete');
+insert into options(group_code, code, description) values ('PROD_STOCK','Q', 'Quarantined');

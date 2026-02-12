@@ -1,0 +1,2 @@
+update control set import_ssn_auto_update = 'T';
+

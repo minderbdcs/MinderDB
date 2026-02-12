@@ -1,0 +1,2 @@
+alter domain locn_id     type varchar(15);
+

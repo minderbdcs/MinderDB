@@ -1,0 +1,25 @@
+alter table ssn add save_depr_method1 code;
+alter table ssn add save_depr_method2 code;
+alter table ssn add save_depr_method3 code;
+commit;
+update ssn set save_depr_method1=depreciate_method1,
+save_depr_method2=depreciate_method2,
+save_depr_method3=depreciate_method3;
+commit;
+alter table ssn drop depreciate_method1;
+alter table ssn drop depreciate_method2;
+alter table ssn drop depreciate_method3;
+commit;
+alter table ssn add depreciate_method1 method_code10;
+alter table ssn add depreciate_method2 method_code10;
+alter table ssn add depreciate_method3 method_code10;
+commit;
+update ssn set depreciate_method1 = save_depr_method1,
+depreciate_method2=save_depr_method2,
+depreciate_method3=save_depr_method3;
+commit;
+ALTER TABLE ssn DROP SAVE_DEPR_METHOD1;
+ALTER TABLE ssn DROP SAVE_DEPR_METHOD2;
+ALTER TABLE ssn DROP SAVE_DEPR_METHOD3;
+
+

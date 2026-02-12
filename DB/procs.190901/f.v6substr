@@ -1,0 +1,6 @@
+/*
+698:DECLARE EXTERNAL FUNCTION V6SUBSTR
+ENTRY_POINT 'IB_UDF_substr' MODULE_NAME 'ib_udf';
+*/
+
+drop external function v6substr;

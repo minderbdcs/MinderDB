@@ -1,0 +1,28 @@
+insert into sys_screen(ss_name,ss_sequence,ss_type) values('FPGISSN','0','ISSN');
+insert into sys_screen(ss_name,ss_sequence,ss_type) values('FPGISSN2','1','ISSN');
+
+insert into sys_screen_table(sst_table,sst_sequence,ss_name,sst_table_status) values('ISSN','0','FPGISSN','OK');
+insert into sys_screen_table(sst_table,sst_sequence,ss_name,sst_table_status,sst_join,sst_via) values('SSN','1','FPGISSN','OK','LEFT OUTER JOIN','ON ISSN.ORIGINAL_SSN=SSN.SSN_ID');
+/*
+insert into sys_screen_table(sst_table,sst_sequence,ss_name,sst_table_status,sst_join,sst_via) values('GRN','2','FPGISSN','OK','LEFT OUTER JOIN','ON SSN.GRN=GRN.GRN');
+*/
+
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table,ssv_primary_id) values('SSN_ID','0','SSN','SR','OK','FPGISSN','ISSN','T');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('WH_ID','1','WH','SR','OK','FPGISSN','ISSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('LOCN_ID','2','Location','SR','OK','FPGISSN','ISSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('PROD_ID','3','Product','SR','OK','FPGISSN','ISSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('CURRENT_QTY','4','Curr Qty','SR','OK','FPGISSN','ISSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('ORIGINAL_SSN','5','Original SSN','SR','OK','FPGISSN','ISSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('COMPANY_ID','6','Company','SR','OK','FPGISSN','ISSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('ISSN_STATUS','7','Status','SR','OK','FPGISSN','ISSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('OTHER1','8','Pallet','SR','OK','FPGISSN','ISSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('OTHER2','9','Split','SR','OK','FPGISSN','ISSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('LAST_UPDATE_DATE','10','Last Update','SR','OK','FPGISSN','ISSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('PO_ORDER','46','PO','SR','OK','FPGISSN','SSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('SSN_TYPE','47','TypeI','SR','OK','FPGISSN','SSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('GENERIC','48','TypeII','SR','OK','FPGISSN','SSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('SSN_SUB_TYPE','49','TypeIII','SR','OK','FPGISSN','SSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('SSN_DESCRIPTION','50','SSN Description','SR','OK','FPGISSN','SSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_expression,ssv_alias) values('GRN_DATE','57','GRN Date','SR','OK','FPGISSN','(SELECT GRN.GRN_DATE FROM GRN WHERE GRN.GRN = SSN.GRN)','GRN_CREATE_DATE');
+
+insert into options(group_code,code,description) values('SCN_FORMAT','ISSN','FPGISSN');

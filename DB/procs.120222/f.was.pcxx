@@ -1,0 +1,376 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+ALTER PROCEDURE PC_UIXX (RECORD_ID INTEGER,
+WH_ID CHAR(2) CHARACTER SET NONE,
+LOCN_ID VARCHAR(10) CHARACTER SET NONE,
+OBJECT VARCHAR(30) CHARACTER SET NONE,
+TRN_TYPE VARCHAR(4) CHARACTER SET NONE,
+TRN_CODE CHAR(1) CHARACTER SET NONE,
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(40) CHARACTER SET NONE,
+QTY INTEGER,
+PERSON_ID VARCHAR(10) CHARACTER SET NONE,
+DEVICE_ID CHAR(2) CHARACTER SET NONE,
+INSTANCE_ID VARCHAR(10) CHARACTER SET NONE)
+AS 
+DECLARE VARIABLE strWH_ID CHAR(2);
+  DECLARE VARIABLE strINSTANCE VARCHAR(10);
+  DECLARE VARIABLE strLOCN_ID VARCHAR(10);
+  DECLARE VARIABLE LOCN_EXIST INTEGER;
+  DECLARE VARIABLE LOCN_NAME VARCHAR(50);
+  DECLARE VARIABLE ISSN_EXIST INTEGER;
+  DECLARE VARIABLE PROD_EXIST INTEGER;
+  DECLARE VARIABLE COMPANY_EXIST INTEGER;
+  DECLARE VARIABLE strAUDIT_DESC VARCHAR(50);
+  DECLARE VARIABLE RESULT INTEGER;
+  DECLARE VARIABLE strTYPE VARCHAR(40);
+  DECLARE VARIABLE WK_ISSN VARCHAR(20);
+  DECLARE VARIABLE WK_CODE VARCHAR(75);
+  DECLARE VARIABLE WK_FILENAME VARCHAR(75);
+  DECLARE VARIABLE WK_LOG VARCHAR(75);
+  DECLARE VARIABLE WK_CURRENT_QTY INTEGER;
+  DECLARE VARIABLE ISSN_RESPONSE_TEXT VARCHAR(255);
+  DECLARE VARIABLE WK_SSN_ID VARCHAR(20);
+
+BEGIN
+ISSN_RESPONSE_TEXT = '';
+/* 15 NOV 07 - AFTER DISCUSSING WITH GLENN
+HAS BEEN RESOLVED THAT WE ARE GOING TO GET WHID AND LOCNID FROM ISSN
+WE ARE NOT GOING TO WORRY ABOUT WHID AND LOCNID THAT IS PASSED TO THIS PROC */
+    strWH_ID = '';
+    strINSTANCE = '';
+    strLOCN_ID = '';
+    LOCN_EXIST = 0;
+    /* LOCN_NAME = 'Created during audit  :TRN_DATE; */
+    LOCN_NAME = LOCN_ID;
+    ISSN_EXIST = 0;
+    strAUDIT_DESC = '';
+    
+
+       SELECT COUNT(*)
+       FROM ISSN
+       WHERE SSN_ID = :OBJECT
+       INTO :ISSN_EXIST;
+       
+
+
+       IF (ISSN_EXIST = 0) THEN
+       BEGIN
+                 /* Add new SSN */
+          EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid ISSN');
+          EXIT;
+       END
+
+    SELECT WH_ID, LOCN_ID
+    FROM ISSN
+    WHERE SSN_ID = :object
+    INTO :strWH_ID, :strLOCN_ID;
+    
+       IF (strWH_ID <> WH_ID) THEN
+       BEGIN
+                 /* Add new SSN */
+          EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'ISSN NOT IN WAREHOUSE');
+          EXIT;
+       END
+
+       IF (strLOCN_ID <> LOCN_ID) THEN
+       BEGIN
+                 /* Add new SSN */
+          EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'ISSN NOT IN LOCATION');
+          EXIT;
+       END
+
+    IF (:TRN_TYPE = 'UIO1') THEN
+    BEGIN
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UIO1', :TRN_CODE, :REFERENCE, :TRN_DATE, :PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'Other1 field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+    
+   IF (:TRN_TYPE = 'UIO2') THEN
+    BEGIN
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UIO2', :TRN_CODE, :REFERENCE, :TRN_DATE, :PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'Other2 field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+    
+   IF (:TRN_TYPE = 'UIO3') THEN
+    BEGIN
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UIO3', :TRN_CODE, :REFERENCE, :TRN_DATE, :PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'Other3 field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+
+   IF (:TRN_TYPE = 'UIO4') THEN
+    BEGIN
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UIO4', :TRN_CODE, :REFERENCE, :TRN_DATE, :PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'Other4 field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+
+   IF (:TRN_TYPE = 'UICO') THEN
+    BEGIN
+         IF (LEN(:REFERENCE) > 20) THEN
+         BEGIN
+              EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'LENGTH OF FIELD GREATER THAN 20');
+              EXIT;
+         END
+         
+       SELECT COUNT(*)
+       FROM COMPANY
+       WHERE COMPANY_ID = :REFERENCE
+       INTO :COMPANY_EXIST;
+
+       IF (COMPANY_EXIST = 0) THEN
+       BEGIN
+                 /* Add new SSN */
+          EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid Company Code');
+          EXIT;
+       END
+
+
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UICO', :TRN_CODE, :REFERENCE, :TRN_DATE,:PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'Company field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+    
+    IF (:TRN_TYPE = 'UIDI') THEN
+    BEGIN
+         IF (LEN(:REFERENCE) > 20) THEN
+         BEGIN
+              EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'LENGTH OF FIELD GREATER THAN 20');
+              EXIT;
+         END
+
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UIDI', :TRN_CODE, :REFERENCE, :TRN_DATE,:PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'Division field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+    
+    IF (:TRN_TYPE = 'UISN') THEN
+    BEGIN
+         IF (LEN(:REFERENCE) > 30) THEN
+         BEGIN
+              EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'LENGTH OF FIELD GREATER THAN 30');
+              EXIT;
+         END
+
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UISN', :TRN_CODE, :REFERENCE, :TRN_DATE,:PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'Serial No field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+    
+    IF (:TRN_TYPE = 'UISC') THEN
+    BEGIN
+         IF (LEN(:REFERENCE) > 10) THEN
+         BEGIN
+              EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'LENGTH OF FIELD GREATER THAN 10');
+              EXIT;
+         END
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UISC', :TRN_CODE, :REFERENCE, :TRN_DATE,:PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'Status Code field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+    
+    IF (:TRN_TYPE = 'UIKT') THEN
+    BEGIN
+         IF (LEN(:REFERENCE) > 1) THEN
+         BEGIN
+              EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'LENGTH OF FIELD GREATER THAN 1');
+              EXIT;
+         END
+
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UIKT', :TRN_CODE, :REFERENCE, :TRN_DATE,:PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'Kitted field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+    
+    IF (:TRN_TYPE = 'UIPC') THEN
+    BEGIN
+         IF (LEN(:REFERENCE) > 30) THEN
+         BEGIN
+              EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'LENGTH OF FIELD GREATER THAN 30');
+              EXIT;
+         END
+         
+       SELECT COUNT(*)
+       FROM PROD_PROFILE
+       WHERE PROD_ID = :REFERENCE
+       INTO :PROD_EXIST;
+
+       IF (PROD_EXIST = 0) THEN
+       BEGIN
+                 /* Add new SSN */
+          EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid Product Code');
+          EXIT;
+       END
+
+
+
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UIPC', :TRN_CODE, :REFERENCE, :TRN_DATE,:PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'Product ID field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+    
+    IF (:TRN_TYPE = 'UIST') THEN
+    BEGIN
+         IF (LEN(:REFERENCE) > 2) THEN
+         BEGIN
+              EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'LENGTH OF FIELD GREATER THAN 2');
+              EXIT;
+         END
+
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UIST', :TRN_CODE, :REFERENCE, :TRN_DATE,:PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'Issn Status field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+    
+    
+     IF (:TRN_TYPE = 'UIPT') THEN
+    BEGIN
+
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UIPT', :TRN_CODE, :REFERENCE, :TRN_DATE,:PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'ISSN Package Type field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+
+
+     IF (:TRN_TYPE = 'UILD') THEN
+    BEGIN
+
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UILD', :TRN_CODE, :REFERENCE, :TRN_DATE,:PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+         strAudit_Desc = 'ISSN Label Date field updated ' || :REFERENCE;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+         EXIT;
+    END
+    
+    /*
+    UISS transaction is complex.
+    Step 1: The easy bit unlike GRNV-P transaction is that we can assume that
+           ssn exists. Creating the first ssn id is very difficult. I have copied
+           the code from run_transaction_grnv - p trigger. add_ssn_issn_grnv procedure.
+    Step 2: Then we generate the issn with the new ssn id.
+    Step 3: Do we need to print the lablel. Ask Glen.
+    
+    */
+
+
+     IF (:TRN_TYPE = 'UISS') THEN
+    BEGIN
+
+
+
+    
+        SELECT CURRENT_QTY FROM ISSN
+      WHERE SSN_ID = :OBJECT
+      INTO :WK_CURRENT_QTY;
+      
+         IF (:WK_CURRENT_QTY < :QTY) THEN
+         BEGIN
+              EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'QUANTITY HAS TO BE LESS THAN ISSN CURRENT QUANTITY');
+              EXIT;
+         END
+         
+
+
+
+         EXECUTE PROCEDURE UPDATE_ISSN(:OBJECT, 'UISS', :TRN_CODE, :REFERENCE, :TRN_DATE,:PERSON_ID, :QTY) RETURNING_VALUES ISSN_RESPONSE_TEXT;
+
+
+         strAudit_Desc = 'ISSN Split Completed ' || :OBJECT;
+         
+
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+                                              
+
+         /* strAudit_Desc = 'Processed successfully|' || ISSN_RESPONSE_TEXT; */
+         strAudit_Desc = 'Processed successfully|' || ISSN_RESPONSE_TEXT || '|';
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', strAudit_Desc);
+         EXIT;
+         
+
+
+
+    END
+
+     IF (:TRN_TYPE = 'UICQ') THEN
+    BEGIN
+
+        WK_CURRENT_QTY = 0;
+        SELECT CURRENT_QTY, ORIGINAL_SSN
+        FROM ISSN
+        WHERE SSN_ID = :OBJECT
+        INTO :WK_CURRENT_QTY, :WK_SSN_ID;
+        IF (WK_CURRENT_QTY IS NULL) THEN
+        BEGIN
+           WK_CURRENT_QTY = 0;
+        END
+      
+         strAudit_Desc = 'ISSN change qty from ' || :WK_CURRENT_QTY;
+         
+         UPDATE ISSN SET PREV_QTY = CURRENT_QTY, CURRENT_QTY = :QTY
+         WHERE SSN_ID = :OBJECT;
+
+         UPDATE SSN SET CURRENT_QTY = CURRENT_QTY + :QTY - :WK_CURRENT_QTY
+         WHERE SSN_ID = :WK_SSN_ID;
+
+         EXECUTE PROCEDURE ADD_SSN_HIST(:strWH_ID, :strLOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID);
+                                              
+
+         strAudit_Desc = 'Processed successfully|' ;
+         EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', strAudit_Desc);
+         EXIT;
+         
+    END
+
+   EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid Transaction Code');
+
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

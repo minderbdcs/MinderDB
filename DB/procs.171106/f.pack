@@ -1,0 +1,9 @@
+alter table pack_id drop prn_model;
+alter table pack_id drop prn_brand;
+
+alter table pack_id add pack_usage pack_no;
+
+alter table pack_id_dx add PRN_DATA           PRN_DATA;
+alter table pack_id_dx add PRN_DEVICE_ID      DEVICE_ID;
+alter table pack_id_dx add PACK_STATUS        STATUS;
+alter table pack_id_dx add pack_usage pack_no;

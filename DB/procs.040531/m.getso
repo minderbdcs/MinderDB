@@ -1,0 +1,29 @@
+
+ALTER PROCEDURE GET_SALE_ORDER_NO RETURNS (SALE_ORDER_ID VARCHAR(10) CHARACTER SET NONE)
+AS 
+  
+
+DECLARE VARIABLE iSaleNo INTEGER;
+DECLARE VARIABLE iLengthSaleNo INTEGER;
+DECLARE VARIABLE sSaleNo VARCHAR(10);
+     
+BEGIN
+  iSaleNo = GEN_ID(SALE_ORDER_ID_GEN, 1) ;
+  iLengthSaleNo = STRLEN(iSaleNo);
+  
+  sSaleNo = 'S'; /* Enter prefix number here */
+  /* Padding leading with 0 */
+  WHILE (iLengthSaleNo < 9) DO
+  BEGIN
+        sSaleNo = sSaleNo || '0';      
+        iLengthSaleNo = iLengthSaleNo + 1;
+  END
+  sSaleNo = sSaleNo || iSaleNo;
+  
+  /* Return LoadNo to the caller */
+  SALE_ORDER_ID = sSaleNo;
+  SUSPEND;
+  
+  
+END ^
+

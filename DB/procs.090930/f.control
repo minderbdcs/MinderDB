@@ -1,0 +1,4 @@
+alter table control add test_method code;
+
+update control set test_method=',TEST,SFTY,CALIB,';
+

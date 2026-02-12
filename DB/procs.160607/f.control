@@ -1,0 +1,3 @@
+alter table control add SYSTEM_PRINTER_DEVICE_TYPES CODE DEFAULT 'LP|PR|LP';
+update control set system_printer_device_types = 'LP|PR|PL';
+

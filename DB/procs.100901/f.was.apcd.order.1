@@ -1,0 +1,2 @@
+select 'update pick_order set pick_order="' || substr(pick_order,1,1) || substr(pick_order,3,10) || '" where pick_order="' || pick_order || '"^' from pick_order  where strlen(pick_order)> 9;
+

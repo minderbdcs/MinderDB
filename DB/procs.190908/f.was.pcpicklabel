@@ -1,0 +1,88 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+
+CREATE OR ALTER PROCEDURE PC_LABEL_PICK (REFERENCE VARCHAR(40) )
+RETURNS (RES INTEGER)
+AS 
+    
+  DECLARE VARIABLE sFilePath VARCHAR(70);
+  DECLARE VARIABLE sFilePath2 VARCHAR(70);
+  DECLARE VARIABLE sPrinterName CHAR(2);
+  DECLARE VARIABLE sRef VARCHAR(40);  
+  DECLARE VARIABLE sLabel VARCHAR(256);
+  
+  DECLARE VARIABLE sPickLabel VARCHAR(7);
+  DECLARE VARIABLE iOrderQty INTEGER;
+/*  DECLARE VARIABLE SPICKORDER VARCHAR(15); */
+  DECLARE VARIABLE SPICKORDER PICK_ORDER;
+/*  DECLARE VARIABLE SPERSONID VARCHAR(10); */
+  DECLARE VARIABLE SPERSONID PERSON;
+  DECLARE VARIABLE sProductId VARCHAR(30);
+  DECLARE VARIABLE sDesc VARCHAR(50);
+  DECLARE VARIABLE sContactName VARCHAR(50);
+  DECLARE VARIABLE sAdd1 VARCHAR(100);
+  DECLARE VARIABLE sLoc VARCHAR(10);
+  
+BEGIN 
+  
+  /* Get the printer dir */
+  sPrinterName = SUBSTR(:REFERENCE,1,2);
+  sRef = SUBSTR(:REFERENCE,3,STRLEN(:REFERENCE));
+  
+  /* Need the directory for this label set */
+  SELECT WORKING_DIRECTORY FROM SYS_EQUIP 
+  WHERE DEVICE_ID = :sPrinterName
+  INTO :sFilePath;
+  
+  sFilePath2 = sFilePath || 'Pick.txt';
+       
+  /* Get Pick data */
+  SELECT Pick_item.PICK_LABEL_NO,
+         Pick_item.PICK_ORDER_QTY,
+         Pick_item.PICK_ORDER,
+         Pick_order.PERSON_ID,
+         Pick_item.PROD_ID,
+         Prod_profile.SHORT_DESC,
+         Pick_item.CONTACT_NAME,
+         Person.ADDRESS_LINE1,
+         Pick_item.DESPATCH_LOCATION
+    FROM ((PICK_ITEM
+         LEFT OUTER JOIN PROD_PROFILE
+                      ON Pick_item.PROD_ID = Prod_profile.PROD_ID)
+         INNER JOIN PICK_ORDER
+                 ON Pick_item.PICK_ORDER = Pick_order.PICK_ORDER)
+         LEFT OUTER JOIN PERSON
+                      ON Pick_order.PERSON_ID = Person.PERSON_ID
+   WHERE Pick_item.PICK_LABEL_NO = :sRef
+   INTO :sPickLabel, :iOrderQty, :SPICKORDER, :SPERSONID, :sProductId,
+        :sDesc, :sContactName, :sAdd1, :sLoc;
+  
+  
+  sLabel = DQUOTEDSTR(:sRef) || ',' || 
+      DQUOTEDSTR(:iOrderQty) || ',' || 
+      DQUOTEDSTR(:SPICKORDER) || ',' || 
+      DQUOTEDSTR(:SPERSONID) || ',' || 
+      DQUOTEDSTR(:sProductId) || ',' || 
+      DQUOTEDSTR(:sDesc) || ',' || 
+      DQUOTEDSTR(:sContactName) || ',' || 
+      DQUOTEDSTR(:sAdd1) || ',' || 
+      DQUOTEDSTR(:sLoc) || ',' ||            
+  
+           DQUOTEDSTR(:sPrinterName);
+  
+  RES = FILE_WRITELN(:sFilePath2, :sLabel);
+  if (RES <> 0) then
+  begin
+     sFilePath2 = sFilePath || 'Pick.2xt';
+     RES = FILE_WRITELN(:sFilePath2, :sLabel);
+  end   
+
+  
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

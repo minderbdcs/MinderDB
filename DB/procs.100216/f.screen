@@ -1,0 +1,12 @@
+/*
+alter table sys_screen_var add ssv_dropdown_procedure code_255;
+*/
+
+CREATE DOMAIN QUERY_FROM_TYPE AS CHAR(4)
+         DEFAULT 'SQL'
+         CHECK (VALUE IN ('SQL','FUN'));
+
+alter table sys_screen_var add ssv_dropdown_data_from query_from_type;
+
+alter table sys_screen_var drop ssv_dropdown_procedure;
+

@@ -1,0 +1,2 @@
+update control set ssn_id_by_lot_line = 'T' ;
+

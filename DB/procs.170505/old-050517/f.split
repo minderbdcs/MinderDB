@@ -1,0 +1,90 @@
+
+ALTER PROCEDURE PC_LABEL_SPLIT (WH_ID VARCHAR(2) ,
+PRINTED_BY VARCHAR(10) ,
+LABEL_NO INTEGER,
+PASSED_SSN_LENGTH INTEGER,
+PRINTER_NAME VARCHAR(2) )
+RETURNS (ISSN VARCHAR(20) ,
+RES INTEGER)
+AS 
+         
+
+DECLARE VARIABLE SSN_LENGTH INTEGER;
+DECLARE VARIABLE SSN_ID INTEGER;
+DECLARE VARIABLE P_SSN_ID INTEGER;
+DECLARE VARIABLE W_SSN_ID VARCHAR(20);
+DECLARE VARIABLE I_SSN_ID VARCHAR(20);
+DECLARE VARIABLE LEN_SSN_ID INTEGER;
+DECLARE VARIABLE I_LEN_SSN_ID INTEGER;
+
+DECLARE VARIABLE sFilePath VARCHAR(70);
+DECLARE VARIABLE sFilePath2 VARCHAR(70);
+DECLARE VARIABLE sLabel VARCHAR(256);
+
+BEGIN          
+   SSN_ID = GEN_ID(ISSN_SSN_ID, :LABEL_NO);
+   P_SSN_ID = SSN_ID - :LABEL_NO;
+   LEN_SSN_ID = STRLEN(P_SSN_ID);     
+         
+   /* Get length for Barcode */   
+   EXECUTE PROCEDURE GET_BARCODE_LENGTH RETURNING_VALUES SSN_LENGTH;
+   W_SSN_ID = '';
+   /* Padding leading with 0 */
+   WHILE (LEN_SSN_ID < :SSN_LENGTH) DO
+   BEGIN
+      W_SSN_ID = W_SSN_ID || '0';      
+      LEN_SSN_ID = LEN_SSN_ID + 1;
+   END
+   W_SSN_ID = W_SSN_ID || P_SSN_ID;
+   
+   /* insert into log(description) values ('create split - len ' || :SSN_LENGTH || ' w ssn ' || :W_SSN_ID || ']'); */
+   /* Insert data into SSN table */   
+   INSERT INTO SSN (SSN_ID, WH_ID, LOCN_ID, STATUS_SSN, LABEL_DATE, PRINTED_BY)
+   VALUES (:W_SSN_ID, :WH_ID, 'NEWLABEL', 'LB', 'NOW', :PRINTED_BY);     
+   
+   /* Return ISSN value to the caller */
+   ISSN = W_SSN_ID;
+        
+   
+   /* Insert data into ISSN table */
+   WHILE (P_SSN_ID < SSN_ID) DO
+   BEGIN
+      I_SSN_ID = '';
+      I_LEN_SSN_ID = STRLEN(P_SSN_ID);
+      
+      /* Padding leading with 0 */
+      WHILE (I_LEN_SSN_ID < :SSN_LENGTH) DO
+      BEGIN
+       I_SSN_ID = I_SSN_ID || '0';
+       I_LEN_SSN_ID = I_LEN_SSN_ID + 1;
+      END
+      I_SSN_ID = I_SSN_ID || P_SSN_ID;
+      
+   /* insert into log(description) values ('create split - issn ' || :SSN_LENGTH || ' i ssn ' || :I_SSN_ID || ']'); */
+      INSERT INTO ISSN (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, ISSN_STATUS)
+      VALUES (:I_SSN_ID, :W_SSN_ID, :WH_ID, 'NEWLABEL', 'LB'); 
+      
+      P_SSN_ID = P_SSN_ID + 1;
+   END
+   
+   /* Export data to text file */    
+   
+   /* Need the directory for this label set */
+   SELECT WORKING_DIRECTORY FROM SYS_EQUIP 
+   WHERE DEVICE_ID = :PRINTER_NAME
+   INTO :sFilePath;   
+   
+   sFilePath2 = sFilePath || 'Split.txt';
+          
+   sLabel = DQUOTEDSTR(:ISSN) || ',' || DQUOTEDSTR(:LABEL_NO) || ',' || 
+            DQUOTEDSTR(:PRINTER_NAME);
+     
+   RES = FILE_WRITELN(:sFilePath2, :sLabel);
+  if (RES <> 0) then
+  begin
+     sFilePath2 = sFilePath || 'Split.2xt';
+     RES = FILE_WRITELN(:sFilePath2, :sLabel);
+  end   
+                
+END ^
+

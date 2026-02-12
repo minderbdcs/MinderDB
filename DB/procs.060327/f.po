@@ -1,0 +1,35 @@
+alter table pick_order add other_num1 standard_cost;
+alter table pick_order add other_num2 standard_cost;
+alter table pick_item add other_qty1 qty;
+alter table pick_item add other_qty2 qty;
+alter table pick_item add special_instructions3 comments;
+alter table pick_order add remarks1 descr;
+alter table pick_order add remarks2 descr;
+alter table pick_order add remarks3 descr;
+alter table pick_order add remarks4 descr;
+alter table pick_order add remarks5 descr;
+alter table pick_order add remarks6 descr;
+alter table pick_order add footer1 descr;
+alter table pick_order add footer2 descr;
+alter table pick_order add footer3 descr;
+alter table pick_order add footer4 descr;
+alter table pick_order add footer5 descr;
+
+alter table pick_order_item_temp add p_aust_post_4state_id varchar(255);
+alter table pick_order_item_temp add H_other_num1 standard_cost;
+alter table pick_order_item_temp add H_other_num2 standard_cost;
+alter table pick_order_item_temp add L_other_qty1 qty;
+alter table pick_order_item_temp add L_other_qty2 qty;
+alter table pick_order_item_temp add L_special_instructions3 comments;
+alter table pick_order_item_temp add H_remarks1 descr;
+alter table pick_order_item_temp add H_remarks2 descr;
+alter table pick_order_item_temp add H_remarks3 descr;
+alter table pick_order_item_temp add H_remarks4 descr;
+alter table pick_order_item_temp add H_remarks5 descr;
+alter table pick_order_item_temp add H_remarks6 descr;
+alter table pick_order_item_temp add H_footer1 descr;
+alter table pick_order_item_temp add H_footer2 descr;
+alter table pick_order_item_temp add H_footer3 descr;
+alter table pick_order_item_temp add H_footer4 descr;
+alter table pick_order_item_temp add H_footer5 descr;
+

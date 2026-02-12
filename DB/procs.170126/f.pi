@@ -1,0 +1,24 @@
+alter table pick_item add description ssn_description;
+alter table pick_item_DX add description ssn_description;
+alter table pick_item alter description position 7;
+alter table pick_item_dx alter description position 7;
+
+update pick_item  set description = (
+select ssn.ssn_description from ssn where ssn.ssn_id = pick_item.ssn_id
+)
+where coalesce(pick_item.ssn_id,'') <> ''
+and coalesce(pick_item.description ,'') = ''
+;
+update pick_item  set description = (
+select ssn_DX.ssn_description from ssn_DX where ssn_dx.ssn_id = pick_item.ssn_id
+)
+where coalesce(pick_item.ssn_id,'') <> ''
+and coalesce(pick_item.description ,'') = ''
+;
+update pick_item  set description = (
+select prod_profile.short_desc from prod_profile where prod_profile.prod_id = pick_item.prod_id
+and pick_item.company_id = prod_profile.company_id
+)
+where coalesce(pick_item.prod_id,'') <> ''
+and coalesce(pick_item.description ,'') = ''
+;

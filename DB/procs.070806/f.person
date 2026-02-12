@@ -1,0 +1,2 @@
+alter table person add web_site descr;
+

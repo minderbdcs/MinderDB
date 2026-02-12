@@ -1,0 +1,2 @@
+alter table control add visual_schema_name descr;
+

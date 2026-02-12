@@ -1,0 +1,2 @@
+alter table sys_menu add ss_submenu_id  code;
+

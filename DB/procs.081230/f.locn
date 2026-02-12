@@ -1,0 +1,9 @@
+alter table location add old_locn_type code;
+update location set old_locn_type = locn_type;
+commit;
+alter table location drop locn_type;
+commit;
+alter table location add locn_type code;
+update location set locn_type = old_locn_type;
+commit;
+alter table location drop old_locn_type;

@@ -1,0 +1,18 @@
+add table sys_equip_device_options
+with device id
+param code
+param value
+    SEAD_LAST_UPDATE_DATE TIMESTAMP
+    SEAD_LAST_UPDATE_BY USER_ID
+
+SYS_EQUIP_ASSIGN_DEVICE
+    RECORD_ID INT - unique, non-null
+    SEAD_DEVICE_ID CODE_TWO - Not Null (where SEAD stands for SYS_EQUIP_ASSIGN_DEVICE) - presumably this is an indexed field.
+    SEAD_ZONE CODE_TWO - Limit Users which have a SYS_USER.ZONE_C value (non NULL). If Null then no restrictions. The Log in function must check if the Device being used is listed in this table. At TIFS they have approximately 4 assembly areas (Zones) and we need to assign sets of devices to each of these zones and along with PICK_ORDER_TYPE and PICK_ORDER_SUB_TYPE values then devices can be kept in these assembly areas.
+    SEAD_PICK_ORDER_TYPE CODE_TWO - This will control which devices can be used for Order Types where 'SO' - all Shipping Orders, 'TO' - all Transfer Orders, 'TR' - Transfer Requests, 'PO' - Purchase Order Receipts. We will add multiple Records if same device is to be used fro more than one PICK_ORDER_SUB_TYPE (NULL means unlimited of course).
+    SEAD_PICK_ORDER_SUB_TYPE CODE_TWO - This will control which devices can be used for Pick Order Sub Types e.g. '50' - all BIGW EDI Shipping Orders. Or 'ID' - TIDAMS Initial Distribution Orders (and SEAD_PICK_ORDER_TYPE = 'TR')
+    SEAD_USER_ID USER_ID - Enables specified Users only to log onto and use this device. This means we need to change the Log On procedure to check this table.
+    SEAD_USER_CATEGORY CODE_TWO - This field will limit which Category of Users who can log in on to this device e.g 'AD' - means only Users with SYS_USER.USER_CATEGORY = 'AD'.
+    SEAD_LAST_UPDATE_DATE TIMESTAMP
+    SEAD_LAST_UPDATE_BY USER_ID
+

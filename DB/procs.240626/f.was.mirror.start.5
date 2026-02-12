@@ -1,0 +1,17 @@
+/*
+TRANSFER_REQUEST
+LEGACY_ADJUSTMENT
+CHART_OF_ACCOUNTS
+STOCKTAKE
+VARIANCE */
+
+update TRANSFER_REQUEST set mirror_data=create_date where mirror_data is null;
+update TRANSFER_REQUEST set mirror_data='NOW' where mirror_data is null;
+update LEGACY_ADJUSTMENT set mirror_data=create_date where mirror_data is null;
+update LEGACY_ADJUSTMENT set mirror_data='NOW' where mirror_data is null;
+update CHART_OF_ACCOUNTS set mirror_data='NOW' where mirror_data is null;
+update STOCKTAKE set mirror_data=st_audit_date where mirror_data is null; 
+update STOCKTAKE mirror_data='NOW' where mirror_data is null;
+update VARIANCE set mirror_data=create_date where mirror_data is null;
+update VARIANCE set mirror_data='NOW' where mirror_data is null;
+

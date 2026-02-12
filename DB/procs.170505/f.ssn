@@ -1,0 +1,2 @@
+alter domain po_order type varchar(20);
+

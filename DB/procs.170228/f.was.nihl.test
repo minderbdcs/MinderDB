@@ -1,0 +1,2 @@
+ execute procedure add_tran('CC','TOOLSTOR','205410','NIHL','A','NOW','01020304',1,'F','','MASTER   ',0,'D000153','SSSSSSSSS','BDCS','XX');
+

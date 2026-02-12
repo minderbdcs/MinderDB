@@ -1,0 +1,29 @@
+CREATE PROCEDURE GET_FORM_NO  RETURNS (
+  FORM_NO VARCHAR(8)
+) AS  
+DECLARE VARIABLE wk_formno_i INTEGER;
+DECLARE VARIABLE wk_len INTEGER;
+DECLARE VARIABLE wk_formno VARCHAR(8);
+BEGIN
+  wk_formno_i = GEN_ID(FORM_NO_GEN, 1) ;
+  
+  /* default prefix */
+  SELECT FORM_NO_PREFIX
+    FROM CONTROL
+    INTO :wk_formno;
+
+  wk_len = STRLEN(wk_formno_i) + STRLEN(wk_formno);
+
+  /* Padding leading with 0 */
+  WHILE (wk_len < 8) DO
+  BEGIN
+        wk_formno = wk_formno || '0';      
+        wk_len = wk_len + 1;
+  END
+  wk_formno = wk_formno || wk_formno_i;
+  
+  /* Return LoadNo to the caller */
+  FORM_NO = wk_formno;
+  
+END^
+

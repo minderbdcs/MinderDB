@@ -1,0 +1,31 @@
+alter table pick_despatch   add SENT_FROM_DEPOT_ID DEPOT_ID;
+alter table pick_despatch   add SENT_FROM_SERVICE_ACCOUNT CARRIER_ACCOUNT_NO;
+alter table pick_despatch   add POST_CODE_DEPOT_RECORD_ID INTEGER;
+alter table pick_despatch   add SENT_FROM_DEPOT_RECORD_ID INTEGER;
+
+alter table pick_despatch    add SENT_FROM_OTHER1                     CODE;
+alter table pick_despatch    add SENT_FROM_OTHER2                     CODE;
+alter table pick_despatch    add SENT_FROM_OTHER3                     CODE;
+alter table pick_despatch    add SENT_FROM_OTHER4                     CODE;
+alter table pick_despatch    add SENT_FROM_OTHER5                     CODE;
+alter table pick_despatch    add SENT_FROM_OTHER6                     CODE;
+alter table pick_despatch    add SENT_FROM_OTHER7                     CODE;
+alter table pick_despatch    add SENT_FROM_OTHER8                     CODE;
+alter table pick_despatch    add SENT_FROM_OTHER9                     CODE;
+alter table pick_despatch    add SENT_FROM_OTHER10                    CODE;
+
+alter table PICK_DESPATCH_DX   add SENT_FROM_DEPOT_ID DEPOT_ID;
+alter table PICK_DESPATCH_DX   add SENT_FROM_SERVICE_ACCOUNT CARRIER_ACCOUNT_NO;
+alter table PICK_DESPATCH_DX   add POST_CODE_DEPOT_RECORD_ID INTEGER;
+alter table PICK_DESPATCH_DX   add SENT_FROM_DEPOT_RECORD_ID INTEGER;
+
+alter table PICK_DESPATCH_DX    add SENT_FROM_OTHER1                     CODE;
+alter table PICK_DESPATCH_DX    add SENT_FROM_OTHER2                     CODE;
+alter table PICK_DESPATCH_DX    add SENT_FROM_OTHER3                     CODE;
+alter table PICK_DESPATCH_DX    add SENT_FROM_OTHER4                     CODE;
+alter table PICK_DESPATCH_DX    add SENT_FROM_OTHER5                     CODE;
+alter table PICK_DESPATCH_DX    add SENT_FROM_OTHER6                     CODE;
+alter table PICK_DESPATCH_DX    add SENT_FROM_OTHER7                     CODE;
+alter table PICK_DESPATCH_DX    add SENT_FROM_OTHER8                     CODE;
+alter table PICK_DESPATCH_DX    add SENT_FROM_OTHER9                     CODE;
+alter table PICK_DESPATCH_DX    add SENT_FROM_OTHER10                    CODE;

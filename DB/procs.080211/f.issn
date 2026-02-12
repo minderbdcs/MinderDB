@@ -1,0 +1,4 @@
+alter table issn add other3 code_255;
+alter table issn add pack_id pack_id;
+alter table issn add despatch_id despatch_id;
+

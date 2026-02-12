@@ -1,0 +1,5 @@
+alter table control add despatch_create_packing_slip VALUE_TF;
+alter table company add despatch_create_packing_slip VALUE_TF;
+alter table company add default_despatch_printer device_id;
+alter table warehouse add despatch_create_packing_slip VALUE_TF;
+

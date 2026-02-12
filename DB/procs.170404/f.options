@@ -1,0 +1,3 @@
+alter table options add last_update_by user_id;
+alter table options add status status;
+

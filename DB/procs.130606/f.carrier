@@ -1,0 +1,1 @@
+alter table carrier_service add service_account carrier_account_no;

@@ -1,0 +1,3 @@
+alter table prod_type add add_pick_item_status status;
+alter table prod_type add checkin_add_pick_item VALUE_FT;
+

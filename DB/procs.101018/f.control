@@ -1,0 +1,3 @@
+alter table control add pick_trolley_product_by varchar(10);
+update control set pick_trolley_product_by = 'ISSN';
+

@@ -1,0 +1,3 @@
+alter table carrier_service add depot_id depot_id;
+alter table carrier_service add min_weight weight_decimal3;
+alter table carrier_service add max_weight weight_decimal3;

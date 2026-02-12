@@ -1,0 +1,13 @@
+/*
+%-12345X@PJL ENTER LANGUAGE=POSTSCRIPT
+M%PS
+(LexForm)run Bs
+*/
+insert into options(group_code,code,description) values('DEV-HEAD','PG01','%-12345X@PJL ENTER LANGUAGE=POSTSCRIPT');
+insert into options(group_code,code,description) values('DEV-HEAD','PG02','M%PS');
+insert into options(group_code,code,description) values('DEV-HEAD','PG03','(LexForm)run Bs');
+/*
+%-12345X
+*/
+insert into options(group_code,code,description) values('DEV-FOOT','PG01','%-12345X');
+

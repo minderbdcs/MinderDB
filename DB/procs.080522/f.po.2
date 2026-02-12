@@ -1,0 +1,43 @@
+/*
+CREATE DOMAIN PO_DUE_DATE AS TIMESTAMP;
+*/
+
+/*
+alter table purchase_order add po_legacy_date po_date;
+alter table purchase_order add po_currency varchar(20);
+alter table purchase_order add po_due_date po_due_date;
+alter table purchase_order add po_legacy_internal_id varchar(20);
+alter table purchase_order add po_receive_wh_id varchar(20);
+alter table purchase_order add po_legacy_memo varchar(1024);
+alter table purchase_order add po_legacy_status varchar(50);
+alter table purchase_order add po_legacy_recvd_date po_receive_date;
+alter table purchase_order add po_ship_to_address1 address_line;
+alter table purchase_order add po_ship_to_address2 address_line;
+alter table purchase_order add po_ship_to_address3 address_line;
+alter table purchase_order add po_ship_to_address4 address_line;
+alter table purchase_order add po_ship_to_address5 address_line;
+alter table purchase_order add po_legacy_consignment integer;
+*/
+
+CREATE DOMAIN legacy_address_line AS varchar(80);
+CREATE DOMAIN legacy_post_code AS varchar(20);
+
+alter table purchase_order add po_created_by_name varchar(40);
+alter table purchase_order add po_receive_wh_name varchar(50);
+alter table purchase_order add po_legacy_status_id varchar(2);
+alter table purchase_order add po_ship_to_attension legacy_address_line;
+alter table purchase_order add po_ship_to_addressee legacy_address_line;
+alter table purchase_order add po_ship_to_phone address_line;
+alter table purchase_order drop po_ship_to_address1;
+alter table purchase_order drop po_ship_to_address2;
+alter table purchase_order add po_ship_to_address1 legacy_address_line;
+alter table purchase_order add po_ship_to_address2 legacy_address_line;
+alter table purchase_order add po_ship_to_suburb address_line;
+alter table purchase_order add po_ship_to_state address_line;
+alter table purchase_order add po_ship_to_postcode legacy_post_code;
+alter table purchase_order add po_ship_to_country address_line;
+
+alter table purchase_order drop po_legacy_consignment ;
+alter table purchase_order add po_legacy_consignment varchar(10);
+alter table purchase_order add po_legacy_created_by_name varchar(40);
+

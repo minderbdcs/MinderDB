@@ -1,0 +1,54 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP TRIGGER UPDATE_SSN_PO_PRICE ^
+COMMIT^
+
+
+CREATE TRIGGER UPDATE_SSN_PO_PRICE FOR SSN 
+INACTIVE BEFORE UPDATE POSITION 0 
+AS
+DECLARE VARIABLE WK_OLD_PRICE FLOAT;
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_REF VARCHAR(40);
+BEGIN
+   IF (OLD.PURCHASE_PRICE IS NULL) THEN
+   BEGIN
+      WK_OLD_PRICE = -1;
+   END
+   ELSE
+   BEGIN
+      WK_OLD_PRICE = OLD.PURCHASE_PRICE;
+   END
+   IF (NOT NEW.PURCHASE_PRICE IS NULL) THEN
+   BEGIN
+      IF (WK_OLD_PRICE <> NEW.PURCHASE_PRICE) THEN
+      BEGIN
+         WK_QTY = NEW.PURCHASE_PRICE * 100;
+         WK_REF = CAST(WK_OLD_PRICE AS VARCHAR(20));
+         EXECUTE PROCEDURE ADD_TRAN(
+           NEW.WH_ID,
+           NEW.LOCN_ID,
+           NEW.SSN_ID,
+           'NIPP',
+           'A',
+           "NOW",
+           :WK_REF,
+           :WK_QTY,
+           'F',
+           '',
+           'MASTER',
+           0,
+           '',
+           'SSSSSSSSS',
+           'DB',
+           'DB');
+      END 
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

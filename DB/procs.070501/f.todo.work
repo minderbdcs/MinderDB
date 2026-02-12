@@ -1,0 +1,45 @@
+for fresh want in grn (receive)
+to create ssn's 
+using 		lot no
+		line no
+		pallet no
+
+glen wants change to transaction
+GRND
+options table to hold pallet owner
+	crate owner
+	crate type
+GRNC | N
+	container no for grn
+GRNC | L
+	lot no||line for grn or empty for new lot and line
+
+then use GRNV | I
+and      GRNV | H
+
+
+glen wants to use grn id as the lot no (9(4) for it)
+then for that grn the # of the product is the line no
+leaving the last 2 bytes for the ssn
+
+eg
+GRND - create grn
+GRNC - create lot and line
+GRNC - container no
+GRNC - for lot -> create n lines
+
+GRNV - I 
+GRNV - S for named ssn's give them a prod
+        note that ssn ggggllnn original ssn has no product
+             but the children ssn do !!!
+             here gggg is the grn
+                  ll is the line for that grn ie istance of prod
+                  nn is the instance of a label
+
+ 
+
+options: 
+   pallet owner GRNDPltOwn
+   crate owner  GRNDShpOwn
+   crate type   GRNDShpTyp
+  

@@ -1,0 +1,17 @@
+done
+=============================================================================
+glens company wh_id product stock status
+to allow nulls - to give all wh's
+and pass the user so that all means a subset
+and allow multiple wh's in the wh
+and multiple companys in the company
+want to also return 1st 3 (lowest qtys > 0)
+
+2/10/07 grnv for fresh 
+	overwrites the ssn carrier and grn return id
+	with the order no
+	(the grnd L does the population of this)
+
+6/10/07 prod_profile 
+	add ssn_type as the default for this product
+	then in grnv p use the default for ssn_type (if its populated)

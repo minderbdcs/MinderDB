@@ -1,0 +1,1 @@
+alter table transaction_types alter comment to trn_comment;

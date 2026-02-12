@@ -1,0 +1,5 @@
+
+
+alter table pack_id_dx add CUBIC_WEIGHT CUBIC_WEIGHT;
+alter table pack_id_dx add CHARGE_WEIGHT CHARGE_WEIGHT;
+

@@ -1,0 +1,142 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+CREATE OR ALTER TRIGGER SAVE_PICK_ITEM FOR PICK_ITEM 
+ACTIVE BEFORE DELETE POSITION 0 
+AS
+DECLARE VARIABLE WK_SAVE_PICK_ITEM CHAR(1);
+DECLARE VARIABLE WK_ISSN_SSN VARCHAR(20);
+DECLARE VARIABLE WK_REFERENCE VARCHAR(1024);
+DECLARE VARIABLE WK_ISSN_WH CHAR(2);
+DECLARE VARIABLE WK_ISSN_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_ISSN_QTY INTEGER;
+BEGIN
+   IF (OLD.CANCEL_METHOD IS NULL) THEN
+   BEGIN
+      WK_SAVE_PICK_ITEM = 'T';
+   END
+   ELSE
+   BEGIN
+      WK_SAVE_PICK_ITEM = OLD.CANCEL_METHOD;
+   END
+   IF (WK_SAVE_PICK_ITEM = '') THEN
+   BEGIN
+      WK_SAVE_PICK_ITEM = 'T';
+   END
+
+   IF (WK_SAVE_PICK_ITEM = 'T') THEN
+   BEGIN
+      INSERT INTO PICK_ITEM_CANCEL(
+        PICK_LABEL_NO ,
+        PICK_ORDER ,
+        PICK_ORDER_LINE_NO ,
+        CONTACT_NAME ,
+        PROD_ID ,
+        SSN_ID ,
+        WARRANTY_TERM ,
+        PICK_LABEL_DATE ,
+        SPECIAL_INSTRUCTIONS1 ,
+        SPECIAL_INSTRUCTIONS2 ,
+        SHIP_VIA ,
+        PICK_ORDER_QTY ,
+        PICK_ALLOCATED_QTY ,
+        PICKED_QTY ,
+        PICK_LINE_DUE_DATE ,
+        PICK_STARTED ,
+        DESPATCH_TS ,
+        DESPATCH_LOCATION ,
+        CREATE_DATE ,
+        USER_ID ,
+        DEVICE_ID ,
+        CHECKIN_START ,
+        CHECKIN_FINISH ,
+        CHECKIN_USER_ID ,
+        PICK_LINE_STATUS ,
+        PARTIAL_PICK_ALLOWED ,
+        DESPATCH_PALLET_NO ,
+        WH_ID ,
+        PICK_LOCATION ,
+        REASON ,
+        SALE_PRICE ,
+        DISCOUNT ,
+        SSN_CONFIRM,
+        CANCEL_METHOD )
+      VALUES (
+        OLD.PICK_LABEL_NO ,
+        OLD.PICK_ORDER ,
+        OLD.PICK_ORDER_LINE_NO ,
+        OLD.CONTACT_NAME ,
+        OLD.PROD_ID ,
+        OLD.SSN_ID ,
+        OLD.WARRANTY_TERM ,
+        OLD.PICK_LABEL_DATE ,
+        OLD.SPECIAL_INSTRUCTIONS1 ,
+        OLD.SPECIAL_INSTRUCTIONS2 ,
+        OLD.SHIP_VIA ,
+        OLD.PICK_ORDER_QTY ,
+        OLD.PICK_ALLOCATED_QTY ,
+        OLD.PICKED_QTY ,
+        OLD.PICK_LINE_DUE_DATE ,
+        OLD.PICK_STARTED ,
+        OLD.DESPATCH_TS ,
+        OLD.DESPATCH_LOCATION ,
+        OLD.CREATE_DATE ,
+        OLD.USER_ID ,
+        OLD.DEVICE_ID ,
+        OLD.CHECKIN_START ,
+        OLD.CHECKIN_FINISH ,
+        OLD.CHECKIN_USER_ID ,
+        OLD.PICK_LINE_STATUS ,
+        OLD.PARTIAL_PICK_ALLOWED ,
+        OLD.DESPATCH_PALLET_NO ,
+        OLD.WH_ID ,
+        OLD.PICK_LOCATION ,
+        'Record Deleted' ,
+        OLD.SALE_PRICE ,
+        OLD.DISCOUNT ,
+        OLD.SSN_CONFIRM,
+        'l' );
+   END
+   /* record saved - now if the line is for an ssn
+      and the issn.pick_item matches - ie confirmed
+      then unconfirm the ssn */
+   IF (OLD.SSN_ID IS NOT NULL) THEN
+   BEGIN
+      FOR SELECT SSN_ID, WH_ID, LOCN_ID, CURRENT_QTY
+          FROM ISSN
+          WHERE ISSN.PICK_ORDER = OLD.PICK_LABEL_NO
+          INTO :WK_ISSN_SSN, :WK_ISSN_WH, :WK_ISSN_LOCN, :WK_ISSN_QTY
+      DO
+      BEGIN
+         /* unconfirm current order line */
+         UPDATE ISSN 
+            SET PREV_PREV_PICK_ORDER = PREV_PICK_ORDER,
+                PREV_PICK_ORDER = PICK_ORDER,
+                PICK_ORDER = NULL,
+                PREV_PREV_PACK_ID = PREV_PACK_ID,
+                PREV_PACK_ID = PACK_ID,
+                PACK_ID = NULL,
+                PREV_PREV_DESPATCH_ID = PREV_DESPATCH_ID,
+                PREV_DESPATCH_ID = DESPATCH_ID,
+                DESPATCH_ID = NULL 
+          WHERE ISSN.SSN_ID = :WK_ISSN_SSN;
+          WK_REFERENCE = OLD.PICK_ORDER || ' ' || OLD.PICK_LABEL_NO;
+          EXECUTE PROCEDURE ADD_SSN_HIST (:WK_ISSN_WH ,
+                  :WK_ISSN_LOCN ,
+                  :WK_ISSN_SSN ,
+                  '' ,
+                  '' ,
+                  'NOW',
+                  'Unconfirm ISSN on Deleted Pick Item',
+                  :WK_REFERENCE,
+                  :WK_ISSN_QTY,
+                  '' ,
+                  '' );
+      END
+   END
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

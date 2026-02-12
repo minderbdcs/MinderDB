@@ -1,0 +1,3 @@
+alter table  control add send_auob value_tf ;
+
+

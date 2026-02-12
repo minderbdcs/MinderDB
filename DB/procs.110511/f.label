@@ -1,0 +1,2 @@
+alter table sys_label_var add slv_pick code;
+

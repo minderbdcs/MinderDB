@@ -1,0 +1,12 @@
+update ssn set brand=upper(brand) where (brand is not null) and brand <> upper(brand) ;
+
+ insert into brand (code,description )
+ select s1.brand, s1.brand as descr 
+ from ssn s1
+ left outer join brand s2 on s2.code     = s1.brand 
+ where s2.code is null
+ and (s1.brand is not null)
+ group by s1.brand, descr
+ ;
+commit;
+alter table SSN add  CONSTRAINT SSN_FK_BRAND foreign key (BRAND) references BRAND(CODE) ON UPDATE CASCADE;

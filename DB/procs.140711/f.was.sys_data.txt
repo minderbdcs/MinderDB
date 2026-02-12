@@ -1,0 +1,145 @@
+From glenn@barcoding.com.au Thu Jul 14 12:00:16 2011
+Date: Tue, 12 Jul 2011 10:38:38 +1000
+From: Glen Nairn <glenn@barcoding.com.au>
+To: Frank Leih <frankl@barcode7.barcoding.com.au>
+Subject: Need a Table to accumulate KPI Data for Graphics -'SYS_DATA'
+
+Hi Frank,
+
+Can we have a new table to hold data for graphs.
+We  need to ensure we can produce graphs with trends for at least the
+last 12 months but because we archive most tables < 12 months then we
+need an alternative data source.
+Can you look at setting up a table say  'SYS_DATA' inside of which we
+hold various totals that can be used in graphs.
+We should also be adding a 'SYS_GRAPH' which is equivalent to the
+SYS_SCREEN which holds the type of Graph to be displayed
+This is only a suggestion - I need you to tell me whether this can be
+used in the graphs.
+Is the following proposed fields enough for all of the graph types?
+It is also important to be able to show trends e.g. Year to date, last 12
+months, last quarter, last month etc.
+
+RECORD_ID
+SD_NAME                   - 'DS_BY_HOUR'  VARCHAR(10)  /* This is the
+name for the data record and will be referred to by a SYS_GRAPH
+                                                                                
+                   or OPTIONS table e.g.  an example= 'DESPATCHES BY
+HOUR' .  */
+SD_TRANSACTION_TYPE - 'DSOT'          /* This indicates which
+TRANSACTIONS Type is being used.
+                                                                           
+Yes, this may have limits but but I hope we
+                                                                           
+will in the future stored procedures/triggers to update this table each
+time this Transaction is
+                                                                         
+run. Hence we can have the graphs updated every 60 secs but still
+avoiding hitting the
+                                                                         
+TRANSACTIONS_ARCHIVE Table every 60 seconds. */
+SD_WH_ID               - 'RZ'                 /*  Pinpoint Rozelle This
+may not always be a populated part of TRANSACTION_ARCHIVE  but we should
+be adding this*/
+SD_COMPANY_ID  - 'PINPOINT'   /* Not sure if needed for every graph but
+better to have now than add later.
+                                                                          
+Currently the TRANSACTIONS_ARCHIVE does not record the COMPANY_ID and we
+should look at adding this
+                                                                         
+  so that we can control which records are being reported by a SYS_GRAPH
+e.g Sales Order $ Values */
+SD_YEAR                  - '2011'              /* My idea of speeding up
+searches */
+SD_DAY_OF_YEAR - '187'               /* =6/7/11 and again, my idea of
+speeding up searches */
+SD_MONTH               - 7                     /* yes, these next 3 can
+be calculated from DATA_DAY_OF_YEAR but may help speed up processing */
+SD_WEEK                  - 2                     /* as above */
+SD_DAY_OF_WEEK - 'WED'           /* as above */
+SD_X_TITLE                - 'Hour of Day' - /*Used by Graph to label the
+X -Axis */
+                                                                       /*
+We perhaps should normalise this and move into a separate table */
+SD_Y_TITLE                -   'Total Despatches by Hour'  - /* Y -Axis
+Title  */
+                                                               /* We
+perhaps should normalise this and move into a separate table */
+                                                               /* Now for
+the data where each pair of [SD_X_?, SD_Y_?] forms an array element... */
+SD_X_1                         - '1'               /* Represents the hour
+the data belongs to e.g. 12.00am to 12:59:59:999am */
+SD_Y_1                         - '0'               /* means no despatches
+DSOT were performed during this hour  */
+SD_X_2                         - '2'
+SD_Y_2                          - '0'
+    ........                                 /* Continue fields  */
+SD_X_9                          - '9'
+SD_Y_9                          - '69'             /* Pinpoint performed
+69 x 'DSOT' Transactions in this hour */
+........                                     /* Continue fields  */
+SD_X_24                       - '24'
+SD_Y_24                       - '0'
+--------------------------------------------------------------------------------
+-----------------------------------
+This is an actual partial record of how many Despatches ('DC') were
+performed at Pinpoint on the 6th July.
+The SD_X_1 ... SD_X_24 is really an array of Column Titles.
+The SD_Y_1 ... SD_Y_24 is the actual total of Despatches completed in the
+Hour shown in the attached screen of an Excel graph.
+
+I also want to avoid updating the TRANSACTIONS_ARCHIVE as this increases
+potential for deadlocks hence we should not add a field to show its been
+exported to the 'SYS_DATA'  table.Each time the process runs it will
+update that relevant SD_X_?, SD_Y_? fields where ? represents the Hour to
+update.
+
+This also allows us to calculate Averages, Means, Std deviations etc
+should we need these.
+This does mean for each type of data we collect there will be 366 records
+after 12 months (this does not necessarily mean for each graph as we may
+have 1 to many graphs per 'SYS_DATA.SD_NAME'.
+
+We need to allow for as wide as possible range of Graph X, Y co-ordinate
+data types and intervals.
+On the other hand graphs are all about reporting trends and results that
+are quite frankly always based on days of the year.
+
+Other examples of Graphs may include - Receipts using the total 'GRND'
+Transactions, another might be the number of Putaway Transfers e.g.
+'TROL' (assuming they always place into somewhere later).
+
+Another and very important KPI graph will involve Sales Orders that have
+been Confirmed by the Sale Department e.g.:
+'SYS_DATA.SD_NAME' = 'SALE_VALUE' - records the Order $ totals per hour
+and then
+'SYS_DATA.SD_NAME' = 'SALE_ORDER' - records the Total Orders per hour and
+then
+'SYS_DATA.SD_NAME' = 'SALE_LINES' - records the total Order Lines per
+hour.
+By combining these we can calculate a range of statistics e.g. Average
+Sale, Average total Lines all without having to impact the PICK_ORDER and
+PICK_ITEM tables every 60 seconds if this is to be graph refresh rate
+(even if the data is only by hour).
+
+It is also my hope that you may be able to build the 'SYS_DATA' update
+into many of these Transactions e.g the 'DSOT', 'GRND', 'GRNV' as a
+trigger and thereby make the 'SYS_DATA' table real-time.
+
+
+
+ -- 
+Regards,
+
+Glen S. Nairn
+Director
+Barcoding & Data Collection Systems Pty Ltd
+109 Ashley St, Roseville, NSW 2069, Australia
+T: +61 2  9419 6011
+F: +61 2  9413 4261
+M:+61 (0) 407 434 076 
+
+--
+This message has been scanned for viruses and
+dangerous content by MailScanner, and is
+believed to be clean.

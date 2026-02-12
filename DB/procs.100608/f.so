@@ -1,0 +1,3 @@
+alter table pick_order add volume volume;
+alter table pick_order add volume_uom uom;
+

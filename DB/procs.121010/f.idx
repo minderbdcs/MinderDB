@@ -1,0 +1,1 @@
+create index trans_archive_cmp_idx on transactions_archive(complete,trn_date);

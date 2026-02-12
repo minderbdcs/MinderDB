@@ -1,0 +1,8 @@
+/*
+alter table pick_order add update_id integer;
+*/
+drop trigger run_transaction_gclo ;
+drop trigger run_transaction_gpld ;
+alter table pick_order drop update_id ;
+alter table pick_order add update_id varchar(10);
+

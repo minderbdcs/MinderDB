@@ -1,0 +1,58 @@
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER UPD_PICK_DESPATCH_TIME FOR PICK_DESPATCH
+ACTIVE BEFORE UPDATE POSITION 20 
+AS
+DECLARE VARIABLE WK_FOUND INTEGER;
+BEGIN
+   NEW.LAST_UPDATE_DATE = 'NOW';
+   IF (NEW.PICKD_MANIFEST_ID IS NOT NULL) THEN
+   BEGIN
+      IF (NEW.PICKD_MANIFEST_ID <> 0) THEN
+      BEGIN
+         WK_FOUND = 0;
+         SELECT 1 FROM PICK_MANIFEST
+         WHERE MANIFEST_ID = NEW.PICKD_MANIFEST_ID
+         INTO :WK_FOUND;
+         IF (WK_FOUND IS NULL) THEN
+         BEGIN
+            WK_FOUND = 0;
+         END
+         IF (WK_FOUND = 0 ) THEN
+         BEGIN
+            INSERT INTO PICK_MANIFEST (MANIFEST_ID, 
+                   PICKM_DATE,
+                   CREATE_DATE,
+                   USER_ID,
+                   LAST_UPDATE_DATE,
+                   DEVICE_ID,
+                   PICKM_STATUS)
+            VALUES (NEW.PICKD_MANIFEST_ID,
+                    'NOW',
+                    'NOW',
+                    NEW.USER_ID,
+                    'NOW',
+                    NEW.DEVICE_ID,
+                    NEW.DESPATCH_STATUS);
+         END
+         ELSE
+         BEGIN
+            UPDATE PICK_MANIFEST SET PICKM_STATUS = NEW.DESPATCH_STATUS,
+                   LAST_UPDATE_DATE = 'NOW',
+                   USER_ID = NEW.USER_ID,
+                   DEVICE_ID = NEW.DEVICE_ID  
+            WHERE MANIFEST_ID = NEW.PICKD_MANIFEST_ID; 
+         END
+      END
+   END
+END^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+

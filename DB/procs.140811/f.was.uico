@@ -1,0 +1,5 @@
+select p1.ssn_id, p1.company_id ,(select response_text from add_tran_response_v6(p1.wh_id,p1.locn_id,p1.ssn_id,'UICO','I','NOW','INSPIRE',1,'F','','MASTER   ',0,'','SSSSSSSSS','BDCS','XX','','PSGROUP','','','',''))
+from issn      p1
+where (p1.wh_id='MV') and (p1.locn_id = 'JASD')
+;
+

@@ -1,0 +1,2 @@
+alter table pick_order add address_label_date timestamp;
+

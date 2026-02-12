@@ -1,0 +1,17 @@
+alter trigger insert_ssn_po_price inactive;
+alter trigger insert_ssn_status  inactive;
+alter trigger add_ssn_time   inactive;
+select issn.ssn_id from issn where issn.ssn_id <> issn.original_ssn and issn.prod_id is null;
+select issn.ssn_id from issn where issn.ssn_id <> issn.original_ssn and issn.prod_id is null and exists(select ssn_id from ssn where ssn.ssn_id = issn.ssn_id);
+select issn.ssn_id,issn.original_ssn from issn where issn.ssn_id <> issn.original_ssn and issn.prod_id is null and exists(select ssn_id from ssn where ssn.ssn_id = issn.ssn_id);
+/*
+select ssn_id from issn where original_ssn='10010004';
+delete from ssn where ssn_id='10010004';
+alter trigger add_ssn_time   active;
+alter trigger insert_ssn_status  active;
+alter trigger insert_ssn_po_price active;
+commit;
+*/
+/*
+update issn set original_ssn = ssn_id where prod_id is null and ssn_id <> original_ssn;
+*/

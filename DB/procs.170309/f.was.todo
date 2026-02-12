@@ -1,0 +1,51 @@
+Table SYS_EMAIL
+
+SE_MAIL_RELAY_HOST* HOST_NAME NOT NULL,
+/* Unique Email Relay Host Name for MINDER. New Domain HOST_NAME AS VARCHAR(50) required.
+This I understand, is not the MDR Host Server name Please refer to Christo for further details */
+SE_MAIL_FROM_DOMAIN DOMAIN_NAME NOT NULL,
+/* New DOMAIN = DOMAIN_NAME AS VARCHAR(63) - Please configure a constraint such that it restrict to use of up to 63 letters, numbers and hyphen characters and must not start or end with hyphen. The max. 63 chars. applies to number of characters left of the extension. There is debate as to the max. no. of chars allowed. Source https://www.domainregistration.com.au/infocentre/info-domain-length.php
+Example 'from@example.com' This must be a valid URL known to the DNS on the network. */
+SE_EMAIL_FROM_NAME EMAIL_NAME,
+/* New Domain EMAIL_NAME AS VARCHAR(50) required
+Example 'Your Name' e.g. ‘ToolMinder’ */
+SE_CREATED_DATE CREATE_DATE ,
+SE_CREATED_BY USER_ID ,
+SE_LAST_UPDATED CREATE_DATE ,
+SE_LAST_UPDATED_BY USER_ID
+
+==============================================================================================
+2. New Table = REPORTS_SCHEDULE
+This new table is to be used to hold the values needed for each Report that is required to be run. 
+This implies one record per Report per Site (WH_ID):
+a. Site (= WH_ID) – Each Site will have different Reporting requirements. E.g. ‘RH’ – Roy Hill.
+b. ReportMan Name – This name must be listed in the REPORTS table and is required to be run automatically. We should look at reducing the size of the current REPORT.NAME field (currently VARCHAR(80).
+c. Report Run Time – can only be to the nearest hour (24 hour clock) as the crontask runs hourly.
+d. Since an Email requires (or not) a Subject then we should define this (and used by other systems if necessary to direct message into at recipient system). E.g. ‘Report – Overdue Tools – Roy Hill’
+e. Report Output Folder – All Reports listed in this table will produce output with format such as .pdf and these should be saved into the Folder defined. E.g. /data/minder/reports/RH/ Each time an email is sent it will attach the Reports found inside the defined Output folder. Once a Report is sent it is moved to a sub folder where up to last 7 days is kept.
+f. Report Parameters – I am guessing here that we need between 2 or 3 up to max. 4 parameters which the report is expecting to use. E.g. WH_ID will be a mandatory parameter. COMPANY_ID must also be mandatory = Tool Owner. If a Report is required to list all Tools with a Safety Test or Calibration Expiry due within the next x days where x will be passed e.g. ‘30’ days.
+g. Each ToolMinder site requires Reports which are unique to their site and therefore recipient’s address will also need to be specific to the site. Rather than having to edit every Reports Schedule with the same Recipient’s email address this can be found in the WAREHOUSE.WH_REPORTS_EMAIL. I would also like the WAREHOUSE table to also hold the email recipients Name which the php example above shows as: $mail->addAddress('myfriend@example.net', 'My Friend'); Frank – Please add WAREHOUSE.WH_REPORTS_EMAIL_NAME NAME h. Add STATUS field if need to turn off a Report/s then Administrator only needs to change Status.
+Suggested Table Metadata (* indicates unique Key): 
+REPS_WH_ID* WH_ID NOT NULL, /* Add Constraint WH_ID must exist in the WAREHOUSE Table */
+REPS_RUN_HOUR* INTEGER NOT NULL, /* e.g. 11 */ 
+/* Holds the hour inside which the Report is run. Note: 
+IF Report required twice per day i.e. each shift then add 2 records. */ 
+REPS_NAME* REPORT_NAME NOT NULL, 
+/* New Domain REPS_NAME AS VARCHAR(80) required. Please add Constraint that REPS_NAME must exist in the REPORTS Table.
+The current REPORTS.NAME does not use a Domain but has VARCHAR(80) 
+please also update both of these fields to use the same Domain name */ 
+REPS_SUBJECT DESCR NOT NULLi, /* VARCHAR(75) e.g. ‘Report – Overdue Tools –Roy Hill’ */
+REPS_OUT_FOLDER FOLDER_NAME NOT NULL, 
+  /* New Domain FOLDER_NAME AS VARCHAR(50) required. Constrain such that Folder name must = WH_ID e.g. ‘/data/minder/reports/RH/’ - where ‘RH’ = Roy Hill. */
+REPS_OUT_FILE_NAME FILENAME NOT NULL,
+REPS_OUT_FILE_EXT EXTENSION NOT NULL, 
+/* We need to decide how to name the Reports but suggest it starts with WH_ID e.g. ‘RH_’ as prefix followed by REPS_OUT_FILE_NAME e.g. ‘OVERDUE_TOOLS_’ followed by a NOW timestamp followed by REPS_OUT_FILE_EXT. Hence overall File name = e.g. ‘RH_OVERDUE_TOOLS_2017-03-06 12:01:20:000.pdf’ REPS_PARAMETER_1 WH_ID NOT NULL /* Must be constrained to the WAREHOUSE Table. */
+REPS_PARAMETER_2 COMPANY NOT NULL DEFAULT ‘ALL’, /* Constrained by COMPANY table or ‘ALL’. */
+REPS_PARAMETER_3 VARCHAR(50), /* Optional – e.g. ’30’ - Days to Expiry of Safety Testing */
+REPS_PARAMETER_4 VARCHAR(50), /* Optional – spare parameter*/
+REPS_STATUS STATUS NOT NULL DEFAULT ‘CU’, 
+/* ‘CU’ = Current. Allows Admin to stop creating and sending reports as temporary step if required.*/
+REPS_CREATED_DATE CREATE_DATE ,
+REPS_CREATED_BY USER_ID,
+REPS_LAST_UPDATED CREATE_DATE,
+REPS_LAST_UPDATED_BY USER_ID

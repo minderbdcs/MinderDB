@@ -1,0 +1,2 @@
+alter table pick_order_dx add P_POST_CODE_DEPOT_ID            CODE; 
+

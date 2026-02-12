@@ -1,0 +1,2 @@
+alter table prod_profile add ssn_type ssn_type;
+

@@ -1,0 +1,27 @@
+/* triggers */
+drop trigger run_transaction_ppsp;
+drop trigger run_transaction_pppk;
+drop trigger run_transaction_ppa2;
+drop trigger run_transaction_gltd;
+drop trigger add_prod_profile_temp;
+drop trigger upd_prod_profile_time;
+/* procedures */
+drop procedure export_prod_profile;
+drop procedure import_prod_profile;
+drop procedure manifest_delivery;
+drop procedure locn_statistics;
+
+commit;
+
+alter table prod_profile alter inner_weight to xx_inner_weight;
+alter table prod_profile alter net_weight to xx_net_weight;
+
+commit;
+
+alter table prod_profile add net_weight weight_decimal3;
+alter table prod_profile add inner_weight weight_decimal3;
+
+update prod_profile set net_weight = xx_net_weight, inner_weight = xx_inner_weight;
+
+commit;
+

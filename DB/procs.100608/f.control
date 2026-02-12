@@ -1,0 +1,2 @@
+alter table control add default_equip_locn_id locn_id;
+

@@ -1,0 +1,6 @@
+WHSD
+	options records for DEF_RET_LO and DEF_RET_CC include the wh_id at the end of the code.
+	note downer has records with code = company_id|wh_id
+	als black boxes have code = system id to allow severla boxes at a site using different 
+		return cc and cost center.
+

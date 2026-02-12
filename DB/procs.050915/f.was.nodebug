@@ -1,0 +1,5 @@
+alter trigger update_issn_locn_log inactive;
+alter trigger update_ssn_locn_log inactive;
+alter trigger add_ssn_hist_log inactive;
+alter trigger save_pick_order active;
+

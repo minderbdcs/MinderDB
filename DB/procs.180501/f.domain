@@ -1,0 +1,2 @@
+alter domain state type varchar(50);
+

@@ -1,0 +1,15 @@
+alter table sys_label_var alter column last_update_by position 8;
+alter table sys_label_var alter column last_update_date position 7;
+alter table sys_label_var alter column sl_name position 6;
+alter table sys_label_var alter column slv_sequence position 5;
+alter table sys_label_var alter column slv_default position 4;
+alter table sys_label_var alter column slv_expression position 3;
+alter table sys_label_var alter column slv_name position 2;
+
+alter table sys_label_var alter column last_update_by position 8;
+alter table sys_label_var alter column last_update_date position 7;
+alter table sys_label_var alter column sl_name position 6;
+alter table sys_label_var alter column slv_sequence position 5;
+alter table sys_label_var alter column slv_default position 4;
+alter table sys_label_var alter column slv_expression position 3;
+alter table sys_label_var alter column slv_name position 2;

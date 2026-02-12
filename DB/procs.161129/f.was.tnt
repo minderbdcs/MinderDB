@@ -1,0 +1,34 @@
+for tnt label
+want the routing info on the label
+
+have 
+H header with date dd-mm-yyyyhh:mmvvv
+need to store vvv somewhere - probably in the carrier since only tnt will use this
+
+Have in carrier_service service_profile_id this will be the service group
+
+A GGG servicegroup 
+
+C suburb:state|postcode|Origin Depot Exception|Gateway depot|Forwarding depot|Route or Sort Bin
+
+D postcode|origin depot  
+
+Z trailing record with date
+
+so for the send from address use the post code and the services profile_id to lookup the first
+D record for the postcode . This gives the send from depot
+
+lookup C records for the to Post code, Suburb and state
+if only one then use it
+otherwise look for one with the origin depot (in origin exception)
+if not found  use the default one ie without an Origin Depot Exception 
+
+
+So the D records are for the preceeding service group
+then a table with service group, post code and send from depot 
+
+also a  depot forwarding table for c type records 
+
+what about no C records  for suburb state post code
+for other couriers we are using the first record in the depot table for the postcode and state and country
+since the suburb is just a string passed to order input

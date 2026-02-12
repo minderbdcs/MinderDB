@@ -1,0 +1,345 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_DSSS FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 135 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_LABEL_NO VARCHAR(10);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_OBJECT VARCHAR(30);
+DECLARE VARIABLE WK_REF VARCHAR(40);
+DECLARE VARIABLE WK_REASON VARCHAR(40);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_PID_FOUND INTEGER;
+DECLARE VARIABLE WK_PID_QTY INTEGER;
+DECLARE VARIABLE WK_PI_STATUS CHAR(2);
+DECLARE VARIABLE WK_DETAIL_ID INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PI_PICKED_QTY INTEGER;
+DECLARE VARIABLE WK_PI_ORDER_QTY INTEGER;
+DECLARE VARIABLE WK_PI_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_IS_QTY INTEGER;
+DECLARE VARIABLE iSSN_LENGTH INTEGER;
+DECLARE VARIABLE iSSN_ID INTEGER;
+DECLARE VARIABLE I_SSN_ID VARCHAR(20);
+DECLARE VARIABLE I_LEN_SSN_ID INTEGER;
+DECLARE VARIABLE LEN_SSN_ID INTEGER;
+DECLARE VARIABLE WK_OLD_SSN_ID VARCHAR(30);
+DECLARE VARIABLE P_SSN_ID INTEGER;
+DECLARE VARIABLE WK_PID_SSN VARCHAR(20);
+DECLARE VARIABLE WK_DEVICE_WH CHAR(2);
+DECLARE VARIABLE WK_PI_PICKED_QTY_NULL INTEGER;
+DECLARE VARIABLE WK_TRN_TYPE VARCHAR(4);
+DECLARE VARIABLE WK_TRN_CODE CHAR(1);
+DECLARE VARIABLE WK_AUDIT_DESC VARCHAR(40);
+
+DECLARE VARIABLE WK_PI_SSN VARCHAR(20);
+DECLARE VARIABLE WK_PI_WH CHAR(2);
+DECLARE VARIABLE WK_QTY_REMAINING INTEGER;
+DECLARE VARIABLE WK_PI_LINE_QTY_REMAINING INTEGER;
+DECLARE VARIABLE WK_QTY_TO_USE INTEGER;
+DECLARE VARIABLE WK_ALLOWED_STATUS VARCHAR(40);
+DECLARE VARIABLE WK_IS_SSN VARCHAR(20);
+DECLARE VARIABLE WK_IS_QTY_REMAINING INTEGER;
+DECLARE VARIABLE WK_USED_SSN VARCHAR(20);
+DECLARE VARIABLE WK_IS_USED_QTY INTEGER;
+DECLARE VARIABLE WK_LOG VARCHAR(255);
+DECLARE VARIABLE WK_DO_UASL CHAR(1);
+DECLARE VARIABLE WK_CURRENT_WH_ID CHAR(2);
+DECLARE VARIABLE WK_CURRENT_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_IS_TAKEN CHAR(1);
+DECLARE VARIABLE WK_GENERATE_SSN_METHOD VARCHAR(25);
+DECLARE VARIABLE WK_PALLET_NO VARCHAR(3);
+DECLARE VARIABLE WK_PALLET_NO_INT INTEGER;
+DECLARE VARIABLE WK_SSN_PREFIX VARCHAR(30);
+DECLARE VARIABLE WK_ORIGINAL_SSN VARCHAR(20);
+DECLARE VARIABLE WK_LAST_SSN VARCHAR(20);
+DECLARE VARIABLE WK_LAST2_SSN VARCHAR(20);
+DECLARE VARIABLE GRN VARCHAR(10);
+DECLARE VARIABLE WK_FILENAME VARCHAR(255);
+DECLARE VARIABLE WK_RESULT INTEGER;
+DECLARE VARIABLE WK_RESPONSE_FINAL VARCHAR(70);
+DECLARE VARIABLE WK_OWNER VARCHAR(20);
+DECLARE VARIABLE WK_OWNER_GRN VARCHAR(10);
+DECLARE VARIABLE WK_OWNER_PFX CHAR(2);
+DECLARE VARIABLE P_LAST_LINE_NO VARCHAR(10);
+DECLARE VARIABLE WK_GRN_TYPE CHAR(2);
+DECLARE VARIABLE WK_LOADNO VARCHAR(10);
+DECLARE VARIABLE WK_GRN_LOT VARCHAR(30);
+DECLARE VARIABLE WK_LAST_LOT_PALLET_NO INTEGER;
+DECLARE VARIABLE WK_ISSN_PREFIX VARCHAR(20);
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'DSSS') THEN
+  BEGIN
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_PI_STATUS = NEW.SUB_LOCN_ID;
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_OBJECT = NEW.OBJECT;
+     WK_REF = ALLTRIM(NEW.REFERENCE);
+     EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REF, 1  RETURNING_VALUES :WK_PI_ORDER; 
+     EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REF, 2  RETURNING_VALUES :WK_REASON; 
+     WK_QTY = NEW.QTY;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_TRN_CODE = NEW.TRN_CODE;
+     WK_TRN_TYPE = NEW.TRN_TYPE;
+
+     WK_AUDIT_DESC = 'Split to Device ' || :WK_DEVICE ;
+           /*  SPlit it */
+           /* calculate the next ssn id */
+           SELECT GENERATE_SSN_METHOD FROM CONTROL INTO :WK_GENERATE_SSN_METHOD;
+
+           /* IF ((WK_GENERATE_SSN_METHOD IS NULL) OR (WK_GENERATE_SSN_METHOD <> '|GRN=4|LINE=2|SUFFIX=2,3|')) THEN */
+           IF ((WK_GENERATE_SSN_METHOD IS NULL) OR ((WK_GENERATE_SSN_METHOD <> '|GRN=4|LINE=2|SUFFIX=2,3|') AND 
+               (WK_GENERATE_SSN_METHOD <> 'CMP=2|GRN=6|LINE=2|SFX=2' ))) THEN
+           BEGIN
+              WK_ISSN_PREFIX = '';
+              /* Get length for Barcode */   
+              EXECUTE PROCEDURE GET_BARCODE_LENGTH RETURNING_VALUES iSSN_LENGTH;
+              SELECT DATA_PREFIX FROM PARAM WHERE DATA_ID = 'BARCODE' INTO :WK_ISSN_PREFIX;
+              IF (WK_ISSN_PREFIX IS NULL) THEN
+              BEGIN
+                 WK_ISSN_PREFIX = '';
+              END
+              iSSN_ID = GEN_ID(ISSN_SSN_ID, 1);
+              P_SSN_ID = iSSN_ID - 1;
+/*
+              LEN_SSN_ID = STRLEN(P_SSN_ID);
+              -* I_SSN_ID = ''; *-
+              I_SSN_ID = WK_ISSN_PREFIX;
+              -* I_LEN_SSN_ID = STRLEN(P_SSN_ID); *-
+              I_LEN_SSN_ID = STRLEN(P_SSN_ID) + STRLEN(WK_ISSN_PREFIX);
+              
+              -* Padding leading with 0 *-
+              WHILE (I_LEN_SSN_ID < :iSSN_LENGTH) DO
+              BEGIN
+                 I_SSN_ID = I_SSN_ID || '0';
+                 I_LEN_SSN_ID = I_LEN_SSN_ID + 1;
+              END
+              I_SSN_ID = I_SSN_ID || P_SSN_ID;
+*/
+              SELECT ISSN_ID FROM GET_ISSN_BARCODE('BARCODE', :P_SSN_ID, 36) INTO :I_SSN_ID;
+           END
+      WK_FILENAME = '/tmp/pkol.log';
+           IF (WK_GENERATE_SSN_METHOD = '|GRN=4|LINE=2|SUFFIX=2,3|' ) THEN
+           BEGIN
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, 'pkol start - grn style ssn id'); */
+              /* the prefix (length 6 is the current issn ssn_id) */
+              WK_SSN_PREFIX = SUBSTR(WK_OBJECT,1,6);
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, 'prefix ' || wk_ssn_prefix); */
+              /* want the max pallet no for that prefix */  
+              /* SELECT GRN FROM SSN WHERE SSN_ID = :WK_ORIGINAL_SSN INTO :GRN; */
+              GRN = SUBSTR(WK_OBJECT,1,4);
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, 'grn ' || grn); */
+              /*
+              SELECT MAX(SSN_ID) FROM ISSN WHERE SSN_ID STARTING :WK_SSN_PREFIX AND (WH_ID < 'X ' OR WH_ID > 'X~') INTO :WK_LAST_SSN;
+              WK_LAST2_SSN = '';
+              -* if the pallet no roled over 99 then the length as gone to 9 *-
+              EXECUTE PROCEDURE GET_BARCODE_LENGTH RETURNING_VALUES iSSN_LENGTH;
+              SELECT MAX(SSN_ID) FROM ISSN WHERE SSN_ID STARTING :WK_SSN_PREFIX AND LEN(SSN_ID) > :iSSN_LENGTH AND (WH_ID < 'X ' OR WH_ID > 'X~') INTO :WK_LAST2_SSN;
+              IF (WK_LAST2_SSN IS NULL) THEN
+              BEGIN
+                 WK_PALLET_NO = SUBSTR(WK_LAST_SSN,iSSN_LENGTH - 1,iSSN_LENGTH);
+              END
+              ELSE
+              BEGIN
+                 WK_PALLET_NO = SUBSTR(WK_LAST2_SSN,iSSN_LENGTH - 1,iSSN_LENGTH + 1);
+              END
+              */
+              SELECT LAST_PALLET_NO FROM GRN WHERE GRN = :GRN INTO :WK_PALLET_NO_INT;
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, 'have pallet ' ); */
+              IF (WK_PALLET_NO_INT IS NULL) THEN
+              BEGIN
+                 WK_PALLET_NO_INT = 0;
+              END
+                
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, 'pallet 2 ' ); */
+              /* WK_PALLET_NO = WK_PALLET_NO + 1; */
+              WK_PALLET_NO_INT = WK_PALLET_NO_INT + 1;
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, 'pallet 3 ' ); */
+              UPDATE GRN SET LAST_PALLET_NO = :WK_PALLET_NO_INT WHERE GRN = :GRN;
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, 'update grn' ); */
+              WK_PALLET_NO = WK_PALLET_NO_INT;
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, ' pallet no is ' || WK_PALLET_NO ); */
+              IF (WK_PALLET_NO < 10) THEN
+              BEGIN
+                 WK_PALLET_NO = LPAD(WK_PALLET_NO,'0',2);
+              END
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, 'after lpad' ); */
+              I_SSN_ID = WK_SSN_PREFIX || WK_PALLET_NO;
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, 'set issn ' || :I_SSN_ID ); */
+           END /* if ssn method is |GRN=4|LINE=2|SUFFIX=2,3| */
+
+           IF (WK_GENERATE_SSN_METHOD = 'CMP=2|GRN=6|LINE=2|SFX=2' ) THEN
+           BEGIN
+              GRN = '';
+              WK_ORIGINAL_SSN = '';
+              /* the prefix (length 6 is the current issn ssn_id) */
+              WK_SSN_PREFIX = SUBSTR(WK_OBJECT,1,6);
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, 'prefix ' || wk_ssn_prefix); */
+              /* want the max pallet no for that prefix */  
+              SELECT ORIGINAL_SSN FROM ISSN WHERE SSN_ID = :WK_OBJECT INTO :WK_ORIGINAL_SSN; 
+              SELECT GRN FROM SSN WHERE SSN_ID = :WK_ORIGINAL_SSN INTO :GRN; 
+              /* GRN = SUBSTR(WK_OBJECT,1,4); */
+              WK_GRN_TYPE = '';
+              WK_LOADNO = '';
+              WK_GRN_LOT = '';
+              SELECT GRN_TYPE, ORDER_NO , LAST_LOT_NO
+              FROM GRN 
+              WHERE GRN = :GRN
+              INTO :WK_GRN_TYPE, :WK_LOADNO, :WK_GRN_LOT;
+              IF (WK_GRN_LOT IS NULL) THEN
+              BEGIN
+                 WK_GRN_LOT = '';
+              END
+              SELECT LAST_PALLET_NO FROM GRN WHERE GRN = :GRN INTO :WK_PALLET_NO_INT;
+              IF (WK_PALLET_NO_INT IS NULL) THEN
+              BEGIN
+                 WK_PALLET_NO_INT = 0;
+              END
+              IF (STRLEN(WK_GRN_LOT) > 0) THEN
+              BEGIN
+                 WK_LAST_LOT_PALLET_NO = 0;
+                 /* SELECT MAX(LAST_PALLET_NO) FROM GRN WHERE LAST_LOT_NO = :WK_GRN_LOT INTO :WK_LAST_LOT_PALLET_NO; */
+                 SELECT MAX(LAST_PALLET_NO) FROM GRN WHERE LAST_LOT_NO STARTING SUBSTR(:WK_GRN_LOT,1,8) INTO :WK_LAST_LOT_PALLET_NO;
+                 IF (WK_LAST_LOT_PALLET_NO IS NULL) THEN
+                 BEGIN
+                    WK_LAST_LOT_PALLET_NO = WK_PALLET_NO_INT;
+                 END
+                 IF (WK_LAST_LOT_PALLET_NO > WK_PALLET_NO_INT) THEN
+                 BEGIN
+                    WK_PALLET_NO_INT = WK_LAST_LOT_PALLET_NO;
+                 END
+              END
+              WK_PALLET_NO_INT = WK_PALLET_NO_INT + 1;
+              UPDATE GRN SET LAST_PALLET_NO = :WK_PALLET_NO_INT WHERE GRN = :GRN;
+              WK_PALLET_NO = WK_PALLET_NO_INT;
+              IF (WK_PALLET_NO < 10) THEN
+              BEGIN
+                 WK_PALLET_NO = LPAD(WK_PALLET_NO,'0',2);
+              END
+              WK_OWNER = '';
+              WK_OWNER_PFX = '';
+              IF ((WK_GRN_TYPE = 'PO') OR
+                  (WK_GRN_TYPE = 'RA') OR  
+                  (WK_GRN_TYPE = 'TR') OR
+                  (WK_GRN_TYPE = 'WO')) THEN
+              BEGIN
+                 SELECT COMPANY_ID, PO_LEGACY_OWNER_ID 
+                 FROM PURCHASE_ORDER 
+                 WHERE PURCHASE_ORDER = :WK_LOADNO
+                 INTO :WK_OWNER, :WK_OWNER_PFX;
+                 IF (WK_OWNER_PFX IS NULL) THEN
+                 BEGIN
+                    WK_OWNER_PFX = '';
+                 END
+              END
+              IF (WK_OWNER IS NULL OR WK_OWNER = '') THEN
+              BEGIN
+                 SELECT OWNER_ID 
+                 FROM GRN 
+                 WHERE GRN = :GRN
+                 INTO :WK_OWNER;
+              END
+              IF (WK_OWNER_PFX = '') THEN
+              BEGIN
+                 SELECT COMPANY_ID_PREFIX 
+                 FROM COMPANY 
+                 WHERE COMPANY_ID = :WK_OWNER 
+                 INTO :WK_OWNER_PFX;
+        
+                 IF (WK_OWNER_PFX IS NULL) THEN
+                 BEGIN
+                    WK_OWNER_PFX = '';
+                 END
+              END
+              LEN_SSN_ID = STRLEN(WK_OWNER_PFX);
+              WHILE (LEN_SSN_ID < 2) DO
+              BEGIN
+                 WK_OWNER_PFX = '0' || WK_OWNER_PFX;
+                 LEN_SSN_ID = LEN_SSN_ID + 1;
+              END
+              LEN_SSN_ID = STRLEN(GRN);
+              WK_OWNER_GRN = GRN;
+              WHILE (LEN_SSN_ID < 6) DO
+              BEGIN
+                 WK_OWNER_GRN = '0' || WK_OWNER_GRN;
+                 LEN_SSN_ID = LEN_SSN_ID + 1;
+              END
+              P_LAST_LINE_NO = SUBSTR(WK_OBJECT,STRLEN(WK_OBJECT) - 3,STRLEN(WK_OBJECT) - 2);
+            
+              IF (STRLEN(WK_GRN_LOT) > 0) THEN
+              BEGIN
+                 WK_OWNER_PFX = SUBSTR(WK_OBJECT, 1, 2);
+                 WK_OWNER_GRN = SUBSTR(WK_OBJECT,3, STRLEN(WK_OBJECT) - 4);
+              END
+              /* I_SSN_ID = WK_SSN_PREFIX || WK_PALLET_NO; */
+              I_SSN_ID = WK_OWNER_PFX || WK_OWNER_GRN || P_LAST_LINE_NO || WK_PALLET_NO;
+           END /* if ssn method is 'CMP=2|GRN=6|LINE=2|SFX=2' */
+           /* end of get next ssn id */
+              
+           EXECUTE PROCEDURE PC_TRSS 
+           :WK_RECORD ,
+           :WK_WH_ID,
+           :WK_LOCN_ID,
+           :WK_OBJECT,
+           'TRSS',
+           'A',
+           :WK_DATE,
+           :I_SSN_ID,
+           :WK_QTY,
+           :WK_USER,
+           :WK_DEVICE;
+           WK_OLD_SSN_ID = WK_OBJECT;
+           WK_OBJECT = I_SSN_ID;
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, 'after pc_trss ' || :I_SSN_ID ); */
+           /* UPDATE ISSN SET OTHER1 = (SELECT OTHER1 FROM ISSN WHERE SSN_ID=:WK_OLD_SSN_ID), OTHER2 = 'Split ' || :WK_OLD_SSN_ID WHERE SSN_ID = :I_SSN_ID; */
+           UPDATE ISSN SET OTHER1 = (SELECT OTHER1 FROM ISSN WHERE SSN_ID=:WK_OLD_SSN_ID), OTHER2 = 'SplIT ' || :WK_OLD_SSN_ID || ' Order ' || :WK_PI_ORDER WHERE SSN_ID = :I_SSN_ID;
+      /* WK_RESULT = FILE_WRITELN(WK_FILENAME, 'after set other2 '  ); */
+   
+        /* use wh_id of device */
+        WK_DEVICE_WH = WK_WH_ID;
+        SELECT WH_ID FROM LOCATION WHERE LOCN_ID = :WK_DEVICE
+        INTO :WK_DEVICE_WH;
+   
+/*
+        UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS,
+            PREV_PREV_WH_ID = PREV_WH_ID,
+            PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+            PREV_WH_ID = WH_ID,
+            PREV_LOCN_ID = LOCN_ID,
+            WH_ID = :WK_DEVICE_WH,
+            LOCN_ID = :WK_DEVICE
+         WHERE SSN_ID = :WK_OBJECT;
+*/
+        UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS
+         WHERE SSN_ID = :WK_OBJECT;
+
+         EXECUTE PROCEDURE ADD_SSN_HIST(:WK_DEVICE_WH, :WK_DEVICE, :WK_OBJECT, 
+                 :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                 :WK_AUDIT_DESC , :WK_REASON, :WK_QTY, :WK_USER, :WK_DEVICE); 
+   
+       WK_RESPONSE_FINAL = :WK_OBJECT || '|' || 'Processed successfully';
+       EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'T', :WK_RESPONSE_FINAL);
+
+   /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+  END
+ END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

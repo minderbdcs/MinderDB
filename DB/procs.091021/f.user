@@ -1,0 +1,5 @@
+alter table sys_user add status_adjust_issn value_tf;
+alter table sys_user add status_adjust_pick_item value_tf;
+alter table sys_user add status_adjust_pick_order value_tf;
+alter table sys_user add status_adjust_purchase_order value_tf;
+alter table sys_user add status_adjust_po_line value_tf;

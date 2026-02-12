@@ -1,0 +1,3 @@
+alter table company add send_stav value_tf default 'T';
+update company set send_stav='T';
+

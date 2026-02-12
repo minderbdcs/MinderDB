@@ -1,0 +1,11 @@
+
+alter table pick_item add pi_legacy_item_descr notes;
+alter table pick_item add pi_legacy_closed	value_tf;
+alter table pick_item add pi_legacy_lineno	integer;
+alter table pick_item add pi_legacy_wh_name	description;
+alter table pick_item add pi_legacy_fulfilled_qty	qty;
+alter table pick_item add pi_legacy_packed_qty	qty;
+alter table pick_item add pi_legacy_picked_qty qty;
+alter table pick_item add pi_legacy_rate varchar(15);
+alter table pick_item add pi_legacy_pick_uom code_two;
+

@@ -1,0 +1,483 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/* grn_change_product_id */
+/* create a file to export with
+5. Warehouse Minder will send a Purchase Order Stock Adjustment file to Epicor. Thjs file will have the following fields-
+
+    a. Original PO (for IPAD)
+    b. Original PO Line
+    c. Original part no.
+    d. Qty transferred out
+    e. New PO (for IPAD2)
+    f. New PO line
+    g. New Part no
+    h. Qty Transferred in
+    i. Date transferred
+
+*/
+/* 24/09/12 have to update the original po line to remove qty received
+then update the new po line for the qty
+save the prev prod_id in the issn  - yes
+in the grn comments write something - yes
+*/
+
+CREATE OR ALTER  PROCEDURE GRN_CHANGE_PRODUCT_ID (OLD_GRN GRN ,
+OLD_ORDER_NO ORDER_NO ,
+OLD_LINE_NO VARCHAR(4) ,
+NEW_ORDER_NO ORDER_NO ,
+NEW_LINE_NO VARCHAR(4) ,
+QTY QTY,
+REFERENCE REFERENCE,
+PERSON_ID PERSON,
+DEVICE_ID DEVICE_ID,
+TRN_DATE TRN_DATE )
+RETURNS (NEW_GRN GRN,
+IS_COMPLETE  VARCHAR(1),
+ERROR_TEXT ERROR_TEXT)
+AS 
+DECLARE VARIABLE WK_IS_OK          CHAR(1);
+/*
+DECLARE VARIABLE WK_OLD_PROD_ID    VARCHAR(30);
+DECLARE VARIABLE WK_NEW_PROD_ID    VARCHAR(30);
+*/
+DECLARE VARIABLE WK_OLD_PROD_ID    PRODUCT;
+DECLARE VARIABLE WK_NEW_PROD_ID    PRODUCT;
+
+DECLARE VARIABLE WK_GRN_TYPE       CHAR(2) ;
+DECLARE VARIABLE WK_GRN_SSCC       VARCHAR(18) ;
+DECLARE VARIABLE WK_GRN_CARRIER    VARCHAR(10) ;
+DECLARE VARIABLE WK_GRN_VEHICLE    VARCHAR(8) ;
+DECLARE VARIABLE WK_GRN_AWB        VARCHAR(20) ;
+DECLARE VARIABLE WK_GRN_PALLET_QTY INTEGER;
+DECLARE VARIABLE WK_GRN_DELIVERY_DOCKET VARCHAR(10) ;
+DECLARE VARIABLE WK_GRN_CONTAINERS CHAR(1) ;
+DECLARE VARIABLE WK_GRN_CONTAINER_NO VARCHAR(20) ;
+DECLARE VARIABLE WK_GRN_DATE       TIMESTAMP;
+DECLARE VARIABLE WK_GRN_RETURN_ID  VARCHAR(10) ;
+DECLARE VARIABLE WK_GRN_COMMENTS   VARCHAR(255) ;
+DECLARE VARIABLE WK_GRN_SHIPPED_DATE TIMESTAMP;
+DECLARE VARIABLE WK_GRN_ID         VARCHAR(10);
+
+DECLARE VARIABLE WK_GRN_CONTAINER_TYPE VARCHAR(2);
+DECLARE VARIABLE WK_GRN_SHIPPING_CRATE_OWNER VARCHAR(10);
+DECLARE VARIABLE WK_GRN_SHIPPING_CRATE_TYPE VARCHAR(2);
+DECLARE VARIABLE WK_GRN_SHIPPING_CRATE_QTY INTEGER;
+DECLARE VARIABLE WK_GRN_LAST_LINE_NO INTEGER;
+DECLARE VARIABLE WK_GRN_LAST_PALLET_NO INTEGER;
+DECLARE VARIABLE WK_GRN_OWNER_ID   VARCHAR(20);
+DECLARE VARIABLE WK_GRN_SHIP_CONTAINER_TYPE VARCHAR(2);
+DECLARE VARIABLE WK_GRN_PACK_CRATE_OWNER VARCHAR(10);
+DECLARE VARIABLE WK_GRN_PACK_CRATE_TYPE VARCHAR(2);
+DECLARE VARIABLE WK_GRN_PACK_CRATE_QTY INTEGER;
+DECLARE VARIABLE WK_GRN_GRN_DUE_DATE TIMESTAMP;
+DECLARE VARIABLE WK_GRN_GRN_STATUS VARCHAR(2);
+DECLARE VARIABLE WK_GRN_GRN_FREIGHT_FORWARDER VARCHAR(10);
+DECLARE VARIABLE WK_GRN_GRN_FREIGHT_ACCOUNT_NO VARCHAR(20);
+DECLARE VARIABLE WK_GRN_GRN_LEGACY_INTERNAL_ID VARCHAR(20);
+DECLARE VARIABLE WK_GRN_GRN_LEGACY_MEMO VARCHAR(1024);
+DECLARE VARIABLE WK_GRN_WH_ID     VARCHAR(2);
+DECLARE VARIABLE WK_GRN_GRN_POSTING_PERIOD VARCHAR(20);
+DECLARE VARIABLE WK_GRN_LAST_LOT_NO VARCHAR(30);
+DECLARE VARIABLE WK_GRN_VESSEL_NAME VARCHAR(75);
+DECLARE VARIABLE WK_GRN_VOYAGE_NO   VARCHAR(75);
+DECLARE VARIABLE WK_GRN_OTHER1      VARCHAR(50);
+DECLARE VARIABLE WK_GRN_OTHER2      VARCHAR(50);
+DECLARE VARIABLE WK_GRN_OTHER3      VARCHAR(50);
+DECLARE VARIABLE WK_SSN_ID          VARCHAR(20);
+DECLARE VARIABLE WK_TRN_TYPE        VARCHAR(4);
+DECLARE VARIABLE WK_TRN_CODE        VARCHAR(1);
+DECLARE VARIABLE WK_REASON          VARCHAR(255);
+DECLARE VARIABLE WK_CN_ALLOWED_UPD  VARCHAR(50);
+DECLARE VARIABLE WK_CN_DO_GRNP      VARCHAR(1);
+DECLARE VARIABLE WK_IS_WH_ID        VARCHAR(2);
+DECLARE VARIABLE WK_IS_LOCN_ID      VARCHAR(10);
+DECLARE VARIABLE WK_GM_MESSAGE      VARCHAR(10);
+DECLARE VARIABLE WK_T4_DELIM        CHAR(1);
+DECLARE VARIABLE WK_T4_TRAN_DATA    VARCHAR(1024);
+DECLARE VARIABLE WK_T4_SOURCE       VARCHAR(512);
+DECLARE VARIABLE WK_NEW_RECORD      INTEGER;
+DECLARE VARIABLE WK_IS_QTY          INTEGER;
+DECLARE VARIABLE WK_IS_TOTAL_QTY    INTEGER;
+DECLARE VARIABLE WK_PO_FOUND        INTEGER;
+DECLARE VARIABLE WK_PO_QTY          INTEGER;
+DECLARE VARIABLE WK_PO_ORIG_QTY     INTEGER;
+DECLARE VARIABLE WK_PO_NEW_QTY      INTEGER;
+DECLARE VARIABLE WK_PO_STATUS       VARCHAR(2);
+BEGIN
+   WK_TRN_TYPE = 'GNNP';
+   WK_TRN_CODE = 'P';
+   ERROR_TEXT = '';
+   NEW_GRN = '';
+   IS_COMPLETE = 'F';
+   WK_IS_OK = 'T';
+   WK_OLD_PROD_ID = NULL;
+   WK_NEW_PROD_ID = NULL;
+   WK_CN_ALLOWED_UPD = NULL;
+   WK_CN_DO_GRNP     = NULL;
+   /* get the from prod_id */
+   SELECT PROD_ID FROM PURCHASE_ORDER_LINE
+   WHERE PURCHASE_ORDER = :OLD_ORDER_NO
+   AND   PO_LINE = :OLD_LINE_NO
+   INTO :WK_OLD_PROD_ID;
+   IF (WK_OLD_PROD_ID IS NULL) THEN
+   BEGIN
+      WK_IS_OK = 'F';
+      ERROR_TEXT = ERROR_TEXT || 'No From Product';
+      IS_COMPLETE = 'F';
+   END
+   /* get the to prod_id */
+   SELECT PROD_ID FROM PURCHASE_ORDER_LINE
+   WHERE PURCHASE_ORDER = :NEW_ORDER_NO
+   AND   PO_LINE = :NEW_LINE_NO
+   INTO :WK_NEW_PROD_ID;
+   IF (WK_NEW_PROD_ID IS NULL) THEN
+   BEGIN
+      WK_IS_OK = 'F';
+      ERROR_TEXT = ERROR_TEXT || ' No To Product';
+      IS_COMPLETE = 'F';
+   END
+   SELECT  PICK_IMPORT_SSN_STATUS, SEND_GRNP FROM CONTROL INTO :WK_CN_ALLOWED_UPD, :WK_CN_DO_GRNP;
+   IF (WK_CN_ALLOWED_UPD IS NULL) THEN
+       WK_CN_ALLOWED_UPD = ',,';
+   IF (WK_IS_OK = 'T') THEN
+   BEGIN
+      IF (OLD_ORDER_NO = NEW_ORDER_NO) THEN
+      BEGIN
+         /* can use the original grn */
+         NEW_GRN = OLD_GRN;
+         WK_GRN_COMMENTS = NULL;
+         SELECT COMMENTS , GRN_TYPE  
+         FROM GRN
+         WHERE GRN = :OLD_GRN
+         INTO :WK_GRN_COMMENTS, :WK_GRN_TYPE ; 
+         IF (WK_GRN_COMMENTS IS NULL) THEN
+         BEGIN
+            WK_GRN_COMMENTS = '';
+         END
+         IF (WK_GRN_TYPE IS NULL) THEN
+         BEGIN
+            WK_GRN_TYPE = '';
+         END
+         WK_GRN_COMMENTS = :WK_GRN_COMMENTS || 
+          ' Change Product To ' || :WK_NEW_PROD_ID || ' From ' || :WK_OLD_PROD_ID || ' by User ' || :PERSON_ID ||
+          ' PO To ' || :NEW_ORDER_NO || ' - ' || :NEW_LINE_NO ||   
+          ' From ' || :OLD_ORDER_NO || ' - ' || :OLD_LINE_NO  ;
+         UPDATE GRN SET COMMENTS = :WK_GRN_COMMENTS
+         WHERE GRN = :OLD_GRN;
+      END
+      ELSE
+      BEGIN 
+         WK_GRN_TYPE = NULL; 
+         WK_GRN_SSCC = NULL ;
+         WK_GRN_CARRIER = NULL;
+         WK_GRN_VEHICLE = NULL;
+         WK_GRN_AWB = NULL;
+         WK_GRN_PALLET_QTY = NULL;
+         WK_GRN_DELIVERY_DOCKET = NULL;
+         WK_GRN_CONTAINERS = NULL; 
+         WK_GRN_CONTAINER_NO = NULL;
+         WK_GRN_DATE = NULL;
+         WK_GRN_RETURN_ID = NULL;
+         WK_GRN_COMMENTS = NULL;
+         WK_GRN_SHIPPED_DATE = NULL;
+         WK_GRN_ID = NULL;
+
+         WK_GRN_CONTAINER_TYPE = NULL;
+         WK_GRN_SHIPPING_CRATE_OWNER = NULL;
+         WK_GRN_SHIPPING_CRATE_TYPE = NULL;
+         WK_GRN_SHIPPING_CRATE_QTY = NULL;
+         WK_GRN_LAST_LINE_NO = NULL;
+         WK_GRN_LAST_PALLET_NO = NULL;
+         WK_GRN_OWNER_ID = NULL;
+         WK_GRN_SHIP_CONTAINER_TYPE = NULL;
+         WK_GRN_PACK_CRATE_OWNER = NULL;
+         WK_GRN_PACK_CRATE_TYPE = NULL;
+         WK_GRN_PACK_CRATE_QTY = NULL;
+         WK_GRN_GRN_DUE_DATE = NULL;
+         WK_GRN_GRN_STATUS = NULL;
+         WK_GRN_GRN_FREIGHT_FORWARDER = NULL;
+         WK_GRN_GRN_FREIGHT_ACCOUNT_NO = NULL;
+         WK_GRN_GRN_LEGACY_INTERNAL_ID = NULL;
+         WK_GRN_GRN_LEGACY_MEMO = NULL;
+         WK_GRN_WH_ID = NULL;
+         WK_GRN_GRN_POSTING_PERIOD = NULL;
+         WK_GRN_LAST_LOT_NO = NULL;
+         WK_GRN_VESSEL_NAME = NULL;
+         WK_GRN_VOYAGE_NO = NULL;
+         WK_GRN_OTHER1 = NULL;
+         WK_GRN_OTHER2 = NULL;
+         WK_GRN_OTHER3 = NULL;
+         SELECT GRN_TYPE, PACK_EAN_SSCC, CARRIER, 
+                VEHICLE_ID, AWB_CONSIGNMENT_NO, GRN_PALLET_QTY ,
+                DELIVERY_DOCKET, PALLETS_YN, CONTAINER_NO, 
+                RETURN_ID, COMMENTS, SHIPPED_DATE,
+                CONTAINER_TYPE , SHIPPING_CRATE_OWNER , SHIPPING_CRATE_TYPE ,
+                SHIPPING_CRATE_QTY , LAST_LINE_NO , LAST_PALLET_NO ,
+                OWNER_ID , SHIP_CONTAINER_TYPE , PACK_CRATE_OWNER ,
+                PACK_CRATE_TYPE , PACK_CRATE_QTY , GRN_DUE_DATE ,
+                GRN_STATUS , GRN_FREIGHT_FORWARDER , GRN_FREIGHT_ACCOUNT_NO ,
+                GRN_LEGACY_INTERNAL_ID , GRN_LEGACY_MEMO , WH_ID ,
+                GRN_POSTING_PERIOD , LAST_LOT_NO , VESSEL_NAME ,
+                VOYAGE_NO , OTHER1 , OTHER2 ,
+                OTHER3 
+         FROM GRN
+         WHERE GRN = :OLD_GRN
+         INTO :WK_GRN_TYPE, :WK_GRN_SSCC, :WK_GRN_CARRIER, 
+              :WK_GRN_VEHICLE, :WK_GRN_AWB, :WK_GRN_PALLET_QTY, 
+              :WK_GRN_DELIVERY_DOCKET, :WK_GRN_CONTAINERS, :WK_GRN_CONTAINER_NO, 
+              :WK_GRN_RETURN_ID, :WK_GRN_COMMENTS, :WK_GRN_SHIPPED_DATE,
+              :WK_GRN_CONTAINER_TYPE , :WK_GRN_SHIPPING_CRATE_OWNER , :WK_GRN_SHIPPING_CRATE_TYPE ,
+              :WK_GRN_SHIPPING_CRATE_QTY , :WK_GRN_LAST_LINE_NO , :WK_GRN_LAST_PALLET_NO ,
+              :WK_GRN_OWNER_ID , :WK_GRN_SHIP_CONTAINER_TYPE , :WK_GRN_PACK_CRATE_OWNER ,
+              :WK_GRN_PACK_CRATE_TYPE , :WK_GRN_PACK_CRATE_QTY , :WK_GRN_GRN_DUE_DATE ,
+              :WK_GRN_GRN_STATUS , :WK_GRN_GRN_FREIGHT_FORWARDER , :WK_GRN_GRN_FREIGHT_ACCOUNT_NO ,
+              :WK_GRN_GRN_LEGACY_INTERNAL_ID , :WK_GRN_GRN_LEGACY_MEMO , :WK_GRN_WH_ID ,
+              :WK_GRN_GRN_POSTING_PERIOD , :WK_GRN_LAST_LOT_NO , :WK_GRN_VESSEL_NAME ,
+              :WK_GRN_VOYAGE_NO , :WK_GRN_OTHER1 , :WK_GRN_OTHER2 ,
+              :WK_GRN_OTHER3 ;
+         IF (WK_GRN_COMMENTS IS NULL) THEN
+         BEGIN
+            WK_GRN_COMMENTS = '';
+         END
+         WK_GRN_COMMENTS = :WK_GRN_COMMENTS || 
+          ' Change Product To ' || :WK_NEW_PROD_ID || ' From ' || :WK_OLD_PROD_ID || ' by User ' || :PERSON_ID ||
+          ' PO To ' || :NEW_ORDER_NO || ' - ' || :NEW_LINE_NO ||   
+          ' From ' || :OLD_ORDER_NO || ' - ' || :OLD_LINE_NO  ;
+         IF (WK_GRN_TYPE IS NULL) THEN
+         BEGIN
+            WK_GRN_TYPE = '';
+         END
+         /* must create a new grn */
+         EXECUTE PROCEDURE ADD_GRN :OLD_GRN, :WK_GRN_TYPE, :QTY, :WK_GRN_SSCC, 
+                                  :WK_GRN_CARRIER, :WK_GRN_VEHICLE, :WK_GRN_AWB,
+                                  :WK_GRN_PALLET_QTY, :WK_GRN_DELIVERY_DOCKET, :WK_GRN_CONTAINERS,
+                                  :WK_GRN_CONTAINER_NO, :PERSON_ID, :DEVICE_ID,
+                                  :TRN_DATE, :NEW_ORDER_NO, :NEW_LINE_NO,
+                                  :WK_GRN_RETURN_ID, :WK_GRN_COMMENTS, :WK_GRN_SHIPPED_DATE RETURNING_VALUES :WK_GRN_ID;
+         UPDATE GRN 
+            SET CONTAINER_TYPE = :WK_GRN_CONTAINER_TYPE ,
+                SHIPPING_CRATE_OWNER = :WK_GRN_SHIPPING_CRATE_OWNER ,
+                SHIPPING_CRATE_TYPE = :WK_GRN_SHIPPING_CRATE_TYPE ,
+                SHIPPING_CRATE_QTY = :WK_GRN_SHIPPING_CRATE_QTY ,
+                LAST_LINE_NO = :WK_GRN_LAST_LINE_NO , 
+                LAST_PALLET_NO = :WK_GRN_LAST_PALLET_NO ,
+                OWNER_ID = :WK_GRN_OWNER_ID ,
+                SHIP_CONTAINER_TYPE = :WK_GRN_SHIP_CONTAINER_TYPE ,
+                PACK_CRATE_OWNER = :WK_GRN_PACK_CRATE_OWNER ,
+                PACK_CRATE_TYPE = :WK_GRN_PACK_CRATE_TYPE ,
+                PACK_CRATE_QTY = :WK_GRN_PACK_CRATE_QTY ,
+                GRN_DUE_DATE = :WK_GRN_GRN_DUE_DATE ,
+                GRN_STATUS = :WK_GRN_GRN_STATUS ,
+                GRN_FREIGHT_FORWARDER = :WK_GRN_GRN_FREIGHT_FORWARDER ,
+                GRN_FREIGHT_ACCOUNT_NO = :WK_GRN_GRN_FREIGHT_ACCOUNT_NO ,
+                GRN_LEGACY_INTERNAL_ID = :WK_GRN_GRN_LEGACY_INTERNAL_ID ,
+                GRN_LEGACY_MEMO = :WK_GRN_GRN_LEGACY_MEMO ,
+                WH_ID = :WK_GRN_WH_ID,
+                GRN_POSTING_PERIOD = :WK_GRN_GRN_POSTING_PERIOD ,
+                LAST_LOT_NO = :WK_GRN_LAST_LOT_NO ,
+                VESSEL_NAME = :WK_GRN_VESSEL_NAME ,
+                VOYAGE_NO = :WK_GRN_VOYAGE_NO ,
+                OTHER1 = :WK_GRN_OTHER1,
+                OTHER2 = :WK_GRN_OTHER2,
+                OTHER3 = :WK_GRN_OTHER3
+         WHERE GRN = :WK_GRN_ID;
+         NEW_GRN = WK_GRN_ID;
+      END
+      WK_IS_TOTAL_QTY = 0;
+      /* now update the issn s to be for the new prod_id - only issns not picked */
+      FOR SELECT ISSN.SSN_ID, ISSN.WH_ID, ISSN.LOCN_ID, ISSN.CURRENT_QTY FROM SSN JOIN ISSN  ON SSN.SSN_ID = ISSN.ORIGINAL_SSN WHERE SSN.GRN = :OLD_GRN
+          AND SSN.PO_ORDER = :OLD_ORDER_NO
+          AND SSN.PO_LINE =  :OLD_LINE_NO
+          AND ISSN.PROD_ID = :WK_OLD_PROD_ID
+          AND POS(:WK_CN_ALLOWED_UPD,ISSN.ISSN_STATUS ,0,1) > -1
+          INTO :WK_SSN_ID, :WK_IS_WH_ID, :WK_IS_LOCN_ID, :WK_IS_QTY
+      DO
+      BEGIN
+         IF (WK_IS_QTY IS NOT NULL) THEN
+             WK_IS_TOTAL_QTY = WK_IS_TOTAL_QTY + WK_IS_QTY;
+         /* UPDATE ISSN SET PROD_ID = :WK_NEW_PROD_ID  
+         WHERE SSN_ID = :WK_SSN_ID; */
+         UPDATE ISSN SET   
+                     PREV_PREV_PROD_ID_UPDATE = PREV_PROD_ID_UPDATE,
+                     PREV_PROD_ID_UPDATE = PROD_ID_UPDATE,
+                     PROD_ID_UPDATE = :TRN_DATE,
+                     PREV_PREV_PROD_ID = PREV_PROD_ID,
+                     PREV_PROD_ID = PROD_ID,
+                     PROD_ID = :WK_NEW_PROD_ID,
+                     LAST_UPDATE_DATE =  :TRN_DATE 
+         WHERE SSN_ID = :WK_SSN_ID;
+         /* create ssn_hist for the change */
+         WK_REASON = 'Change Product To ' || :WK_NEW_PROD_ID || ' From ' || :WK_OLD_PROD_ID || ' by User ' || :PERSON_ID || ' SSN ' || :WK_SSN_ID ;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:WK_IS_WH_ID, :WK_IS_LOCN_ID, :WK_SSN_ID, 
+                          :WK_TRN_TYPE, :WK_TRN_CODE, :TRN_DATE,
+                          :WK_REASON, :REFERENCE , :QTY, :PERSON_ID, :DEVICE_ID); 
+      END
+      /* now update the ssn s to be for the grn and line and new prod_id */
+      FOR SELECT SSN_ID, WH_ID, LOCN_ID FROM SSN WHERE GRN = :OLD_GRN
+          AND PO_ORDER = :OLD_ORDER_NO
+          AND PO_LINE =  :OLD_LINE_NO
+          AND PROD_ID = :WK_OLD_PROD_ID
+          INTO :WK_SSN_ID, :WK_IS_WH_ID, :WK_IS_LOCN_ID
+      DO
+      BEGIN
+         UPDATE SSN SET PROD_ID = :WK_NEW_PROD_ID, GRN = :NEW_GRN, 
+                PO_ORDER = :NEW_ORDER_NO, PO_LINE = :NEW_LINE_NO
+         WHERE SSN_ID = :WK_SSN_ID;
+         /* create ssn_hist for the change */
+         WK_REASON = 'Change Product To ' || :WK_NEW_PROD_ID || ' From ' || :WK_OLD_PROD_ID || ' by User ' || :PERSON_ID || ' SSN ' || :WK_SSN_ID ;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:WK_IS_WH_ID, :WK_IS_LOCN_ID, :WK_SSN_ID, 
+                          :WK_TRN_TYPE, :WK_TRN_CODE, :TRN_DATE,
+                          :WK_REASON, :REFERENCE , :WK_IS_TOTAL_QTY, :PERSON_ID, :DEVICE_ID); 
+      END
+ /* =============================================================== */
+
+      /* update the po outstanding qty and status for the original */
+      WK_PO_FOUND = 0;
+      WK_PO_QTY = 0;
+      WK_PO_ORIG_QTY = 0;
+      SELECT 1 , PO_LINE_QTY, ORIGINAL_QTY 
+      FROM PURCHASE_ORDER_LINE
+      WHERE PURCHASE_ORDER = :OLD_ORDER_NO
+      AND   PO_LINE = :OLD_LINE_NO
+      INTO :WK_PO_FOUND, :WK_PO_QTY, :WK_PO_ORIG_QTY ;
+      IF (WK_PO_FOUND = 1) THEN
+      BEGIN
+         WK_PO_STATUS = 'OP';
+         WK_PO_NEW_QTY = WK_PO_QTY + WK_IS_TOTAL_QTY; 
+         IF (WK_PO_NEW_QTY = 0) THEN
+         BEGIN
+            IF (WK_GRN_TYPE = 'IP') THEN
+            BEGIN
+               WK_PO_STATUS = 'IN';
+            END
+            ELSE
+            BEGIN
+               WK_PO_STATUS = 'CL';
+            END
+         END
+         ELSE
+         BEGIN
+            IF (WK_PO_NEW_QTY < 0) THEN
+            BEGIN
+               WK_PO_STATUS = 'OS';
+            END
+         END
+         IF (WK_PO_ORIG_QTY IS NULL) THEN
+         BEGIN
+            UPDATE PURCHASE_ORDER_LINE
+            SET ORIGINAL_QTY = :WK_PO_QTY,
+                PO_LINE_QTY = :WK_PO_NEW_QTY,
+                PO_LINE_STATUS = :WK_PO_STATUS
+            WHERE PURCHASE_ORDER = :OLD_ORDER_NO
+            AND   PO_LINE = :OLD_LINE_NO;
+         END
+         ELSE
+         BEGIN
+            UPDATE PURCHASE_ORDER_LINE
+            SET PO_LINE_QTY = :WK_PO_NEW_QTY,
+                PO_LINE_STATUS = :WK_PO_STATUS
+            WHERE PURCHASE_ORDER = :OLD_ORDER_NO
+            AND   PO_LINE = :OLD_LINE_NO;
+         END
+      END
+/* =============================================================== */
+      /* update the po outstanding qty and status  for new order */
+      WK_PO_FOUND = 0;
+      WK_PO_QTY = 0;
+      WK_PO_ORIG_QTY = 0;
+      SELECT 1 , PO_LINE_QTY, ORIGINAL_QTY 
+      FROM PURCHASE_ORDER_LINE
+      WHERE PURCHASE_ORDER = :NEW_ORDER_NO
+      AND   PO_LINE = :NEW_LINE_NO
+      INTO :WK_PO_FOUND, :WK_PO_QTY, :WK_PO_ORIG_QTY ;
+      IF (WK_PO_FOUND = 1) THEN
+      BEGIN
+         WK_PO_STATUS = 'OP';
+         WK_PO_NEW_QTY = WK_PO_QTY - WK_IS_TOTAL_QTY; 
+         IF (WK_PO_NEW_QTY = 0) THEN
+         BEGIN
+            IF (WK_GRN_TYPE = 'IP') THEN
+            BEGIN
+               WK_PO_STATUS = 'IN';
+            END
+            ELSE
+            BEGIN
+               WK_PO_STATUS = 'CL';
+            END
+         END
+         ELSE
+         BEGIN
+            IF (WK_PO_NEW_QTY < 0) THEN
+            BEGIN
+               WK_PO_STATUS = 'OS';
+            END
+         END
+         IF (WK_PO_ORIG_QTY IS NULL) THEN
+         BEGIN
+            UPDATE PURCHASE_ORDER_LINE
+            SET ORIGINAL_QTY = :WK_PO_QTY,
+                PO_LINE_QTY = :WK_PO_NEW_QTY,
+                PO_LINE_STATUS = :WK_PO_STATUS
+            WHERE PURCHASE_ORDER = :NEW_ORDER_NO
+            AND   PO_LINE = :NEW_LINE_NO;
+         END
+         ELSE
+         BEGIN
+            UPDATE PURCHASE_ORDER_LINE
+            SET PO_LINE_QTY = :WK_PO_NEW_QTY,
+                PO_LINE_STATUS = :WK_PO_STATUS
+            WHERE PURCHASE_ORDER = :NEW_ORDER_NO
+            AND   PO_LINE = :NEW_LINE_NO;
+         END
+      END
+/* =============================================================================== */
+      ERROR_TEXT = ERROR_TEXT || 'Processed Successfully|' || NEW_GRN || '|';   
+      IS_COMPLETE = 'T';
+      IF (WK_CN_DO_GRNP = 'T') THEN
+      BEGIN
+       /* send file about receive */
+           /* need to be aware of whether this is the end of the receive if so can send this */
+         WK_GM_MESSAGE = '';
+         SELECT MESSAGE_ID 
+         FROM GET_NEXT_MESSAGE 
+         INTO :WK_GM_MESSAGE;
+         WK_T4_DELIM = '|';
+         WK_T4_TRAN_DATA = :PERSON_ID || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || :DEVICE_ID || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || WK_GM_MESSAGE || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<UpdateDateTime>' || MER_YEAR('NOW') || '-' || LPAD(MER_MONTH('NOW'),'0',2) || '-' || LPAD(MER_DAY('NOW'),'0',2) || 'T' || LPAD(MER_HOUR('NOW'),'0',2) || ':' || LPAD(MER_MINUTE('NOW'),'0',2) || ':' || LPAD(SEC('NOW'),'0',2) || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<OriginalPO>' || :OLD_ORDER_NO || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<OriginalPOLine>' || :OLD_LINE_NO || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<OriginalGRN>' || :OLD_GRN || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<OriginalProdId>' || :WK_OLD_PROD_ID || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<QtyOut>' || :WK_IS_TOTAL_QTY || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<NewPO>' || :NEW_ORDER_NO || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<NewPOLine>' || :NEW_LINE_NO || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<NewGRN>' || :NEW_GRN || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<NewProdId>' || :WK_NEW_PROD_ID || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<QtyIn>' || :WK_IS_TOTAL_QTY || WK_T4_DELIM ;
+         WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<User>' || :PERSON_ID || WK_T4_DELIM ;
+         WK_T4_SOURCE = 'SSSSSSSSSSSSSSS' ;
+         SELECT REC_ID FROM ADD_TRAN_V4 ( 'V4', 'GNNP','P',
+              :TRN_DATE,
+              :WK_T4_DELIM,
+              :PERSON_ID,
+              :DEVICE_ID,
+              :WK_GM_MESSAGE,
+              :WK_T4_TRAN_DATA,
+              'F','','MASTER',0,
+              :WK_T4_SOURCE)
+           INTO :WK_NEW_RECORD;
+      END
+   END
+   SUSPEND;
+
+END ^
+
+
+SET TERM ; ^
+
+COMMIT WORK;
+SET AUTODDL ON;

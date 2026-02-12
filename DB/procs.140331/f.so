@@ -1,0 +1,3 @@
+alter table pick_order add import_despatch_id despatch_id;
+alter table pick_order_dx add import_despatch_id despatch_id;
+alter table pick_order_item_temp add h_import_despatch_id despatch_id;

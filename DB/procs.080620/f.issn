@@ -1,0 +1,3 @@
+alter table issn add issn_description descr;
+alter table issn add other4 other_char ;
+

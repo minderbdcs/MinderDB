@@ -1,0 +1,19 @@
+add start qty to reservation table
+in receive 
+	if po has a channel look first for orders for the channel
+	else look in other sales channels for orders for the product order by the channel priority
+	else look at orders in none sales channel
+
+	if po has no channel look 
+		in sales channels for orders for the product order by the channel priority
+	else look at orders in none sales channel
+===================================================================
+in pkal check available_qty within 0 and reserved qty limit
+does  this reduce the available qty ?
+
+==================================================================
+in dsot check the 
+available qty and reserved qty
+when the reserved qty goes to zero
+must spread the available qty among the other channels for this product
+====================================================================

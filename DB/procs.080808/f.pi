@@ -1,0 +1,3 @@
+alter table pick_item add pi_loan_rate percent;
+alter table pick_item add pi_loan_ssn_cost purchase_price;
+

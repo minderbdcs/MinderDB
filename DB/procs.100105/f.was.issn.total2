@@ -1,0 +1,151 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+
+ALTER  PROCEDURE MANIFEST_ISSN (IN_WH_ID CHAR(2), IN_COMPANY_ID VARCHAR(20), IN_PROD_ID VARCHAR(30), IN_START_DATE TIMESTAMP, IN_END_DATE TIMESTAMP )
+RETURNS (IS_PROD_ID VARCHAR(30) ,
+IS_METHOD_NAME VARCHAR(15) ,
+IS_QTY INTEGER ,
+IS_DATE TIMESTAMP 
+)
+AS 
+DECLARE VARIABLE WK_END_DATE TIMESTAMP;
+DECLARE VARIABLE WK_QTY  INTEGER;
+DECLARE VARIABLE WK_LAST_PROD VARCHAR(30);
+DECLARE VARIABLE WK_SAVE_PROD VARCHAR(30);
+DECLARE VARIABLE WK_SAVE_METHOD VARCHAR(40);
+DECLARE VARIABLE WK_SAVE_QTY  INTEGER;
+DECLARE VARIABLE WK_SAVE_DATE TIMESTAMP;
+DECLARE VARIABLE WK_REC_ID    INTEGER;
+BEGIN
+   WK_END_DATE = MAXTIME(IN_END_DATE);
+/* have wh_id and a date range */
+/* have current qtys */
+/* have receipt qtys */
+/* have picked qtys */
+/* stock adjust ments */
+   /* have done none in last 3 months*/
+ /* STIS
+    STRC
+    AUOB to change location wh or qty */
+/* returns */
+   /* none of these there not using this */
+/* transfers out of wh */
+/* transfers into wh */
+
+
+   /* get current values */
+   WK_REC_ID = GEN_ID(TRANSACTION_ID, 1);
+   DELETE FROM TRANSACTIONS_WORK WHERE RECORD_ID = :WK_REC_ID;
+   INSERT INTO TRANSACTIONS_WORK(RECORD_ID, OBJECT, REFERENCE, QTY, TRN_DATE, SUB_LOCN_ID )
+   SELECT :WK_REC_ID, PROD_ID, 'Now' , SUM(CURRENT_QTY) ,:WK_END_DATE, COMPANY_ID
+   FROM ISSN 
+   WHERE WH_ID= :IN_WH_ID 
+   /* AND  COMPANY_ID= :IN_COMPANY_ID 
+   GROUP BY PROD_ID ; */
+   GROUP BY COMPANY_ID, PROD_ID;
+
+   /* get receipts */
+   INSERT INTO TRANSACTIONS_WORK(RECORD_ID, OBJECT, REFERENCE, QTY, TRN_DATE, SUB_LOCN_ID)
+   SELECT :WK_REC_ID, PROD_ID, 'Received', SUM(ORIGINAL_QTY) ,ZEROTIME(CREATE_DATE) , COMPANY_ID
+   FROM SSN 
+   WHERE WH_ID= :IN_WH_ID 
+   /* AND  COMPANY_ID= :IN_COMPANY_ID */
+   AND  CREATE_DATE BETWEEN :IN_START_DATE AND :WK_END_DATE 
+   /* GROUP BY PROD_ID, ZEROTIME(CREATE_DATE); */
+   GROUP BY COMPANY_ID, PROD_ID, ZEROTIME(CREATE_DATE);
+
+   /* get picks */
+   INSERT INTO TRANSACTIONS_WORK(RECORD_ID, OBJECT, REFERENCE, QTY, TRN_DATE, SUB_LOCN_ID)
+   SELECT :WK_REC_ID, I1.PROD_ID, 'Picked' , SUM(T1.QTY) , ZEROTIME(T1.TRN_DATE), I1.COMPANY_ID
+   FROM TRANSACTIONS_ARCHIVE  T1 
+   JOIN ISSN I1 ON T1.OBJECT = I1.SSN_ID 
+   WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :WK_END_DATE 
+   AND   T1.TRN_TYPE='PKOL' 
+   AND   T1.WH_ID= :IN_WH_ID 
+   /* AND   I1.COMPANY_ID= :IN_COMPANY_ID 
+   GROUP BY I1.PROD_ID, ZEROTIME(T1.TRN_DATE); */
+   GROUP BY I1.COMPANY_ID, I1.PROD_ID, ZEROTIME(T1.TRN_DATE); 
+
+   WK_LAST_PROD = '';
+   /*  want issns in location  */
+   FOR SELECT TRANSACTIONS_WORK.OBJECT, 
+      TRANSACTIONS_WORK.REFERENCE,
+      TRANSACTIONS_WORK.QTY,
+      TRANSACTIONS_WORK.TRN_DATE
+      FROM TRANSACTIONS_WORK 
+      WHERE TRANSACTIONS_WORK.RECORD_ID = :WK_REC_ID 
+      ORDER BY TRANSACTIONS_WORK.OBJECT, TRANSACTIONS_WORK.REFERENCE, TRANSACTIONS_WORK.TRN_DATE
+       INTO :IS_PROD_ID,
+       :IS_METHOD_NAME,
+       :IS_QTY,
+       :IS_DATE
+      DO
+      BEGIN
+         IF (IS_PROD_ID <>  WK_LAST_PROD) THEN
+         BEGIN
+            /* product changed */
+            /* save the result */
+            WK_SAVE_METHOD = IS_METHOD_NAME;
+            WK_SAVE_PROD = IS_PROD_ID;
+            WK_SAVE_QTY = IS_QTY;
+            WK_SAVE_DATE = IS_DATE;
+            /* write 'Start' record */
+            BEGIN
+               IS_METHOD_NAME = 'Begin';
+               IS_QTY = WK_QTY;
+               IS_DATE = IN_START_DATE;
+               IS_PROD_ID = WK_LAST_PROD;
+               SUSPEND;
+               IS_METHOD_NAME = WK_SAVE_METHOD;
+               IS_PROD_ID = WK_SAVE_PROD;
+               IS_QTY = WK_SAVE_QTY;
+               IS_DATE = WK_SAVE_DATE;
+            END
+            IF (IS_METHOD_NAME <> 'Now') THEN
+            BEGIN
+               /* product no longer in location */
+               /* so send a zero Now record */
+               IS_METHOD_NAME = 'Now';
+               IS_QTY = 0;
+               WK_QTY = 0;
+               IS_DATE = WK_END_DATE;
+               SUSPEND;
+               IS_METHOD_NAME = WK_SAVE_METHOD;
+               IS_PROD_ID = WK_SAVE_PROD;
+               IS_QTY = WK_SAVE_QTY;
+               IS_DATE = WK_SAVE_DATE;
+            END
+            ELSE
+            BEGIN
+               WK_QTY = IS_QTY;
+            END
+            WK_LAST_PROD = IS_PROD_ID;
+         END /* end of prod changed */
+         /* modify total */
+         IF (IS_METHOD_NAME = 'Picked') THEN
+         BEGIN
+            /* add to now */
+            WK_QTY = WK_QTY + IS_QTY;
+         END
+         IF (IS_METHOD_NAME = 'Received') THEN
+         BEGIN
+            /* remove from now */
+            WK_QTY = WK_QTY - IS_QTY;
+         END
+         SUSPEND;
+      END /* end for */
+   /* write last 'Start' */
+   BEGIN
+      IS_METHOD_NAME = 'Begin';
+      IS_QTY = WK_QTY;
+      IS_DATE = IN_START_DATE;
+      IS_PROD_ID = WK_LAST_PROD;
+      SUSPEND;
+   END
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

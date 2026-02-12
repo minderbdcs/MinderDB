@@ -1,0 +1,2 @@
+alter table ssn add loan_safety_tag_colour code;
+

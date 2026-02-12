@@ -1,0 +1,13 @@
+alter table dep_methods add save_method code;
+commit;
+update dep_methods set save_method=method;
+commit;
+alter table dep_methods drop method;
+commit;
+alter table dep_methods add method method_code10;
+commit;
+update dep_methods set method=save_method;
+commit;
+ALTER TABLE dep_methods DROP SAVE_METHOD;
+
+

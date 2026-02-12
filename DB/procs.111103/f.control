@@ -1,0 +1,3 @@
+alter table control add ssn_po_price_nipp value_tf;
+update control set ssn_po_price_nipp='F';
+

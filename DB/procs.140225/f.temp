@@ -1,0 +1,11 @@
+
+alter table prod_profile_temp alter p_inner_weight to xx_inner_weight;
+alter table prod_profile_temp alter p_net_weight to xx_net_weight;
+
+commit;
+
+alter table prod_profile_temp add p_net_weight weight_decimal3;
+alter table prod_profile_temp add p_inner_weight weight_decimal3;
+
+commit;
+

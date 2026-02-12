@@ -1,0 +1,99 @@
+table pick_item
+PICK_LABEL_NO                   (PICK_LABEL_NO) VARCHAR(7) Not Null 
+PICK_ORDER                      (PICK_ORDER) VARCHAR(15) Not Null 
+PICK_ORDER_LINE_NO              (PICK_ORDER_LINE_NO) CHAR(4) Nullable 
+CONTACT_NAME                    (CONTACT_NAME) VARCHAR(50) Nullable 
+PROD_ID                         (PRODUCT) VARCHAR(30) Nullable 
+SSN_ID                          (SSN_ID) VARCHAR(20) Nullable 
+WARRANTY_TERM                   (WARRANTY_TERM) VARCHAR(50) Nullable 
+PICK_LABEL_DATE                 (LABEL_DATE) TIMESTAMP Nullable 
+SPECIAL_INSTRUCTIONS1           (SPECIAL_INSTRUCTIONS1) VARCHAR(8192) Nullable 
+SPECIAL_INSTRUCTIONS2           (SPECIAL_INSTRUCTIONS2) VARCHAR(255) Nullable 
+SHIP_VIA                        (SHIP_VIA) VARCHAR(10) Nullable 
+PICK_ORDER_QTY                  (QTY) INTEGER Nullable 
+PICK_ALLOCATED_QTY              (QTY) INTEGER Nullable 
+PICKED_QTY                      (QTY) INTEGER Nullable 
+PICK_LINE_DUE_DATE              (PICK_LINE_DUE_DATE) TIMESTAMP Nullable 
+PICK_STARTED                    (PICK_STARTED) TIMESTAMP Nullable 
+DESPATCH_TS                     (DESPATCH_TS) TIMESTAMP Nullable 
+DESPATCH_LOCATION               (DESPATCH_LOCATION) VARCHAR(10) Nullable 
+CREATE_DATE                     (CREATE_DATE) TIMESTAMP Nullable 
+USER_ID                         (USER_ID) VARCHAR(10) Nullable 
+DEVICE_ID                       (DEVICE_ID) CHAR(2) Nullable 
+CHECKIN_START                   (CHECKIN_START) TIMESTAMP Nullable 
+CHECKIN_FINISH                  (CHECKIN_FINISH) TIMESTAMP Nullable 
+CHECKIN_USER_ID                 (USER_ID) VARCHAR(10) Nullable 
+PICK_LINE_STATUS                (STATUS) CHAR(2) Nullable 
+PARTIAL_PICK_ALLOWED            (PARTIAL_PICK_ALLOWED) CHAR(1) Nullable 
+DESPATCH_PALLET_NO              (PALLET_NO) VARCHAR(7) Nullable 
+WH_ID                           (WH_ID) CHAR(2) Nullable 
+PICK_LOCATION                   (LOCN_ID) VARCHAR(10) Nullable 
+REASON                          (DESCRIPTION) VARCHAR(50) Nullable 
+SSN_CONFIRM                     CHAR(1) Nullable 
+WIP_PRELOCN_ORDERING            (DESCRIPTION) VARCHAR(50) Nullable 
+WIP_POSTLOCN_ORDERING           (DESCRIPTION) VARCHAR(50) Nullable 
+ALLOW_SUBSTITUTE                (CODE_ONE) CHAR(1) Nullable 
+ORIGINAL_SSN_ID                 (SSN_ID) VARCHAR(20) Nullable 
+RETURN_DATE                     (DATETIME) TIMESTAMP Nullable 
+PICK_RETRIEVE_STATUS            (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+DESPATCH_LOCATION_GROUP         (LOCN_ID) VARCHAR(10) Nullable 
+PICK_QTY_DIFFERENCE             INTEGER Nullable 
+PICK_QTY_DIFFERENCE2            INTEGER Nullable 
+LAST_UPDATE_DATE                (LAST_UPDATE_DATE) TIMESTAMP Nullable 
+OTHER1                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER2                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER3                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER4                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER5                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER6                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER7                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER8                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER9                          (OTHER_CHAR) VARCHAR(50) Nullable 
+BATCH_LINE                      INTEGER Nullable 
+OVER_SIZED                      (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+OTHER_QTY1                      (QTY) INTEGER Nullable 
+OTHER_QTY2                      (QTY) INTEGER Nullable 
+SPECIAL_INSTRUCTIONS3           (COMMENTS) VARCHAR(512) Nullable 
+ALT_DESPATCH_WH_ID              (WH_ID) CHAR(2) Nullable 
+ALT_DESPATCH_LOCN_ID            (LOCN_ID) VARCHAR(10) Nullable 
+PICK_LINE_PRIORITY              (PICK_LINE_PRIORITY) INTEGER Nullable 
+PICK_PICK_FINISH                TIMESTAMP Nullable 
+CANCEL_METHOD                   (CODE_ONE) CHAR(1) Nullable 
+PI_LEGACY_ITEM_DESCR            (NOTES) BLOB segment 80, subtype TEXT Nullable 
+PI_LEGACY_CLOSED                (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+PI_LEGACY_LINENO                INTEGER Nullable 
+PI_LEGACY_WH_NAME               (DESCRIPTION) VARCHAR(50) Nullable 
+PI_LEGACY_FULFILLED_QTY         (QTY) INTEGER Nullable 
+PI_LEGACY_PACKED_QTY            (QTY) INTEGER Nullable 
+PI_LEGACY_PICKED_QTY            (QTY) INTEGER Nullable 
+PI_LEGACY_RATE                  VARCHAR(15) Nullable 
+PI_LEGACY_PICK_UOM              (CODE_TWO) CHAR(2) Nullable 
+SO_REVISION_STATUS              (STATUS) CHAR(2) Nullable 
+PI_LEGACY_WH_ID                 VARCHAR(2) Nullable 
+PI_LOAN_SSN_COST                (PURCHASE_PRICE) FLOAT Nullable 
+PICK_TYPE                       (STATUS) CHAR(2) Nullable 
+PICK_ID                         VARCHAR(80) Nullable 
+EARLIEST_DATE                   (DATETIME) TIMESTAMP Nullable 
+ORIG_PROD_ID                    (DESCR) VARCHAR(75) Nullable 
+ORIG_SSN_ID                     (CODE_255) VARCHAR(255) Nullable 
+PREV_LINE_STATUS                (STATUS) CHAR(2) Nullable 
+PREV_PICK_ORDER_LINE_NO         (PICK_ORDER_LINE_NO) CHAR(4) Nullable 
+PREV_PREV_PICK_ORDER_LINE_NO    (PICK_ORDER_LINE_NO) CHAR(4) Nullable 
+PREV_PROD_ID                    (PRODUCT) VARCHAR(30) Nullable 
+PREV_PREV_PROD_ID               (PRODUCT) VARCHAR(30) Nullable 
+PREV_SSN_ID                     (SSN_ID) VARCHAR(20) Nullable 
+PREV_PREV_SSN_ID                (SSN_ID) VARCHAR(20) Nullable 
+LEGACY_LEDGER_SALE_CODE         (CODE) VARCHAR(40) Nullable 
+LEGACY_LEDGER_DEPOSIT_CODE      (CODE) VARCHAR(40) Nullable 
+LEGACY_LEDGER_PURCHASE_CODE     (CODE) VARCHAR(40) Nullable 
+EXPORTED_DESPATCH               (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+EXPORTED_DESPATCH_QTY           (QTY) INTEGER Nullable 
+SALE_PRICE                      (UNIT_PRICE_F) FLOAT Nullable DEFAULT 0
+DISCOUNT                        (DISCOUNT_F) FLOAT Nullable default 0
+LINE_TOTAL                      FLOAT Nullable default 0
+TAX_AMOUNT                      (TAX_AMOUNT_F) FLOAT Nullable default 0
+TAX_RATE                        (TAX_RATE_F) FLOAT Nullable default 0
+PI_LOAN_RATE                    (PERCENT_FF) FLOAT Nullable DEFAULT 0
+PICK_LOCN_SEQ                   (LOCN_SEQ_F) FLOAT Nullable 
+LINE_COST_AMOUNT                FLOAT Nullable 
+PARENT_LABEL_NO                 (PICK_LABEL_NO) VARCHAR(7) Nullable 

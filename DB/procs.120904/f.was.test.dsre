@@ -1,0 +1,11 @@
+/*
+S40014965L002,2   ,1,11 Sep 2012 10:31:52,BBE3000352          ,,DA,
+S40014965L003,3   ,1,11 Sep 2012 10:31:55,BBE3000351          ,,DA,
+S40014965L004,4   ,1,11 Sep 2012 10:31:58,BBE3000350          ,,DA,
+S40014965L005,5   ,1,11 Sep 2012 10:32:01,BBE3000349          ,,DA,
+S40014965L004,4   ,1,11 Sep 2012 16:31:59,BBE3000350          ,EPARCEL,DA,P155293
+execute procedure add_tran('XX','        ','S40014965L004','DSRE','R','NOW','','1','F','','MASTER   ',0,'PG','SSSSSSSSS','BDCS','XX');
+*/
+execute procedure add_tran('XX','        ','S40014965L002','DSRE','R','NOW','','1','F','','MASTER   ',0,'PG','SSSSSSSSS','BDCS','XX');
+execute procedure add_tran('XX','        ','S40014965L003','DSRE','R','NOW','','1','F','','MASTER   ',0,'PG','SSSSSSSSS','BDCS','XX');
+execute procedure add_tran('XX','        ','S40014965L005','DSRE','R','NOW','','1','F','','MASTER   ',0,'PG','SSSSSSSSS','BDCS','XX');

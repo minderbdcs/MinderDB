@@ -1,0 +1,20 @@
+set a colour for a field in sys_screen_var
+
+so nominate a value in the result set
+
+then for a range of values
+or < a value
+or > a value   
+
+set a value
+
+add a field ssv_colour_test_field and ssv_colour_test
+
+then a new table for the colours and conditions
+ have a less than and greater than value
+
+ie operator and test value 1 eg operator "<"
+   operator and 2 test values  eg operator "between"
+
+so sys_screen_colour_test table
+

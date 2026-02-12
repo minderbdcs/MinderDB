@@ -1,0 +1,6 @@
+alter table location add locn_tare_weight numeric(9,3);
+alter table location add locn_tare_weight_uom code_two; 
+alter table location add locn_int_dimension_x  numeric(9,3);
+alter table location add locn_int_dimension_y  numeric(9,3);
+alter table location add locn_int_dimension_z  numeric(9,3);
+alter table location add locn_dimension_uom code_two; 

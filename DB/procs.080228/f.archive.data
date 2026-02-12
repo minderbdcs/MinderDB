@@ -1,0 +1,6 @@
+
+
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days,archive_query) values(110, 'SSN','AR','DQ','LAST_UPDATE_DATE',90," (not exist(select issn.ssn_id from issn where issn.original_ssn = ssn.ssn_id)) and ssn.wh_id starting 'X'");
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days,archive_query) values(120, 'SSN_HIST','AR','DQ','TRN_DATE',90," (not exist(select ssn.ssn_id from ssn where ssn.ssn_id = ssn_hist.ssn_id)) ");
+
+

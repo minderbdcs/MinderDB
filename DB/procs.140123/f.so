@@ -1,0 +1,4 @@
+alter table pick_order add P_CARRIER_SERVICE_RECORD_ID     RECORD_ID; 
+alter table pick_order_dx add P_CARRIER_SERVICE_RECORD_ID     RECORD_ID; 
+alter table pick_order add P_POST_CODE_ZONE     DEPOT_ID; 
+alter table pick_order_dx add P_POST_CODE_ZONE     DEPOT_ID; 

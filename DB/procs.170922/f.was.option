@@ -1,0 +1,1 @@
+update or insert into options(group_code,code,description,description2) values('CHECK_ORDER','%|9999','Order Checking Force Product Scanning', "Order Checking requires scanning of all the picked PROD_ID's to be scanned.");

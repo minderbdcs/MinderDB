@@ -1,0 +1,28 @@
+================================================================================
+1 add mirror_data date time field to all datasets that want mirroring
+================================================================================
+2 add not unique index on those datasets for the mirror_data field
+================================================================================
+3 in the processing of transactions4 transactions make the mirror_date = trn_date
+  eg gcna , ppa2 , ppa3
+  then can add transactions4 table - even though it does processing - only the records with null mirror-data will be copied
+  use the procedure update_tran4 for this
+================================================================================
+4 do the mirroring based on a null mirror_data field in the 28 datasets
+inserts add a null mirror_data - so these will be captured
+updates will not reset the mirror_data field !!!!
+so have to get a trigger to clear the field for an update
+note also when mirror is done that it updates the mirror_data field from null to  NOW!!!!
+so that means that in the update trigger
+allow update from null to any time
+otherwise
+update the mirror_data to be null
+================================================================================
+ok have ssn, issn, transactions, grn, pick related tables plus dx tables
+but no purchase orders
+no ssn_type
+================================================================================
+in the list of tables included are missing sequence 320 and 345
+PICK_ORDER_DX and GRN_DX
+these do not have primary keys
+

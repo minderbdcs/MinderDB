@@ -1,0 +1,889 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_DSGS FOR TRANSACTIONS
+ACTIVE AFTER INSERT POSITION 164
+AS
+/* TRANSACTION Table Fields ---(not quite all reqd) ------------- */
+/*----Max Chars-----1234567890123456789012345678901------------- */
+DECLARE VARIABLE   WK_RECORD_ID                RECORD_ID ;
+DECLARE VARIABLE   WK_WH_ID                   WH_ID ;
+DECLARE VARIABLE   WK_LOCN_ID                   LOCN_ID ;
+DECLARE VARIABLE   WK_OBJECT                   TRN_OBJECT ;
+DECLARE VARIABLE   WK_TRN_TYPE                TRN_TYPE ;
+DECLARE VARIABLE   WK_TRN_CODE                TRN_CODE ;
+DECLARE VARIABLE   WK_DATE                   TRN_DATE ;
+DECLARE VARIABLE   WK_REFERENCE               REFERENCE ;
+DECLARE VARIABLE   WK_QTY                      QTY ;
+DECLARE VARIABLE   WK_COMPLETE                  COMPLETE;
+DECLARE VARIABLE   WK_ERROR_TEXT               ERROR_TEXT ;
+DECLARE VARIABLE   WK_INSTANCE_ID               INSTANCE_ID ;
+DECLARE VARIABLE   WK_EXPORTED                  EXPORTED ;
+DECLARE VARIABLE   WK_SUB_LOCN_ID                LOCN_ID ;
+DECLARE VARIABLE   WK_INPUT_SOURCE             INPUT_SOURCE ;
+DECLARE VARIABLE   WK_USER                   PERSON ;
+DECLARE VARIABLE   WK_DEVICE                   DEVICE_ID ;
+DECLARE VARIABLE   WK_PROD_ID                   PRODUCT ;
+DECLARE VARIABLE   WK_COMPANY_ID                COMPANY ;
+DECLARE VARIABLE   WK_ORDER_NO                ORDER_ID ;
+DECLARE VARIABLE   WK_ORDER_TYPE                ORDER_TYPE ;
+DECLARE VARIABLE   WK_ORDER_SUB_TYPE             ORDER_TYPE ;
+
+DECLARE VARIABLE   WK_TRN_CLASS               TRN_CLASS ;      /* This seems new and not completely sure what it's used for */
+DECLARE VARIABLE   WK_FIELD_TEXT               TRN_RESPONSE;
+DECLARE VARIABLE   WK_RESULT                  TRN_RESPONSE;  /* Frank said WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_RESPONSE_TEXT, 1, '|' ) INTO :WK_RESULT;  */
+DECLARE VARIABLE    WK_RESPONSE_TEXT            TRN_RESPONSE;  /* VARCHAR(255)  */
+DECLARE VARIABLE   WK_RESPONSE_FINAL             TRN_RESPONSE ;    /* Check if need 1024 or 255 bytes */
+
+/* Temp TRN_REFERENCE Variables --------------------*/          
+DECLARE VARIABLE   WK_QTY_TMP                   QTY ;
+DECLARE VARIABLE   WK_TRN_REF_STATUS             STATUS ;
+DECLARE VARIABLE   WK_TRN_REF_DX_TMP             DIM_DECIMAL3 ;
+DECLARE VARIABLE   WK_TRN_REF_DY_TMP             DIM_DECIMAL3 ;
+DECLARE VARIABLE   WK_TRN_REF_DZ_TMP             DIM_DECIMAL3 ;
+DECLARE VARIABLE   WK_TRN_REF_VOL_TMP             VOLUME ;
+DECLARE VARIABLE   WK_TRN_REF_WT_TMP             DIM_DECIMAL3 ;
+DECLARE VARIABLE   WK_TRN_REF_TOT_OUT_TMP          QTY ;
+DECLARE VARIABLE   WK_TRN_REF_DIM_UOM            UOM ;
+DECLARE VARIABLE   WK_TRN_REF_VOL_UOM            UOM ;
+DECLARE VARIABLE   WK_TRN_REF_WT_UOM            UOM ;
+DECLARE VARIABLE   WK_TRN_REF_PACK_TYPE         PACK_T ;
+DECLARE VARIABLE    WK_TRN_REF_OUTER_BARCODE      GTIN14 ;
+DECLARE VARIABLE    WK_TRN_REF_LABEL_PRINTER      CODE ;         /* holds '|SYS_EQUIP.DEVICE_ID=PA|'  */
+/* Other variables ---------------------------------*/
+DECLARE VARIABLE   WK_DESPATCH_ID               DESPATCH_ID ;
+DECLARE VARIABLE   WK_CONSIGNMENT               AWB_CONSIGNMENT_NO ;
+DECLARE VARIABLE   WK_PS_QTY                  QTY;
+DECLARE VARIABLE   WK_PS_STATUS                STATUS ;
+DECLARE VARIABLE   WK_PS_DX                   DIM_DECIMAL3 ;
+DECLARE VARIABLE   WK_PS_DY                   DIM_DECIMAL3 ;
+DECLARE VARIABLE   WK_PS_DZ                   DIM_DECIMAL3 ;
+DECLARE VARIABLE   WK_PS_VOL                   VOLUME ;
+DECLARE VARIABLE   WK_PS_WT                  DIM_DECIMAL3 ;
+DECLARE VARIABLE   WK_PS_TOT_OUTERS            QTY ;
+DECLARE VARIABLE   WK_PS_DIM_UOM               UOM ;
+DECLARE VARIABLE   WK_PS_VOL_UOM               UOM ;
+DECLARE VARIABLE   WK_PS_WT_UOM               UOM ;
+DECLARE VARIABLE   WK_PS_PACK_TYPE               PACK_T ;
+DECLARE VARIABLE   WK_PS_RECORD                RECORD_ID ;
+DECLARE VARIABLE   WK_FILENAME                FILENAME ;
+DECLARE VARIABLE   WK_LABEL_PRINTER_DEVICE_ID      DEVICE_ID ;               
+/* PACK_SSCC Table Fields----used for copying to new PACK_SSCC record--- */
+DECLARE VARIABLE   WK_PS_RECORD_ID               RECORD_ID ;
+DECLARE VARIABLE   WK_PS_PICK_ORDER                PICK_ORDER_25 ;
+DECLARE VARIABLE   WK_PS_PICK_ORDER_LINE_NO       PICK_ORDER_LINE_NO ;
+DECLARE VARIABLE   WK_PS_PICK_LABEL_NO          PICK_LABEL_NO ;
+DECLARE VARIABLE   WK_PS_DESPATCH_ID               DESPATCH_ID ;
+DECLARE VARIABLE   WK_PS_SSCC                      SSCC_ID ;
+DECLARE VARIABLE   WK_PS_SSCC_STATUS               CODE_TWO ;
+DECLARE VARIABLE   WK_PS_PICK_ORDER_DATE           DATE_YYYYMMDD ;
+DECLARE VARIABLE   WK_PS_SCHED_DEL_DATE            DATE_YYYYMMDD ;
+DECLARE VARIABLE   WK_PS_SCHED_DEL_TIME            TIME_HH_MM ;
+DECLARE VARIABLE   WK_PS_CARRIER_ID                SHIP_VIA ;
+DECLARE VARIABLE   WK_PS_EDI_ASN                   ASN_NO ;
+DECLARE VARIABLE   WK_PS_DESPATCHED_DATE           DATE_YYYYMMDD ;
+DECLARE VARIABLE   WK_PS_ORDER_TYPE_CODE           CODE_THREE ;
+DECLARE VARIABLE   WK_PS_ORDER_TYPE_DESC           ORDER_DESC ;
+DECLARE VARIABLE   WK_PS_PO_PURPOSE_CODE           CODE_TWO ;
+DECLARE VARIABLE   WK_PS_PO_PURPOSE_DESC           ORDER_DESC ;
+DECLARE VARIABLE   WK_PS_PO_SUBSET_NO              CODE_THREE ;
+DECLARE VARIABLE   WK_PS_PO_NO_SUBSET_NO           ORDER_DESC ;
+DECLARE VARIABLE   WK_PS_CUSTOMER_EDI_NO           EDI_NO ;
+DECLARE VARIABLE   WK_PS_CUSTOMER_IN_HOUSE_NO      EDI_NO ;
+DECLARE VARIABLE   WK_PS_ASN_VENDOR_NO             EDI_NO ;
+DECLARE VARIABLE   WK_PS_VENDOR_EDI_NO             EDI_NO ;
+DECLARE VARIABLE   WK_PS_VENDOR_IN_HOUSE_NO        EDI_NO ;         /* Frank using this to hold COMPANY_ID - need to check */
+DECLARE VARIABLE   WK_PS_DEL_TO_DC_NO              EDI_LOCN_NO ;
+DECLARE VARIABLE   WK_PS_DEL_TO_DC_IN_HOUSE_NO     EDI_LOCN_NO ;
+DECLARE VARIABLE   WK_PS_DEL_TO_STORE_NO           EDI_LOCN_NO ;
+DECLARE VARIABLE   WK_PS_DEL_TO_STORE_IN_HSE_NO     EDI_LOCN_NO ;   /* Need to watch length of Variable Name */
+DECLARE VARIABLE   WK_PS_BILL_TO_PARTNER_NO        EDI_LOCN_NO ;
+DECLARE VARIABLE   WK_PS_BILL_TO_PTNR_IN_HSE_NO   EDI_LOCN_NO ;     /* Need to watch length of Variable Name */
+DECLARE VARIABLE   WK_PS_CLASS_GROUP_DESC          ORDER_DESC ;
+DECLARE VARIABLE   WK_PS_ADVERT_DATE_QLF           CODE_THREE ;
+DECLARE VARIABLE   WK_PS_ADVERTISED_DATE           DATE_DDMM ;
+DECLARE VARIABLE   WK_PS_CANCEL_AFTER_DATE         DATE_YYYYMMDD ;
+DECLARE VARIABLE   WK_PS_PRODUCT_QUALIFIER         CODE_TWO ;
+DECLARE VARIABLE   WK_PS_PRODUCT_CODE              PRODUCT ;
+DECLARE VARIABLE   WK_PS_PRODUCT_GTIN              PRODUCT ;
+DECLARE VARIABLE   WK_PS_PRODUCT_DESC              CODE ;
+DECLARE VARIABLE   WK_PS_QTY_ORDERED               QTY ;
+DECLARE VARIABLE   WK_PS_QTY_SHIPPED               QTY ;
+DECLARE VARIABLE   WK_PS_ORDERED_UOM               CODE_TWO ;
+DECLARE VARIABLE   WK_PS_SALE_PRICE_CODE           CODE_TWO ;
+DECLARE VARIABLE   WK_PS_SALE_PRICE                UNIT_PRICE ;
+DECLARE VARIABLE   WK_PS_SALE_IN_HOUSE_PRICE       UNIT_PRICE ;
+DECLARE VARIABLE   WK_PS_SALE_PRICE_VARIANCE       UNIT_PRICE ;
+DECLARE VARIABLE   WK_PS_LINE_COST                 UNIT_PRICE ;
+DECLARE VARIABLE   WK_PS_SALE_RETAIL_PRICE         UNIT_PRICE ;
+DECLARE VARIABLE   WK_PS_POS_KEY_CODE              CODE ;
+DECLARE VARIABLE   WK_PS_TOTAL_ORDER_AMOUNT        UNIT_PRICE ;
+DECLARE VARIABLE   WK_PS_TOTAL_ORDER_QTY           QTY ;
+DECLARE VARIABLE   WK_PS_ORDERED_BY_UOM_GTIN       QTY ;
+DECLARE VARIABLE   WK_PS_ORDERED_BY_GTIN           CODE ;
+DECLARE VARIABLE   WK_PS_USE_BY_DATE               DATE_YYYYMMDD ;
+DECLARE VARIABLE   WK_PS_BATCH_NO                  BATCH ;
+DECLARE VARIABLE   WK_PS_SSCC_WEIGHT               WEIGHT_DECIMAL3 ;
+DECLARE VARIABLE   WK_PS_SSCC_WEIGHT_UOM           UOM ;
+DECLARE VARIABLE   WK_PS_SSCC_DIM_X                DIM_DECIMAL3 ;
+DECLARE VARIABLE   WK_PS_SSCC_DIM_Y                DIM_DECIMAL3 ;
+DECLARE VARIABLE   WK_PS_SSCC_DIM_Z                DIM_DECIMAL3 ;
+DECLARE VARIABLE   WK_PS_SSCC_DIM_UOM              UOM ;
+DECLARE VARIABLE   WK_PS_SSCC_CUBIC                VOLUME ;
+DECLARE VARIABLE   WK_PS_SSCC_VOL_UOM              UOM ;
+DECLARE VARIABLE   WK_PS_TOTAL_OUTERS              QTY ;
+DECLARE VARIABLE   WK_PS_OUTER_BARCODE             GTIN14 ;
+DECLARE VARIABLE   WK_PS_INNERS_PER_OUTER          QTY ;
+DECLARE VARIABLE   WK_PS_ISSUES_PER_INNER          QTY ;
+DECLARE VARIABLE   WK_PS_STORE_DEPT_NO             EDI_LOCN_NO ;
+DECLARE VARIABLE   WK_PS_OTHER1                    CODE ;
+/* DECLARE VARIABLE   WK_PS_PACK_TYPE                 PACK_T ; */   /* CHAR(1) Package Type e.g. 'S'atchel, 'C'arton, 'P'allet. */
+DECLARE VARIABLE   WK_PS_OTHER2                    CODE ;
+DECLARE VARIABLE   WK_PS_LABEL_PRINTED_DATE        LABEL_DATE ;
+DECLARE VARIABLE   WK_PS_CREATE_DATE               CREATE_DATE ;
+DECLARE VARIABLE   WK_PS_CREATED_BY                USER_ID ;
+DECLARE VARIABLE   WK_PS_LAST_UPDATE_DATE          CREATE_DATE ;
+DECLARE VARIABLE     WK_PS_LAST_UPDATE_BY          USER_ID ;                 
+DECLARE VARIABLE   WK_PS_LEGACY_PICK_ORDER         PICK_ORDER_25 ;
+DECLARE VARIABLE   WK_PS_OUT_SSCC                  SSCC_ID ;
+/* Next generated PS_SSCC -----------*/
+DECLARE VARIABLE   WK_NEXT_PS_SSCC               SSCC_ID ;
+/* Company ID of the Order used in Next generated PS_SSCC -----------*/
+DECLARE VARIABLE WK_SO_COMPANY_ID VARCHAR(20);
+
+/* Update PACK_SSCC record. Started 4 April 2014 GSN
+
+Required: At time of completing Awaiting Checking of an SSCC the Operator scans the SSCC to confirm completion.
+Updates the PACK_SSCC record Status from ‘GO’ to ‘DC’, Qty Shipped (on this SSCC), Despatch details - dimensions,
+weight, total Outers (Cartons).
+Processing required: (uses example data only)
+NEW.TRN_TYPE = 'DSGS' (was DSSS Feb 2014)
+WK_TRN_CODE = 'D'
+OBJECT = ‘00393123450000000019’ - PS_SSCC - SSCC
+scanned Barcode Number use to search for record.
+Update PACK_SSCC.PS_LAST_UPDATE_DATE =NOW(),
+PACK_SSCC.PS_SSCC__STATUS =’DC’,
+PACK_SSCC.PS_LAST_UPDATE_BY =’glenn’,
+
+Example Reference field holds =
+‘|PS_SSCC_STATUS=DC|PS_SSCC_DIM_X=30|
+PS_SSCC_DIM_Y=30|PS_SSCC_DIM_Z=16|PS_SSCC_CUBIC=
+0.014|PS_SSCC_WEIGHT = 3.4|PS_TOTAL_OUTERS=1|'
+But realise we need to pass the UOM's as User can change these at time of Checking Order
+'PS_SSCC_DIM_UOM ='CM'|PS_SSCC_VOL_UOM='M3'|PS_SSCC_WEIGHT_UOM=KG'|
+Also passing more fields
+QTY = 1 Quantity Shipped (scanned Item's with same PROD_ID)
+COMPANY_ID = ‘PSGROUP’ - Inventory Owner
+ORDER_NO = ’33333333’ - Order No.
+ORDER_TYPE = TBA i.e. ‘GO’, etc
+ORDER_SUB_TYPE = ‘SA’ - EDI Order, Type SA as previously
+extracted from import EDI Order data file.
+---------------------------------------
+Further mods reqd - Handle no SSCC Barcode FL suggest the Screen should check this first that means double traffic, 
+What if PACK_STATUS already 'DC'
+---------------------------------------
+WK_TRN_CODE= 'N' Next SSCC 9 April 2014 gsn
+During the Order Checking of an SSCC the current carton (i.e. SSCC label) is full and another carton is required.
+This new carton requires its own SSCC label therefore we need to create a new PACK_SSCC record which inherits from
+the previous full PACK_SSCC record. The Operator scans the current SSCC Barcode and it pop-ups
+the SSCC Pack Details Screen which requires input of the SSCC’s dimensions, weight. Once complete the Operator
+scans ACCEPT then this Transaction must be sent. 
+We must also remember to close out the current SSCC record, before creating next SSCC.
+TRN_TYPE = ‘DSSS’ - Despatch, Update SSCC
+TRN_CODE = ‘N’ - Despatch, Next PACK_SSCC record.
+OBJECT = ‘00393123450000000019’ (or Blank to hanel multiple SSCC's)
+This is the PS_SSCC we now need to replicate but with next available PS_SSCC number.
+Use this OBJECT value to retrieve record to copy and update nest SSCC.
+---------------------------------------
+Please note these details refer to the current SSCC. 
+QTY = 1 Quantity Shipped (Scanned item’s)
+PROD_ID = 9312345000012’ - This is the current Product ID is
+included here for future searching and reporting
+COMPANY_ID = ‘PSGROUP’ - Inventory Owner
+ORDER_NO =’33333333’ - Order No.
+ORDER_TYPE = TBA i.e. ‘GO’, etc
+ORDER_SUB_TYPE = ‘SA’ - EDI Order, Type SA
+*/
+
+BEGIN
+   IF (NEW.TRN_TYPE = 'DSGS') THEN
+   BEGIN
+      WK_RECORD_ID          = NEW.RECORD_ID;  
+      WK_WH_ID             = NEW.WH_ID;
+      WK_LOCN_ID             = NEW.LOCN_ID;
+      WK_OBJECT             = NEW.OBJECT;
+      WK_TRN_TYPE          = NEW.TRN_TYPE;
+      WK_TRN_CODE          = NEW.TRN_CODE;  /* Either = 'D' for updating existing record , 'N' = new SSCC record  */
+      WK_DATE             = NEW.TRN_DATE;
+      WK_REFERENCE         = ALLTRIM(NEW.REFERENCE);
+      WK_QTY_TMP             = NEW.QTY;      /* TRN_CODE='D' -holds total scanned Products,TRN_CODE='N' -Copies of each New SSCC label to print */
+      WK_SUB_LOCN_ID          = NEW.SUB_LOCN_ID;
+      WK_INPUT_SOURCE       = NEW.INPUT_SOURCE;
+      WK_USER             = NEW.PERSON_ID;
+      WK_DEVICE             = NEW.DEVICE_ID;
+      WK_PROD_ID             = NEW.PROD_ID;
+      WK_COMPANY_ID          = NEW.COMPANY_ID;
+      WK_ORDER_NO          = NEW.ORDER_NO;
+      WK_ORDER_TYPE          = NEW.ORDER_TYPE;
+      WK_ORDER_SUB_TYPE      = NEW.ORDER_SUB_TYPE;
+      WK_TRN_CLASS         = NULL ;      /*   Need advice on this */      
+      WK_RESPONSE_TEXT      = '' ;         /* max 255 */
+      WK_RESPONSE_FINAL      = '' ;         /* max 255   */
+      WK_FILENAME          = '/tmp/DSGS.log'; /* whilst failed transaction gets rolled back the log file remains */
+      WK_QTY               = 0 ;
+      WK_DESPATCH_ID          = 0 ;
+      /* WK_CLASS            = '' ; */
+      WK_CONSIGNMENT          = '' ;
+      WK_NEXT_PS_SSCC         = '' ;
+      WK_TRN_REF_STATUS       = '';
+      WK_TRN_REF_DX_TMP       = 0 ;
+      WK_TRN_REF_DY_TMP       = 0 ;
+      WK_TRN_REF_DZ_TMP       = 0 ;
+      WK_TRN_REF_VOL_TMP       = 0 ;
+      WK_TRN_REF_WT_TMP       = 0 ;
+      WK_TRN_REF_TOT_OUT_TMP    = 0 ;
+      WK_PS_DX            = 0 ;
+      WK_PS_DY             = 0 ;
+      WK_PS_DZ             = 0 ;
+      WK_PS_VOL             = 0 ;
+      WK_PS_WT             = 0 ;
+      WK_PS_TOT_OUTERS       = 0 ;
+      WK_TRN_REF_DIM_UOM       = '' ;
+      WK_TRN_REF_VOL_UOM       = '' ;
+      WK_TRN_REF_WT_UOM       = '' ;
+      WK_TRN_REF_PACK_TYPE    = '' ;
+      WK_TRN_REF_OUTER_BARCODE = '' ;      /* Desktop screen not yet capturing Shipping Outer Barcode TUN14  - Future modification */
+      WK_LABEL_PRINTER_DEVICE_ID = 'PA';  /* Not used here */
+      
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 2, '|' ) INTO :WK_TRN_REF_STATUS;
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 3, '|' ) INTO :WK_TRN_REF_DX_TMP ;
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 4, '|' ) INTO :WK_TRN_REF_DY_TMP ;
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 5, '|' ) INTO :WK_TRN_REF_DZ_TMP ;
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 6, '|' ) INTO :WK_TRN_REF_VOL_TMP ;
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 7, '|' ) INTO :WK_TRN_REF_WT_TMP ;
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 8, '|' ) INTO :WK_TRN_REF_TOT_OUT_TMP ;
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 9, '|' ) INTO :WK_TRN_REF_DIM_UOM ;
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 10, '|' ) INTO :WK_TRN_REF_VOL_UOM ;
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 11, '|' ) INTO :WK_TRN_REF_WT_UOM ;
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 12, '|' ) INTO :WK_TRN_REF_PACK_TYPE ;
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 13, '|' ) INTO :WK_TRN_REF_OUTER_BARCODE ;
+      SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 14, '|' ) INTO :WK_TRN_REF_LABEL_PRINTER ;
+            
+      BEGIN
+         WK_PS_DX = CAST(WK_TRN_REF_DX_TMP AS NUMERIC(9,3));
+         WHEN SQLCODE -413
+         DO
+         BEGIN
+            /* No Dimension X */
+            WK_PS_DX = 10.0;
+         END
+      END
+      BEGIN
+         WK_PS_DY = CAST(WK_TRN_REF_DY_TMP AS NUMERIC(9,3));
+         WHEN SQLCODE -413
+         DO
+         BEGIN
+            /* No Dimension Y */
+            WK_PS_DY = 10.0;
+         END
+      END
+      BEGIN
+         WK_PS_DZ = CAST(WK_TRN_REF_DZ_TMP AS NUMERIC(9,3));
+         WHEN SQLCODE -413
+         DO
+         BEGIN
+            /* No Dimension Z */
+            WK_PS_DZ = 10.0;
+         END   
+      END
+      BEGIN
+         WK_QTY = CAST(WK_QTY_TMP AS INTEGER);
+         WHEN SQLCODE -413
+         /* Quantity of scanned PROD_ID's . Should equal Ordered qty. Default = 1 
+         This needs to be treated as a failed transaction but do not know how.*/
+         DO
+         BEGIN
+            /* No scanned count or copies of Labels required*/
+            WK_QTY = 0;
+         END    
+      END
+      BEGIN
+         IF (WK_TRN_REF_STATUS = '') THEN
+         BEGIN
+            /* no Status passed - use default, naughty to use hard coded value gsn = 'DC'*/
+            WK_TRN_REF_STATUS = 'DC' ;
+         END
+      END
+      BEGIN
+         WK_PS_VOL = CAST(WK_TRN_REF_VOL_TMP AS DOUBLE PRECISION);
+         WHEN SQLCODE -413
+         DO
+         BEGIN
+            /* No Volume */
+            WK_PS_VOL = 0.001;
+         END    
+      END
+      BEGIN
+         WK_PS_WT = CAST(WK_TRN_REF_WT_TMP AS NUMERIC(9,3));
+         WHEN SQLCODE -413
+         DO
+         BEGIN
+            /* No Weight use a default = 1.0kgs */
+            WK_PS_WT = 1.0;
+         END   
+      END
+      BEGIN
+         WK_PS_TOT_OUTERS = CAST(WK_TRN_REF_TOT_OUT_TMP AS INTEGER);
+         WHEN SQLCODE -413
+         /* Total Outer Cartons, really should only always be = 1 i.e. 1 SSCC label per carton */
+         DO
+         BEGIN
+            /* No Carton Count */
+            WK_PS_TOT_OUTERS = 1.0;
+         END        
+      END
+      BEGIN
+         IF (WK_TRN_REF_DIM_UOM = '' ) THEN
+         BEGIN
+            /* Dimension Uom use Default = 'CM' Centimetres */
+            WK_TRN_REF_DIM_UOM = 'CM' ;
+         END
+      END
+      BEGIN
+         IF (WK_TRN_REF_VOL_UOM = '' ) THEN
+         BEGIN
+            /* Volume UoM use default = M3 - Cubic Metres */
+            WK_TRN_REF_VOL_UOM = 'M3' ;
+         END
+      END
+      BEGIN
+         IF (WK_TRN_REF_WT_UOM = '' ) THEN
+         BEGIN
+            /* Weight UoM use default = KG */
+            WK_TRN_REF_WT_UOM = 'KG' ;
+         END
+      END
+      BEGIN
+         IF (WK_TRN_REF_PACK_TYPE = '' ) THEN
+         BEGIN
+            /* PAck Type use default = 'S' - Satchel */
+            WK_TRN_REF_PACK_TYPE = 'S' ;
+         END
+      END
+      BEGIN
+         /* Must pass Label Printer as '|SYS_EQUIP.DEVICE_ID=PB|' in Transaction REFERENCE */
+         IF (WK_TRN_REF_LABEL_PRINTER = '' ) THEN
+         BEGIN   
+            WK_TRN_REF_LABEL_PRINTER = 'SYS_EQUIP.DEVICE_ID=PA' ;
+         END      
+      END
+      /* ----- Begin processing ---------------------------------------*/
+      IF (WK_TRN_CODE = 'D') THEN
+      /* Updates existing PACK_SSCC record as now completed and includes changing Status (from 'GO') to 'DC' */
+      BEGIN
+         IF (EXISTS (SELECT RECORD_ID 
+            FROM PACK_SSCC 
+            WHERE PS_SSCC = :WK_OBJECT
+            )) 
+         THEN 
+         BEGIN
+            SELECT PS_DESPATCH_ID , PS_AWB_CONSIGNMENT_NO, RECORD_ID
+               FROM PACK_SSCC 
+               WHERE PS_SSCC = :WK_OBJECT 
+               INTO :WK_DESPATCH_ID, :WK_CONSIGNMENT, :WK_PS_RECORD;
+            BEGIN
+               /* SSCC exists so update */
+               UPDATE PACK_SSCC
+               SET
+               PS_QTY_SHIPPED       = :WK_QTY,
+               PS_SSCC_STATUS       = :WK_TRN_REF_STATUS,
+               PS_SSCC_DIM_X        = :WK_PS_DX,
+               PS_SSCC_DIM_Y        = :WK_PS_DY,
+               PS_SSCC_DIM_Z        = :WK_PS_DZ,
+               PS_SSCC_DIM_UOM     = :WK_TRN_REF_DIM_UOM,
+               PS_SSCC_CUBIC        = :WK_PS_VOL,
+               PS_SSCC_VOL_UOM     = :WK_TRN_REF_VOL_UOM,
+               PS_SSCC_WEIGHT       = :WK_PS_WT,
+               PS_SSCC_WEIGHT_UOM    = :WK_TRN_REF_WT_UOM,
+               PS_TOTAL_OUTERS    = :WK_PS_TOT_OUTERS,
+               PS_PACK_TYPE      = :WK_TRN_REF_PACK_TYPE,
+               PS_OUTER_BARCODE   = :WK_TRN_REF_OUTER_BARCODE,
+               PS_LAST_UPDATE_BY    = :WK_USER,
+               PS_LAST_UPDATE_DATE = :WK_DATE 
+               WHERE PS_SSCC = :WK_OBJECT;
+            END
+            WK_RESPONSE_FINAL = 'Processed successfully';
+            WK_RESPONSE_FINAL = WK_RESPONSE_FINAL ||  '|PICK_DESPATCH.DESPATCH_ID=' || COALESCE(:WK_DESPATCH_ID,0) ;
+            WK_RESPONSE_FINAL = WK_RESPONSE_FINAL ||  '|PACK_SSCC.AWB_CONSIGNMENT_NO=' || COALESCE(:WK_CONSIGNMENT,'') ;
+            WK_RESPONSE_FINAL = WK_RESPONSE_FINAL ||  '|PACK_SSCC.RECORD_ID =' || COALESCE(:WK_PS_RECORD,0) ;         
+            EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD_ID, 'T', :WK_RESPONSE_FINAL);
+         END
+         ELSE 
+         BEGIN
+            WK_RESPONSE_FINAL = 'NOT Processed - Cannot find existing PS_SSCC.';
+            WK_RESPONSE_FINAL = WK_RESPONSE_FINAL ||  '|PACK_SSCC.PS_SSCC=' || :WK_OBJECT ;
+            EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD_ID, 'F', :WK_RESPONSE_FINAL);
+         END
+      END
+      IF (WK_TRN_CODE = 'N') THEN
+      /* We need to handle 2 scenarios for creating New SSCC's:
+      a) User fills current carton, enters carton dims etc. and scans 'Completed SSCC' command and the above 'DSGS D' Transaction is run. 
+         PS_SSCC_STATUS is changed from 'GO' to 'DC'. 
+         They may now move onto another SSCC (Product) and check this and complete with a 'DSGS D' Transaction.
+         But then User finds they must repack an earlier SSCC into say 1 more carton. 
+         They must rescan the SSCC Barcode of the previous Product/Order Line they wish to repack then scan 'Add New SSCC' command
+         Now we need to read the scanned and this previous Completed PACK_SSCC to retrieve data and then create next SSCC with PS_SSCC_STATUS = 'GO'
+         and update with the retrieved data. Then the new SSCC must be printed and the User applies to new carton. 
+         Then User completes this new SSCC by entering Dims etc. by again scanning 'Completed SSCC'. The record is updated 
+         by above 'DSGS D' Transaction.
+      b)  User fills current carton, enters carton dims etc. and realises that they require another carton as current is full hence a new SSCC label.
+         User scans 'Add New SSCC' this means same as scanning 'Completed SSCC' then scanning 'Add New SSCC'. 
+         Hence this procedure must complete current SSCC record by running 'DSGS D' Transaction then create next SSCC with 
+         PS_SSCC_STATUS = 'GO' and update with the previous SSCC data. Then the new SSCC must be printed and the User applies to new carton. 
+         Then User completes this new SSCC by entering Dims etc. then scanning 'Completed SSCC' and again the record is updated 
+         by above 'DSGS D' Transaction.
+      */
+      BEGIN
+      /* Need to read details from previous SSCC record so we can populate the next New SSCC record */
+         IF (EXISTS (SELECT 
+            RECORD_ID                        
+            FROM PACK_SSCC 
+            WHERE PS_SSCC = :WK_OBJECT
+            )) 
+         THEN 
+         BEGIN
+
+      /* Need to read details from previous SSCC record so we can populate the next New SSCC record */
+            SELECT 
+            RECORD_ID,                        
+            PS_PICK_ORDER,                   
+            PS_PICK_ORDER_LINE_NO,          
+            PS_PICK_LABEL_NO,             
+            PS_DESPATCH_ID,                  
+/*            PS_SSCC,                   not reqd. */                  
+            PS_SSCC_STATUS,        /* New PS_SSCC_STATUS starts as 'GO'. Use DSGS D to update  */                
+            PS_PICK_ORDER_DATE,              
+            PS_SCHED_DEL_DATE,               
+            PS_SCHED_DEL_TIME,               
+            PS_CARRIER_ID,                   
+            PS_EDI_ASN,                       
+            PS_DESPATCHED_DATE,                
+            PS_ORDER_TYPE_CODE,                
+            PS_ORDER_TYPE_DESC,                
+            PS_PO_PURPOSE_CODE,                
+            PS_PO_PURPOSE_DESC,                
+            PS_PO_SUBSET_NO,                  
+            PS_PO_NO_SUBSET_NO,               
+            PS_CUSTOMER_EDI_NO,               
+            PS_CUSTOMER_IN_HOUSE_NO,          
+            PS_ASN_VENDOR_NO,                 
+            PS_VENDOR_EDI_NO,                 
+            PS_VENDOR_IN_HOUSE_NO,            /* Need this value to pass to NEXT_SSCC_ID(:WK_PS_VENDOR_IN_HOUSE_NO)    */
+            PS_DEL_TO_DC_NO,                  
+            PS_DEL_TO_DC_IN_HOUSE_NO,         
+            PS_DEL_TO_STORE_NO,               
+            PS_DEL_TO_STORE_IN_HOUSE_NO,      
+            PS_BILL_TO_PARTNER_NO,            
+/*--------------123456789012345678901234567890---------- */
+            PS_BILL_TO_PARTNER_IN_HOUSE_NO,   
+            PS_CLASS_GROUP_DESC,              
+            PS_ADVERT_DATE_QLF,               
+            PS_ADVERTISED_DATE,               
+            PS_CANCEL_AFTER_DATE,             
+            PS_PRODUCT_QUALIFIER,             
+            PS_PRODUCT_CODE,                  
+            PS_PRODUCT_GTIN,                  
+            PS_PRODUCT_DESC,                  
+            PS_QTY_ORDERED,                   
+            PS_QTY_SHIPPED,                   
+            PS_ORDERED_UOM,                   
+            PS_SALE_PRICE_CODE,               
+            PS_SALE_PRICE,                    
+            PS_SALE_IN_HOUSE_PRICE,           
+            PS_SALE_PRICE_VARIANCE,           
+            PS_LINE_COST,                     
+            PS_SALE_RETAIL_PRICE,             
+            PS_POS_KEY_CODE,                  
+            PS_TOTAL_ORDER_AMOUNT,            
+            PS_TOTAL_ORDER_QTY,               
+            PS_ORDERED_BY_UOM_GTIN,           
+            PS_ORDERED_BY_GTIN,               
+            PS_USE_BY_DATE,             /* Future option */         
+            PS_BATCH_NO,                /* Future option */         
+/*            PS_SSCC_WEIGHT,            must use DSGD D later to update */           
+/*            PS_SSCC_WEIGHT_UOM,        must use DSGD D later to update */            
+/*            PS_SSCC_DIM_X,             must use DSGD D later to update */            
+/*            PS_SSCC_DIM_Y,             must use DSGD D later to update */            
+/*            PS_SSCC_DIM_Z,             must use DSGD D later to update */            
+/*            PS_SSCC_DIM_UOM,           must use DSGD D later to update */            
+/*            PS_SSCC_CUBIC,             must use DSGD D later to update */            
+/*            PS_SSCC_VOL_UOM,           must use DSGD D later to update */            
+/*            PS_TOTAL_OUTERS,            must use DSGD D later to update */           
+/*            PS_OUTER_BARCODE,           must use DSGD D later to update */           
+            PS_INNERS_PER_OUTER,        /* Future option */      
+            PS_ISSUES_PER_INNER,        /* Future option */         
+            PS_STORE_DEPT_NO,           /* Future option */         
+            PS_OTHER1,                  /* Future option */         
+/*            PS_PACK_TYPE,               must use DSGD D later to update */      
+            PS_OTHER2,                  /* Future option */         
+/*            PS_LABEL_PRINTED_DATE,      must use DSPS B (print Label) later to update */        
+/*            PS_CREATE_DATE,                   */
+/*            PS_CREATED_BY,                    */
+/*            PS_LAST_UPDATE_DATE,              */
+/*            PS_LAST_UPDATE_BY              */
+            PS_LEGACY_PICK_ORDER ,                  
+            PS_OUT_SSCC ,                 
+            PS_AWB_CONSIGNMENT_NO
+            
+            FROM PACK_SSCC 
+            WHERE PS_SSCC = :WK_OBJECT
+            INTO  
+            :WK_PS_RECORD_ID,               
+            :WK_PS_PICK_ORDER,
+            :WK_PS_PICK_ORDER_LINE_NO,
+            :WK_PS_PICK_LABEL_NO,   
+            :WK_PS_DESPATCH_ID,
+/*            :WK_PS_SSCC,            need to generate new SSCC number, NEXT_SSCC_ID(NEW.PS_VENDOR_IN_HOUSE_NO) below */
+            :WK_PS_SSCC_STATUS,     /*  We should not be copying Status from one record to another */
+            :WK_PS_PICK_ORDER_DATE,
+            :WK_PS_SCHED_DEL_DATE,
+            :WK_PS_SCHED_DEL_TIME,
+            :WK_PS_CARRIER_ID,
+            :WK_PS_EDI_ASN,
+            :WK_PS_DESPATCHED_DATE,
+            :WK_PS_ORDER_TYPE_CODE,
+            :WK_PS_ORDER_TYPE_DESC,
+            :WK_PS_PO_PURPOSE_CODE,
+            :WK_PS_PO_PURPOSE_DESC,
+            :WK_PS_PO_SUBSET_NO,       
+            :WK_PS_PO_NO_SUBSET_NO,
+            :WK_PS_CUSTOMER_EDI_NO,
+            :WK_PS_CUSTOMER_IN_HOUSE_NO,
+            :WK_PS_ASN_VENDOR_NO,
+            :WK_PS_VENDOR_EDI_NO,
+            :WK_PS_VENDOR_IN_HOUSE_NO,         
+            :WK_PS_DEL_TO_DC_NO,
+            :WK_PS_DEL_TO_DC_IN_HOUSE_NO,
+            :WK_PS_DEL_TO_STORE_NO,
+            :WK_PS_DEL_TO_STORE_IN_HSE_NO,
+            :WK_PS_BILL_TO_PARTNER_NO,
+            :WK_PS_BILL_TO_PTNR_IN_HSE_NO,
+            :WK_PS_CLASS_GROUP_DESC,
+            :WK_PS_ADVERT_DATE_QLF,
+            :WK_PS_ADVERTISED_DATE,
+            :WK_PS_CANCEL_AFTER_DATE,
+            :WK_PS_PRODUCT_QUALIFIER,
+            :WK_PS_PRODUCT_CODE,
+            :WK_PS_PRODUCT_GTIN,
+            :WK_PS_PRODUCT_DESC,
+            :WK_PS_QTY_ORDERED,
+            :WK_PS_QTY_SHIPPED,
+            :WK_PS_ORDERED_UOM,
+            :WK_PS_SALE_PRICE_CODE,
+            :WK_PS_SALE_PRICE,
+            :WK_PS_SALE_IN_HOUSE_PRICE,
+            :WK_PS_SALE_PRICE_VARIANCE,
+            :WK_PS_LINE_COST,
+            :WK_PS_SALE_RETAIL_PRICE,
+            :WK_PS_POS_KEY_CODE,
+            :WK_PS_TOTAL_ORDER_AMOUNT,
+            :WK_PS_TOTAL_ORDER_QTY,
+            :WK_PS_ORDERED_BY_UOM_GTIN,
+            :WK_PS_ORDERED_BY_GTIN,
+            :WK_PS_USE_BY_DATE,
+            :WK_PS_BATCH_NO,
+/*            :WK_PS_SSCC_WEIGHT,               must use DSGD D later to update */  
+/*            :WK_PS_SSCC_WEIGHT_UOM,            must use DSGD D later to update */  
+/*            :WK_PS_SSCC_DIM_X,                 must use DSGD D later to update */  
+/*            :WK_PS_SSCC_DIM_Y,                 must use DSGD D later to update */  
+/*            :WK_PS_SSCC_DIM_Z,                 must use DSGD D later to update */  
+/*            :WK_PS_SSCC_DIM_UOM,               must use DSGD D later to update */  
+/*            :WK_PS_SSCC_CUBIC ,                must use DSGD D later to update */  
+/*            :WK_PS_SSCC_VOL_UOM,               must use DSGD D later to update */  
+/*            :WK_PS_TOTAL_OUTERS,                must use DSGD D later to update */ 
+/*            :WK_PS_OUTER_BARCODE,               must use DSGD D later to update */ 
+            :WK_PS_INNERS_PER_OUTER,
+            :WK_PS_ISSUES_PER_INNER,
+            :WK_PS_STORE_DEPT_NO,
+            :WK_PS_OTHER1,
+/*            :WK_PS_PACK_TYPE,               must use DSGD D later to update */
+            :WK_PS_OTHER2,
+/*            :WK_PS_LABEL_PRINTED_DATE,          must use DSPS B (print Label) later to update */ 
+/*            :WK_PS_CREATE_DATE,               */
+/*            :WK_PS_CREATED_BY,               */
+/*            :WK_PS_LAST_UPDATE_DATE,         */
+/*            :WK_PS_LAST_UPDATE_BY              */      
+            :WK_PS_LEGACY_PICK_ORDER,
+            :WK_PS_OUT_SSCC,
+            :WK_CONSIGNMENT
+             ;
+
+            WK_PS_RECORD = :WK_PS_RECORD_ID;               
+            WK_RESULT ='' ;
+            /* Need generate next SSCC - use Frank's NEXT_SSCC_ID() */
+            SELECT COMPANY_ID FROM PICK_ORDER WHERE PICK_ORDER.PICK_ORDER = :WK_PS_PICK_ORDER INTO :WK_SO_COMPANY_ID;
+            /* SELECT SSCC_ID FROM NEXT_SSCC_ID(:WK_PS_VENDOR_IN_HOUSE_NO) INTO :WK_NEXT_PS_SSCC; */
+            SELECT SSCC_ID FROM NEXT_SSCC_ID(:WK_SO_COMPANY_ID) INTO :WK_NEXT_PS_SSCC;
+            IF (WK_NEXT_PS_SSCC IS NULL) THEN
+            BEGIN
+               WK_NEXT_PS_SSCC = '';
+               /* need to trigger error */
+               WK_RESULT = 'Cannot Get a Next SSCC';
+            END
+
+/* use the current values from the passed sscc
+close the sscc passed */
+            ELSE
+            BEGIN
+               /* UPDATE the newly created SSCC with data from previous SSCC */
+               INSERT INTO PACK_SSCC
+               (
+               PS_PICK_ORDER                   ,
+               PS_PICK_ORDER_LINE_NO           ,
+               PS_PICK_LABEL_NO                ,   
+               PS_DESPATCH_ID                  ,
+               PS_SSCC                         ,               
+               PS_SSCC_STATUS                  ,         /* 'GO' = Generated Only */
+               PS_PICK_ORDER_DATE              ,
+               PS_SCHED_DEL_DATE               ,
+               PS_SCHED_DEL_TIME               ,
+               PS_CARRIER_ID                   ,
+               PS_EDI_ASN                      ,
+               PS_DESPATCHED_DATE              ,
+               PS_ORDER_TYPE_CODE              ,
+               PS_ORDER_TYPE_DESC              ,
+               PS_PO_PURPOSE_CODE              ,
+               PS_PO_PURPOSE_DESC              ,
+               PS_PO_SUBSET_NO                 ,       
+               PS_PO_NO_SUBSET_NO              ,
+               PS_CUSTOMER_EDI_NO              ,
+               PS_CUSTOMER_IN_HOUSE_NO         ,
+               PS_ASN_VENDOR_NO                ,
+               PS_VENDOR_EDI_NO                ,
+/*               PS_VENDOR_IN_HOUSE_NO         ,         */
+               PS_DEL_TO_DC_NO                 ,
+               PS_DEL_TO_DC_IN_HOUSE_NO        ,
+               PS_DEL_TO_STORE_NO              ,
+/*------------------123456789012345678901234567890----123456789012345678901234567890----- */
+               PS_DEL_TO_STORE_IN_HOUSE_NO     ,
+               PS_BILL_TO_PARTNER_NO           ,
+               PS_BILL_TO_PARTNER_IN_HOUSE_NO  ,
+               PS_CLASS_GROUP_DESC             ,
+               PS_ADVERT_DATE_QLF              ,
+               PS_ADVERTISED_DATE              ,
+               PS_CANCEL_AFTER_DATE            ,
+               PS_PRODUCT_QUALIFIER            ,
+               PS_PRODUCT_CODE                 ,
+               PS_PRODUCT_GTIN                 ,
+               PS_PRODUCT_DESC                 ,
+               PS_QTY_ORDERED                  ,
+               PS_QTY_SHIPPED                  ,
+               PS_ORDERED_UOM                  ,
+               PS_SALE_PRICE_CODE              ,
+               PS_SALE_PRICE                   ,
+               PS_SALE_IN_HOUSE_PRICE          ,
+               PS_SALE_PRICE_VARIANCE          ,
+               PS_LINE_COST                    ,
+               PS_SALE_RETAIL_PRICE            ,
+               PS_POS_KEY_CODE                 ,
+               PS_TOTAL_ORDER_AMOUNT           ,
+               PS_TOTAL_ORDER_QTY              ,
+               PS_ORDERED_BY_UOM_GTIN          ,
+               PS_ORDERED_BY_GTIN              ,
+               PS_USE_BY_DATE                  ,
+               PS_BATCH_NO                     ,
+/*             PS_SSCC_WEIGHT                  ,         */
+/*             PS_SSCC_WEIGHT_UOM              ,         */
+/*             PS_SSCC_DIM_X                   ,         */
+/*             PS_SSCC_DIM_Y                   ,         */
+/*             PS_SSCC_DIM_Z                   ,         */
+/*             PS_SSCC_DIM_UOM                 ,         */
+/*             PS_SSCC_CUBIC                   ,         */
+/*             PS_SSCC_VOL_UOM                 ,         */
+/*             PS_TOTAL_OUTERS                 ,         */
+/*             PS_OUTER_BARCODE                ,         */
+               PS_INNERS_PER_OUTER             ,
+               PS_ISSUES_PER_INNER             ,
+               PS_STORE_DEPT_NO                ,
+               PS_OTHER1                       ,
+/*             PS_PACK_TYPE                    ,         */
+               PS_OTHER2                       ,
+               PS_LABEL_PRINTED_DATE           ,         /* Updated by the DSPS Transaction later */
+               PS_CREATE_DATE                  ,
+               PS_CREATED_BY                   ,
+               PS_LAST_UPDATE_DATE             ,         
+               PS_LAST_UPDATE_BY               ,
+               PS_LEGACY_PICK_ORDER            ,       
+               PS_OUT_SSCC ,
+               PS_AWB_CONSIGNMENT_NO 
+         
+               ) VALUES (
+
+               :WK_PS_PICK_ORDER,
+               :WK_PS_PICK_ORDER_LINE_NO,
+               :WK_PS_PICK_LABEL_NO,   
+               :WK_PS_DESPATCH_ID,
+               :WK_NEXT_PS_SSCC,
+               'GO',                     /* 'GO' = Generated Only */
+               :WK_PS_PICK_ORDER_DATE,
+               :WK_PS_SCHED_DEL_DATE,
+               :WK_PS_SCHED_DEL_TIME,
+               :WK_PS_CARRIER_ID,
+               :WK_PS_EDI_ASN,
+               :WK_PS_DESPATCHED_DATE,
+               :WK_PS_ORDER_TYPE_CODE,
+               :WK_PS_ORDER_TYPE_DESC,
+               :WK_PS_PO_PURPOSE_CODE,
+               :WK_PS_PO_PURPOSE_DESC,
+               :WK_PS_PO_SUBSET_NO,       
+               :WK_PS_PO_NO_SUBSET_NO,
+               :WK_PS_CUSTOMER_EDI_NO,
+               :WK_PS_CUSTOMER_IN_HOUSE_NO,
+               :WK_PS_ASN_VENDOR_NO,
+               :WK_PS_VENDOR_EDI_NO,
+/*             :WK_PS_VENDOR_IN_HOUSE_NO,         */
+               :WK_PS_DEL_TO_DC_NO,
+               :WK_PS_DEL_TO_DC_IN_HOUSE_NO,
+               :WK_PS_DEL_TO_STORE_NO,
+/*------------------123456789012345678901234567890----123456789012345678901234567890----- */
+               :WK_PS_DEL_TO_STORE_IN_HSE_NO,
+               :WK_PS_BILL_TO_PARTNER_NO,
+               :WK_PS_BILL_TO_PTNR_IN_HSE_NO,
+               :WK_PS_CLASS_GROUP_DESC,
+               :WK_PS_ADVERT_DATE_QLF,
+               :WK_PS_ADVERTISED_DATE,
+               :WK_PS_CANCEL_AFTER_DATE,
+               :WK_PS_PRODUCT_QUALIFIER,
+               :WK_PS_PRODUCT_CODE,
+               :WK_PS_PRODUCT_GTIN,
+               :WK_PS_PRODUCT_DESC,
+               :WK_PS_QTY_ORDERED,
+               :WK_PS_QTY_SHIPPED,
+               :WK_PS_ORDERED_UOM,
+               :WK_PS_SALE_PRICE_CODE,
+               :WK_PS_SALE_PRICE,
+               :WK_PS_SALE_IN_HOUSE_PRICE,
+               :WK_PS_SALE_PRICE_VARIANCE,
+               :WK_PS_LINE_COST,
+               :WK_PS_SALE_RETAIL_PRICE,
+               :WK_PS_POS_KEY_CODE,
+               :WK_PS_TOTAL_ORDER_AMOUNT,
+               :WK_PS_TOTAL_ORDER_QTY,
+               :WK_PS_ORDERED_BY_UOM_GTIN,
+               :WK_PS_ORDERED_BY_GTIN,
+               :WK_PS_USE_BY_DATE,
+               :WK_PS_BATCH_NO,
+/*             PS_SSCC_WEIGHT                    :WK_PS_SSCC_WEIGHT,            */
+/*             PS_SSCC_WEIGHT_UOM                :WK_PS_SSCC_WEIGHT_UOM,        */
+/*             PS_SSCC_DIM_X                     :WK_PS_SSCC_DIM_X,             */
+/*             PS_SSCC_DIM_Y                     :WK_PS_SSCC_DIM_Y,             */
+/*             PS_SSCC_DIM_Z                     :WK_PS_SSCC_DIM_Z,             */
+/*             PS_SSCC_DIM_UOM                   :WK_PS_SSCC_DIM_UOM,           */
+/*             PS_SSCC_CUBIC                     :WK_PS_SSCC_CUBIC ,            */
+/*             PS_SSCC_VOL_UOM                   :WK_PS_SSCC_VOL_UOM,           */
+/*             PS_TOTAL_OUTERS                   :WK_PS_TOTAL_OUTERS,           */
+/*             PS_OUTER_BARCODE                  :WK_PS_OUTER_BARCODE,          */
+               :WK_PS_INNERS_PER_OUTER,
+               :WK_PS_ISSUES_PER_INNER,
+               :WK_PS_STORE_DEPT_NO,
+               :WK_PS_OTHER1,
+/*             PS_PACK_TYPE                      =:WK_PS_PACK_TYPE,               */
+               :WK_PS_OTHER2,
+               NULL,                        /* Updated by the DSPS Transaction later */
+               :WK_DATE,
+               :WK_USER,
+               :WK_DATE,         
+               :WK_USER,            
+               :WK_PS_LEGACY_PICK_ORDER,
+               :WK_NEXT_PS_SSCC,
+               /* have to use the current ps_sscc since its a new box - split from an other box */
+               :WK_CONSIGNMENT
+         
+               );
+            END
+            IF (WK_RESULT = '') THEN
+            BEGIN
+               /* now update the status of the copied from sscc to be closed - if the current status is GO */
+               IF (WK_PS_SSCC_STATUS = 'GO') THEN
+               BEGIN
+                  UPDATE  PACK_SSCC 
+                  SET PS_SSCC_STATUS = 'CL',
+                  PS_LAST_UPDATE_BY  = :WK_USER,
+                  PS_LAST_UPDATE_DATE = :WK_DATE         
+                  WHERE PS_SSCC = :WK_OBJECT;
+               END
+               UPDATE  PACK_SSCC 
+               SET 
+               PS_OUT_SSCC = :WK_NEXT_PS_SSCC,
+               PS_LAST_UPDATE_BY  = :WK_USER
+               WHERE PS_OUT_SSCC = :WK_PS_OUT_SSCC
+               AND PS_SSCC_STATUS = 'GO';
+               UPDATE  PACK_SSCC 
+               SET 
+               PS_SSCC_STATUS = 'CL',
+               PS_LAST_UPDATE_BY  = :WK_USER
+               WHERE PS_OUT_SSCC = :WK_PS_OUT_SSCC
+               AND PS_SSCC_STATUS = 'DC';
+               WK_RESULT ='' ;
+               BEGIN
+                  /* Print new SSCC Label/s. User TRN_CODE= 'B' as maybe we have generated > 1 new records each with PS_LABEL_PRINTED_DATE=NULL */
+                  /* =========================ADD_TRAN_RESPONSE_V6() -  This needs checking =============== */
+                  SELECT RESPONSE_TEXT FROM ADD_TRAN_RESPONSE_V6 (
+                     :WK_WH_ID,
+                     :WK_LOCN_ID, 
+                     '',                   /* OBJECT is left empty for TRN_CODE = 'B' Batch print */
+                     'DSPS', 'B', 
+                     'NOW',        
+                     '|' || :WK_TRN_REF_LABEL_PRINTER || '|',   /* REFERENCE  */      
+                     :WK_QTY,                /*  QTY - may need to be able pass > 1 if we need say 2 SSCC labels / Carton  */
+                     'F',                  /* COMPLETE must be 'F'   */
+                     '',                   /* ERROR_TEXT   */
+                     'MASTER    ',                /* INSTANCE_ID must be 'MASTER    '   */   
+                     0,                      /* EXPORTED   = 0*/   
+                     '',                   /* SUB_LOCN_ID   */   
+                     'SSSSSSSSS',             /* INPUT_SOURCE   */                  
+                     :WK_USER,       
+                     :WK_DEVICE,       
+                     :WK_PROD_ID,       
+                     :WK_COMPANY_ID,    
+                     :WK_ORDER_NO,    
+                     :WK_ORDER_TYPE,    
+                     :WK_ORDER_SUB_TYPE,
+                     :WK_TRN_CLASS
+                  )
+                  INTO :WK_RESPONSE_TEXT ; /* <= '|PRINT_REQUEST.MESSAGE_ID=12345678|PRINT_REQUEST.REQUEST_STATUS=‘XQ’  */
+                  SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_RESPONSE_TEXT, 1, '|' ) INTO :WK_RESULT;
+               END
+            END
+            IF (:WK_RESULT = 'Processed successfully') THEN
+               BEGIN
+                  WK_RESPONSE_FINAL = 'Processed successfully';
+                  WK_RESPONSE_FINAL = WK_RESPONSE_FINAL ||  '|PICK_DESPATCH.DESPATCH_ID=' || COALESCE(:WK_DESPATCH_ID,0);
+                  WK_RESPONSE_FINAL = WK_RESPONSE_FINAL ||  '|PACK_SSCC.AWB_CONSIGNMENT_NO=' || COALESCE(:WK_CONSIGNMENT,'') ;
+                  WK_RESPONSE_FINAL = WK_RESPONSE_FINAL ||  '|PACK_SSCC.RECORD_ID =' || COALESCE(:WK_PS_RECORD,0) ;
+                  WK_RESPONSE_FINAL = WK_RESPONSE_FINAL ||  '|PACK_SSCC.PS_SSCC =' || :WK_NEXT_PS_SSCC ;            
+                  EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD_ID, 'T', :WK_RESPONSE_FINAL);
+               END
+            ELSE
+               BEGIN
+                  WK_RESPONSE_FINAL = 'NOT Successful - Could not Print new SSCC label.';
+                  WK_RESPONSE_FINAL = WK_RESPONSE_FINAL ||  COALESCE(:WK_RESULT,'')   ;
+                  WK_RESPONSE_FINAL = WK_RESPONSE_FINAL ||  '|PACK_SSCC.PS_SSCC=' || :WK_NEXT_PS_SSCC  ;
+                  EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD_ID, 'F', :WK_RESPONSE_FINAL);
+               END
+         END
+         ELSE 
+            BEGIN
+               WK_RESPONSE_FINAL = 'NOT Processed - Cannot Find prior SSCC to use to create new SSCC.';
+               WK_RESPONSE_FINAL = WK_RESPONSE_FINAL ||  '|PACK_SSCC.PS_SSCC=' || :WK_OBJECT ;
+               EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD_ID, 'F', :WK_RESPONSE_FINAL);
+            END
+      END
+   END
+END^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

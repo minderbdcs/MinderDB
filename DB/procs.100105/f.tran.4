@@ -1,0 +1,27 @@
+update transaction_types set soap_method='PrintCoverLetterSupplierList',soap_procedure='sendPRCL' where trn_type='PRCL';
+update transaction_types set soap_method='GetContactInstanceLiteratureOrderDetail',soap_procedure='sendGCLO' where trn_type='GCLO';
+update transaction_types set soap_method='GetContactInstanceLiteratureOrderDetail',soap_procedure='sendGCLM' where trn_type='GCLM';
+update transaction_types set soap_method='UpdateContactInstanceStatus',soap_procedure='sendUCIS' where trn_type='UCIS';
+update transaction_types set soap_method='UpdateLiteratureAvailableStockLevel',soap_procedure='sendUASL' where trn_type='UASL';
+update transaction_types set soap_method='GetLiteraturePrePackComposition',soap_procedure='sendGLPP' where trn_type='GLPP';
+update transaction_types set soap_method='GetLiteratureDetail',soap_procedure='$this->sendGLTD' where trn_type='GLTD';
+update transaction_types set soap_method='GetPickingListDetail',soap_procedure='sendGPLD' where trn_type='GPLD';
+update transaction_types set soap_method='GetCampaignDetail',soap_procedure='sendGCPD' where trn_type='GCPD';
+update transaction_types set soap_method='GetCampaignContactInstanceDetail',soap_procedure='sendGCID' where trn_type='GCID';
+update transaction_types set soap_method='GetSpecialMailoutDetail',soap_procedure='sendGSMD' where trn_type='GSMD';
+update transaction_types set soap_method='GetContactInstanceNameAndAddressDetail',soap_procedure='sendGCNA' where trn_type='GCNA';
+/*
+PRCL  0 PrintCoverLetterSupplierList
+GCLO  1 GetContactInstanceLiteratureOrderDetail
+GCLM = GCLO but for the revised data
+      1 GetContactInstanceLiteratureOrderDetail
+UCIS  2 UpdateContactInstanceStatus
+UASL  3 UpdateLiteratureAvailableStockLevel
+GLPP  4 GetLiteraturePrePackComposition
+GLTD  5 GetLiteratureDetail
+GPLD  6 GetPickingListDetail
+GCPD  7 GetCampaignDetail
+GCID  8 GetCampaignContactInstanceDetail
+GSMD  9 GetSpecialMailoutDetail
+GCNA 10 GetContactInstanceNameAndAddressDetail
+*/

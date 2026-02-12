@@ -1,0 +1,2 @@
+alter table grn_order add label_extension code_two;
+

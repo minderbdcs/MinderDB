@@ -1,0 +1,6 @@
+create domain price_numeric numeric(9,3);
+create domain price_decimal decimal(9,3);
+
+alter table ssn add loan_cost_base  price_decimal;
+
+

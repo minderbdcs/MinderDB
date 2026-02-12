@@ -1,0 +1,2 @@
+alter table pick_manifest add PICKM_CARRIER_ID                DESPATCH_CARRIER;
+

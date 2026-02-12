@@ -1,0 +1,3 @@
+ALTER TABLE UOM ADD UOM_TYPE CODE_TWO;
+update uom set uom_type = 'WT' where code in ('GM','KG','TN','LB');
+update uom set uom_type = 'UT' where uom_type is null;

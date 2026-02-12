@@ -1,0 +1,3 @@
+
+alter table sys_equip_device_options
+  add constraint sedo_device foreign key (sedo_device_id) references sys_equip(device_id);

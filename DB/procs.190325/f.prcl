@@ -1,0 +1,78 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_PRCL FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 1 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA TRN_DATA;
+DECLARE VARIABLE WK_WORK_LABEL TRN_DATA;
+DECLARE VARIABLE WK_WORK_FIELD TRN_DATA;
+/* DECLARE VARIABLE WK_ORDER VARCHAR(15); */
+DECLARE VARIABLE WK_ORDER PICK_ORDER;
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'PRCL') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the order 
+            field 2 is the print status 
+         */
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            /* IF ((WK_WORK_LABEL = 'ContactInstanceID') THEN */
+            IF ((WK_WORK_LABEL = 'ContactInstanceID') OR
+                (WK_WORK_LABEL = '<ContactInstanceID')) THEN
+            BEGIN
+               WK_ORDER = WK_WORK_DATA;
+            END
+            /* IF (WK_WORK_LABEL = 'PrintStatus') THEN */
+            IF ((WK_WORK_LABEL = 'PrintStatus') OR
+                (WK_WORK_LABEL = '<PrintStatus')) THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         UPDATE PICK_ORDER 
+         SET PRINTED_DATE = NEW.TRN_DATE,
+             PRINTED_STATUS = :WK_STATUS
+         WHERE PICK_ORDER = :WK_ORDER;
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

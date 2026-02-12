@@ -1,0 +1,34 @@
+alter table person     add address_line5 address_line;
+alter table pick_order add p_address_line5 address_line;
+alter table pick_order add other1 other_char;
+alter table pick_order add other2 other_char;
+alter table pick_order add other3 other_char;
+alter table pick_order add other4 other_char;
+alter table pick_order add other5 other_char;
+alter table pick_order add other6 other_char;
+alter table pick_order add other7 other_char;
+alter table pick_order add other8 other_char;
+alter table pick_order add other9 other_char;
+
+alter table pick_item add other1 other_char;
+alter table pick_item add other2 other_char;
+alter table pick_item add other3 other_char;
+alter table pick_item add other4 other_char;
+alter table pick_item add other5 other_char;
+alter table pick_item add other6 other_char;
+alter table pick_item add other7 other_char;
+alter table pick_item add other8 other_char;
+alter table pick_item add other9 other_char;
+
+/* create domain percent as smallint check (value between 0 and 100); */
+create domain percent as smallint check (value is null OR value between 0 and 100);
+alter table prod_profile add max_weight_under percent;
+alter table prod_profile add max_weight_over percent;
+
+alter table control add default_weight_under percent;
+alter table control add default_weight_over percent;
+
+/*
+alter domain percent drop constraint;
+alter domain percent add constraint check (value is null OR value between 0 and 100);
+*/

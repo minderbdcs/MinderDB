@@ -1,0 +1,14 @@
+/*
+ insert into carrier_service(carrier_id,service_type,description,service_service_code,cs_label_type,cs_manifest_name,service_account) values('CPLEASE','X31','Jiffy X31','X31','CPLEASE',null,'112899570');
+ insert into carrier_service(carrier_id,service_type,description,service_service_code,cs_label_type,cs_manifest_name,service_account) values('CPLEASE','X33','Jiffy X33','X33','CPLEASE',null,'112899570');
+ insert into carrier_service(carrier_id,service_type,description,service_service_code,cs_label_type,cs_manifest_name,service_account) values('CPLEASE','X35','Jiffy X35','X35','CPLEASE',null,'112899570');
+ insert into carrier_service(carrier_id,service_type,description,service_service_code,cs_label_type,cs_manifest_name,service_account) values('CPLEASE','X31','Rewards X31','X31','CPLEASE',null,'112899596');
+ insert into carrier_service(carrier_id,service_type,description,service_service_code,cs_label_type,cs_manifest_name,service_account) values('CPLEASE','X33','Rewards X33','X35','CPLEASE',null,'112899596');
+ insert into carrier_service(carrier_id,service_type,description,service_service_code,cs_label_type,cs_manifest_name,service_account) values('CPLEASE','X35','Rewards X35','X35','CPLEASE',null,'112899596');
+*/
+
+delete from carrier_service where carrier_id='CPLEASE' and service_type in ('X33','X35');
+update carrier_service set service_type='P1',service_service_code='P1' where carrier_id='CPLEASE' and service_type='X31';
+update carrier_service set description='Jiffy P1' where service_type='P1'and  carrier_id='CPLEASE' and description='Jiffy X31';
+update carrier_service set description='Rewards P1' where service_type='P1'and  carrier_id='CPLEASE' and description='Rewards X31';
+

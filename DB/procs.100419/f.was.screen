@@ -1,0 +1,2 @@
+alter table sys_screen_var alter ssv_dropdown_sql type code_32k;
+

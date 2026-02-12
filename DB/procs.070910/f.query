@@ -1,0 +1,17 @@
+delete from query_layout where code='msaleline';
+delete from query_layout where code='msaleline2';
+insert into query_layout(code,description,sequence,label) values('msaleline','pick_item.pick_label_no','1','Id');
+insert into query_layout(code,description,sequence,label) values('msaleline','pick_item.pick_order_line_no','2','Line');
+insert into query_layout(code,description,sequence,label) values('msaleline','~I~','3','TP');
+insert into query_layout(code,description,sequence,label) values('msaleline','cast(pick_item.ssn_id as varchar(30))','4','Code');
+insert into query_layout(code,description,sequence,label) values('msaleline','prod_profile.short_desc','5','Description');
+insert into query_layout(code,description,sequence,label) values('msaleline','pick_item.pick_order_qty','6','Qty');
+insert into query_layout(code,description,sequence,label) values('msaleline','pick_item.pick_line_status','7','ST');
+
+insert into query_layout(code,description,sequence,label) values('msaleline2','pick_item.pick_label_no','1','Id');
+insert into query_layout(code,description,sequence,label) values('msaleline2','pick_item.pick_order_line_no','2','Line');
+insert into query_layout(code,description,sequence,label) values('msaleline2','~P~','3','TP');
+insert into query_layout(code,description,sequence,label) values('msaleline2','pick_item.prod_id','4','Prod');
+insert into query_layout(code,description,sequence,label) values('msaleline2','prod_profile.short_desc','5','Description');
+insert into query_layout(code,description,sequence,label) values('msaleline2','pick_item.pick_order_qty','6','Qty');
+insert into query_layout(code,description,sequence,label) values('msaleline2','pick_item.pick_line_status','7','ST');

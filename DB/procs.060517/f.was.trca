@@ -1,0 +1,256 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP TRIGGER RUN_TRANSACTION_TRCA ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_TRCA FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 13 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_COMPANY VARCHAR(20);
+DECLARE VARIABLE WK_ALT_COMPANY VARCHAR(20);
+DECLARE VARIABLE WK_QTY_X VARCHAR(10);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_BUFFER VARCHAR(512);
+DECLARE VARIABLE WK_FILENAME VARCHAR(80);
+DECLARE VARIABLE WK_RESULT INTEGER;
+==============================================
+DECLARE VARIABLE WK_ALLOWED_STATUS VARCHAR(40);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF (NEW.TRN_TYPE = 'TRCA') THEN
+      BEGIN
+         /* WK_FILENAME = 'd:\tmp\trca.log'; */
+         WK_FILENAME = '/tmp/trca.log';
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the product code
+            field 2 is the company code to
+            field 3 is the company code from 
+            field 4 is the qty 
+         */
+         WK_STATUS = '';
+         WK_PROD = '';
+         WK_COMPANY = '';
+         WK_ALT_COMPANY = '';
+         WK_QTY_X = '';
+         WK_QTY = 0;
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WK_PROD_TYPE = '';
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = '<EANNumber') THEN
+            BEGIN
+               WK_BUFFER = 'have EANNumber ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_PROD = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<CompanyTo') THEN
+            BEGIN
+               WK_BUFFER = 'have Company To' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_COMPANY = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<CompanyFrom') THEN
+            BEGIN
+               WK_BUFFER = 'have AltCompany ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_ALT_COMPANY = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<Qty') THEN
+            BEGIN
+               WK_BUFFER = 'have Qty ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_QTY_X = WK_WORK_DATA;
+               WK_QTY = CAST(WK_VOLUME_X AS INTEGER);
+               WHEN SQLCODE -413
+               DO
+               BEGIN
+                  /* No Number */
+                  WK_QTY = 0;
+               END
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (NEW.TRN_CODE = 'P')  THEN
+         BEGIN
+/*
+         qty remaining =  adjustment qty (mostly should be +ve)
+         if now qty required is < 0
+         ie was -ve then swap from and to company
+	 and make the qty +ve
+         while (qty required (remaining) > 0) & not at end of issn's
+            get an issn for product in the right location 
+            (a non zoned location)
+            (with company and product not in location record)
+            and the from company
+            and the right status
+            if qty required(remaining) < current_qty
+               eg want 10 and issn has  15
+               here we want to take 10 of the 15 
+               so a split is required
+               and 10 go to new company and 5 to old company
+               update issn company for split 
+               reduce qty required (remaining) by qty took (10)
+            if qty required(remaining) = current_qty
+               take all of the issn
+               update issns company
+               reduce qty required (remaining) by qty took
+            if qty required(remaining) > current_qty
+               eg want 10 and issn has  7
+               here we want to take all of the issn
+               update issn company 
+               reduce qty required (remaining) by qty took
+         end while
+         if now qty required remaining is still > zero - have problem
+         not enough stock - so since the level is now zero is ok   
+
+
+*/
+         WK_AUDIT_DESC = 'Adjust Product Company' ;
+         WK_QTY_REMAINING = WK_QTY;
+         SELECT CONTROL.PICK_IMPORT_SSN_STATUS,
+            FROM CONTROL
+            INTO :WK_ALLOWED_STATUS;
+         IF (WK_ALLOWED_STATUS IS NULL) THEN
+         BEGIN
+            WK_ALLOWED_STATUS = ',ST,';
+         END
+   
+         /* must get issns to make up qty to use */
+         WK_IS_QTY_REMAINING = WK_QTY_REMAINING;
+         FOR SELECT CURRENT_QTY, SSN_ID, ORIGINAL_SSN,
+            WH_ID, LOCN_ID
+            FROM ISSN
+            WHERE PROD_ID = :WK_PROD
+/*
+            AND WH_ID = :WK_WH_ID
+            AND LOCN_ID = :WK_LOCN_ID
+*/
+            AND COMPANY_ID = :WK_ALT_COMPANY
+            AND (POS(:WK_ALLOWED_STATUS,ISSN.ISSN_STATUS,0,1) > -1)
+            AND CURRENT_QTY > 0
+            AND (WH_ID < 'X' OR WH_ID > 'X~')
+            INTO :WK_IS_QTY, :WK_IS_SSN, :WK_IS_ORIGINAL_SSN,
+            :WK_WH_ID, :WK_LOCN_ID 
+         DO
+         BEGIN
+            IF (WK_IS_QTY_REMAINING > 0) THEN
+            BEGIN
+               /* how much can I take */
+               /* either issn qty or remaining qty if its less */
+               WK_USED_SSN = WK_IS_SSN;
+               WK_IS_USED_QTY = WK_IS_QTY;
+               IF (WK_IS_QTY_REMAINING < WK_IS_QTY) THEN
+               BEGIN
+                  WK_IS_USED_QTY = WK_IS_QTY_REMAINING;
+                  /*  wk_is_qty_remaining */
+                  /* so end of issns that we take */
+                  /* must do a split and take some */
+               END
+               ELSE
+               BEGIN
+                  UPDATE ISSN SET 
+                   COMPANY_ID = :WK_COMPANY
+                   WHERE SSN_ID = :WK_USED_SSN;
+                  IF (WK_IS_ORIGINAL_SSN = WK_USED_SSN) THEN
+                  BEGIN 
+                     UPDATE SSN SET 
+                      COMPANY_ID = :WK_COMPANY
+                      WHERE SSN_ID = :WK_IS_ORIGINAL_SSN;
+                  END
+               /* must reduce wk_is_qty_remaining by wk_is_used_qty */
+                  WK_IS_QTY_REMAINING = WK_IS_QTY_REMAINING - WK_IS_USED_QTY;
+                  EXECUTE PROCEDURE ADD_SSN_HIST(:WK_WH_ID, :WK_LOCN_ID, :WK_USED_SSN, 
+                       :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                       :WK_AUDIT_DESC , :WK_REF, :WK_IS_USED_QTY, :WK_USER, :WK_DEVICE); 
+               END
+            END
+         END /* end for issns loop */
+=======================================================
+         SELECT 1 
+         FROM PROD_PROFILE
+         WHERE PROD_ID = :WK_PROD
+         INTO :WK_FOUND ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no product */
+/*            WK_RESULT = FILE_WRITELN(WK_FILENAME, 'insert prod');*/
+            INSERT INTO PROD_PROFILE(PROD_ID, 
+               COMPANY_ID, 
+               ALTERNATE_ID,
+               ALTERNATE_COMPANY_ID,
+               SHORT_DESC,
+               NET_WEIGHT,
+               VOLUME,
+               STOCK,
+               UOM_SIZE,
+               STANDARD_COST,
+               PROD_TYPE,
+               LONG_DESC,
+               NET_WEIGHT_UOM)
+            VALUES (:WK_PROD, 
+               :WK_COMPANY, 
+               :WK_ALT_PROD, 
+               :WK_ALT_COMPANY, 
+               :WK_DESC,
+               :WK_WEIGHT,
+               :WK_VOLUME,
+               :WK_STATUS,
+               :WK_SIZE,
+               :WK_COST,
+               :WK_PROD_TYPE_ID,
+               :WK_LONG_DESC,
+               :WK_WEIGHT_UOM);
+         END
+         ELSE
+         BEGIN
+/*            WK_RESULT = FILE_WRITELN(WK_FILENAME, 'update prod');*/
+            UPDATE PROD_PROFILE SET
+               COMPANY_ID = :WK_COMPANY, 
+               ALTERNATE_ID = :WK_ALT_PROD, 
+               ALTERNATE_COMPANY_ID = :WK_ALT_COMPANY, 
+               SHORT_DESC = :WK_DESC,
+               LONG_DESC = :WK_LONG_DESC,
+               NET_WEIGHT = :WK_WEIGHT,
+               VOLUME = :WK_VOLUME,
+               STOCK = :WK_STATUS,
+               UOM_SIZE = :WK_SIZE,
+               STANDARD_COST = :WK_COST,
+               NET_WEIGHT_UOM = :WK_WEIGHT_UOM
+            WHERE PROD_ID = :WK_PROD; 
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

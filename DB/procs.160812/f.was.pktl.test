@@ -1,0 +1,3 @@
+
+execute procedure add_tran('TA','RECEIV01','R52121532','PKTL','S','NOW','Comment',1,'F','','MASTER   ',0,'D000153','SSSSSSSSS','BDCS','XX');
+

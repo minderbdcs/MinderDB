@@ -1,0 +1,6 @@
+select trn_type, trn_code, ssn_hist.ssn_id, issn.ssn_id,issn.prod_id, prod_profile.prod_id
+    FROM SSN_HIST
+    LEFT OUTER JOIN  ISSN ON ISSN.SSN_ID = SSN_HIST.SSN_ID 
+    LEFT OUTER JOIN  PROD_PROFILE ON PROD_PROFILE.PROD_ID = ISSN.PROD_ID
+    LEFT OUTER JOIN  PROD_PROFILE PROD_PROFILE2 ON PROD_PROFILE2.PROD_ID = SSN_HIST.SSN_ID
+where trn_type = 'TROL' and ssn_hist.wh_id='FH' and trn_code='P';

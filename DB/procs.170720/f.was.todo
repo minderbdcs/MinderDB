@@ -1,0 +1,9 @@
+/*
+see that the last change to dsdx for using locn 00000000 was done based on version 040417 not 230517
+that was to version 050717 !!
+*/
+/*
+add to the warehouse 
+timezone
+whether in daylight saving time
+secs from utc

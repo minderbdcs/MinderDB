@@ -1,0 +1,175 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_PSUR FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 158 
+AS
+/* Product Stock Update Reservation Qtys  */
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_LINE_CNT INTEGER;
+DECLARE VARIABLE WK_REFERENCE VARCHAR(1024);
+DECLARE VARIABLE WK_SALE_CHANNEL VARCHAR(40);
+DECLARE VARIABLE WK_RECORD_ID_X VARCHAR(128);
+DECLARE VARIABLE WK_RECORD_ID INTEGER;
+DECLARE VARIABLE WK_ERROR_TEXT VARCHAR(255);
+DECLARE VARIABLE WK_PREV_STATUS VARCHAR(2);
+DECLARE VARIABLE WK_PREV_QTY INTEGER;
+DECLARE VARIABLE WK_NEW_STATUS VARCHAR(2);
+DECLARE VARIABLE WK_FOUND  INTEGER;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PSUR') THEN
+  BEGIN
+     WK_ERROR_TEXT = '';
+     WK_USER = NEW.PERSON_ID;
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+        /* have the adjustment qty passed in the qty field */
+     WK_QTY = NEW.QTY;
+        /* have the product in the object field */
+     WK_PROD = NEW.OBJECT;
+     WK_REFERENCE = NEW.REFERENCE;
+        /* have the channel code in the reference field */
+        /* have the record_id passed in the reference field */
+     WK_SALE_CHANNEL = '';
+     WK_RECORD_ID_X = '';
+     SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 1, '|' ) INTO :WK_SALE_CHANNEL ;
+     SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 2, '|' ) INTO :WK_RECORD_ID_X ;
+     BEGIN
+        WK_RECORD_ID  = CAST(WK_RECORD_ID_X AS INTEGER);
+        WHEN SQLCODE -413
+        DO
+        BEGIN
+           /* No Number */
+           WK_RECORD_ID = 0;
+           WK_ERROR_TEXT = WK_ERROR_TEXT || ' Non Numeric RECORD_ID ';
+        END
+     END
+     IF (WK_QTY IS NULL) THEN
+     BEGIN
+        WK_QTY = 0;
+     END
+     IF (NEW.TRN_CODE = 'R' OR NEW.TRN_CODE = 'K') THEN
+     BEGIN
+        /* update the reserved_qty */
+        IF (WK_QTY <> 0 AND WK_RECORD_ID <> 0) THEN
+        BEGIN
+           WK_FOUND = 0;
+           WK_PREV_QTY = NULL;
+           WK_PREV_STATUS = NULL;
+           SELECT RECORD_ID, PR_RESERVED_QTY, PR_RESERVATION_STATUS
+           FROM PROD_RESERVATION
+           WHERE RECORD_ID = :WK_RECORD_ID
+           INTO :WK_FOUND, :WK_PREV_QTY, :WK_PREV_STATUS;
+           IF (WK_FOUND IS NULL) THEN
+           BEGIN
+              WK_ERROR_TEXT = WK_ERROR_TEXT || ' Record Not Found ';
+           END
+           IF (WK_PREV_QTY IS NULL) THEN
+           BEGIN
+              WK_PREV_QTY = 0;
+           END
+           WK_NEW_STATUS = WK_PREV_STATUS;
+           IF (WK_PREV_QTY + WK_QTY < 0) THEN
+           BEGIN
+              WK_QTY = 0 - WK_PREV_QTY;
+              WK_NEW_STATUS = 'CN';
+           END
+           IF (WK_PREV_QTY + WK_QTY = 0) THEN
+           BEGIN
+              WK_NEW_STATUS = 'CN';
+           END
+           UPDATE PROD_RESERVATION SET 
+              PR_RESERVED_QTY = PR_RESERVED_QTY + :WK_QTY,
+              PR_NOTES = 'Adjusted Reserved Qty by ' || :WK_QTY,
+              LAST_UPDATE_DATE =  :WK_DATE,
+              LAST_UPDATE_BY =  :WK_USER,
+              LAST_UPDATE_DEVICE = :WK_DEVICE
+           WHERE RECORD_ID = :WK_RECORD_ID;
+        END
+        ELSE
+        BEGIN
+           IF (WK_QTY = 0) THEN
+           BEGIN
+              WK_ERROR_TEXT = WK_ERROR_TEXT || ' Adjustment Qty is Zero ';
+           END
+           IF (WK_RECORD_ID = 0) THEN
+           BEGIN
+              WK_ERROR_TEXT = WK_ERROR_TEXT || ' Record ID is Zero ';
+           END
+        END
+     END
+     IF (NEW.TRN_CODE = 'A' OR NEW.TRN_CODE = 'S') THEN
+     BEGIN
+        /* update the reserved_qty */
+        IF (WK_QTY <> 0 AND WK_RECORD_ID <> 0) THEN
+        BEGIN
+           WK_FOUND = 0;
+           WK_PREV_QTY = NULL;
+           WK_PREV_STATUS = NULL;
+           SELECT RECORD_ID, PR_AVAILABLE_QTY, PR_RESERVATION_STATUS
+           FROM PROD_RESERVATION
+           WHERE RECORD_ID = :WK_RECORD_ID
+           INTO :WK_FOUND, :WK_PREV_QTY, :WK_PREV_STATUS;
+           IF (WK_FOUND IS NULL) THEN
+           BEGIN
+              WK_ERROR_TEXT = WK_ERROR_TEXT || ' Record Not Found ';
+           END
+           IF (WK_PREV_QTY IS NULL) THEN
+           BEGIN
+              WK_PREV_QTY = 0;
+           END
+           WK_NEW_STATUS = WK_PREV_STATUS;
+           IF (WK_PREV_QTY + WK_QTY < 0) THEN
+           BEGIN
+              WK_QTY = 0 - WK_PREV_QTY;
+           END
+           UPDATE PROD_RESERVATION SET 
+              PR_AVAILABLE_QTY = PR_AVAILABLE_QTY + :WK_QTY,
+              PR_NOTES = 'Adjusted Available Qty by ' || :WK_QTY,
+              LAST_UPDATE_DATE =  :WK_DATE,
+              LAST_UPDATE_BY =  :WK_USER,
+              LAST_UPDATE_DEVICE = :WK_DEVICE
+           WHERE RECORD_ID = :WK_RECORD_ID;
+        END
+        ELSE
+        BEGIN
+           IF (WK_QTY = 0) THEN
+           BEGIN
+              WK_ERROR_TEXT = WK_ERROR_TEXT || ' Adjustment Qty is Zero ';
+           END
+           IF (WK_RECORD_ID = 0) THEN
+           BEGIN
+              WK_ERROR_TEXT = WK_ERROR_TEXT || ' Record ID is Zero ';
+           END
+        END
+     END
+     IF (WK_ERROR_TEXT = '') THEN
+     BEGIN
+              EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'T','Processed successfully');
+     END
+     ELSE
+     BEGIN
+              EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'F',:WK_ERROR_TEXT);
+     END
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+  END
+ END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

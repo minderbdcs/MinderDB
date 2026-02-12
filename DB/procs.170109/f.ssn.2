@@ -1,0 +1,9 @@
+
+update or insert  into  ssn_type(code, description) values('UNKNOWN','Unknown');
+update ssn set ssn_type = upper(ssn_type) where upper(ssn_type) <> ssn_type;
+update ssn set ssn_type = 'UNKNOWN'  where coalesce(ssn_type,'') = '';
+insert into ssn_type (code,description)
+select s1.ssn_type, s1.ssn_type as s1_desc from ssn s1 left outer join ssn_type s2 on s1.ssn_type = s2.code
+where s2.code is null
+group by s1.ssn_type
+;

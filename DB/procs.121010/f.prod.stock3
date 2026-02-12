@@ -1,0 +1,2 @@
+alter table prod_reservation add   pr_last_available_qty qty;
+

@@ -1,0 +1,5 @@
+/*
+ insert into param(data_id,max_length,data_type,fixed_length,symbology_prefix,data_expression,global_search,data_type_id,data_brand,data_model) values('SERIAL5',12,'1','T',']C0;','S[A-Z0-9]{11,11}','F','SERIAL_NUMBER','DEFAULT','DEFAULT');
+*/
+/* CREATE DOMAIN DATA_EXPRESSION AS VARCHAR(40); */
+ALTER  DOMAIN DATA_EXPRESSION TYPE  VARCHAR(255);

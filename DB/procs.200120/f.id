@@ -1,0 +1,29 @@
+CREATE SEQUENCE ID_GEN;
+ALTER SEQUENCE ID_GEN RESTART WITH 8000;
+
+/*
+alter table issn add ID COMPUTED BY (SSN_ID);
+alter table location add ID COMPUTED BY (WH_ID || LOCN_ID);
+alter table warehouse  add ID COMPUTED BY (WH_ID );
+alter table location drop ID;
+alter table warehouse drop ID;
+alter table issn drop ID;
+*/
+commit;
+alter table location add id varchar(36);
+/* update location set id=gen_id(TRANSACTION_ID,1); */
+ update location set id = next value from ID_GEN;
+commit;
+
+commit;
+alter table warehouse add id varchar(36);
+/* update warehouse set id=gen_id(TRANSACTION_ID,1); */
+ update warehouse set id = next value from ID_GEN;
+commit;
+
+commit;
+alter table issn add id varchar(36);
+/* update issn set id=gen_id(TRANSACTION_ID,1); */
+ update issn set id = next value from ID_GEN;
+commit;
+

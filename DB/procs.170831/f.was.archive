@@ -1,0 +1,90 @@
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(5,'ISSN','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(10,'SSN','MR','MR')
+matching (archive_table, archive_status);
+
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(30,'GRN','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(40,'GRN_ORDER','MR','MR')
+matching (archive_table, archive_status);
+
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(45,'PICK_ORDER','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(50,'PICK_ITEM_LINE_NO','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(55,'PICK_ITEM','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(60,'PICK_ITEM_DETAIL','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(65,'PICK_ORDER_IMPORT','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(70,'PICK_INVOICE','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(75,'PICK_INVOICE_LINE','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(80,'PICK_DESPATCH','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(85,'PICK_MANIFEST','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(90,'PACK_ID','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(95,'PICK_ITEM_ADDRESS','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(100,'PACK_SSCC','MR','MR')
+matching (archive_table, archive_status);
+
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(105,'TRANSACTIONS4','MR','MR')
+matching (archive_table, archive_status);
+
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(215,'ISSN_DX','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(220,'SSN_DX','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(225,'SSN_HIST','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(300,'PACK_ID_DX','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(305,'PICK_ITEM_DX','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(310,'PICK_DESPATCH_DX','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(315,'PICK_ITEM_DETAIL_DX','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(320,'PICK_ORDER_DX','MR','MR')
+matching (archive_table, archive_status);
+
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(330,'TRANSACTIONS_ARCHIVE','MR','MR')
+matching (archive_table, archive_status);
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(340,'TRANSACTIONS4_ARCHIVE','MR','MR')
+matching (archive_table, archive_status);
+
+update or insert into archive_layout(sequence,archive_table,archive_status,archive_method)
+values(345,'GRN_DX','MR','MR')
+matching (archive_table, archive_status);

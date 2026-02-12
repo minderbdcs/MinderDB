@@ -1,0 +1,3 @@
+
+alter table ssn add ssn_original_qty_f kit_qty;
+

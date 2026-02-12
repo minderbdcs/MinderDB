@@ -1,0 +1,3 @@
+alter table pick_item add pick_line_priority pick_priority;
+
+CREATE INDEX PICK_ITEM_DEVICE_IDX ON PICK_ITEM(DEVICE_ID, PICK_LINE_PRIORITY);

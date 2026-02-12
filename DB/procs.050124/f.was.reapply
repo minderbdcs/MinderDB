@@ -1,0 +1,12 @@
+set term ^;
+drop trigger del_order_group^
+drop trigger run_transaction_gcpd^
+drop table order_group^
+drop table pick_order_group^
+set term ;^
+in f.order;
+set term ^;
+in f.order.del^
+in f.gcpd.resp^
+set term ;^
+exit;

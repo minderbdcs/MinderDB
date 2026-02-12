@@ -1,0 +1,20 @@
+
+after downloaded order
+	upload that all of order arrived
+	download name and address
+	if set in order (special ) download comments
+
+in overnight task
+get all campaigns ->  update status to old and load order_group
+
+now get all orders on each campaign -> update status and load pick_order_group
+
+for order loading 
+	* must update items to be confirmed
+	must find a way to remove lines no longer on this order
+
+in control
+	pick method have 2 values so far
+	by ssn and product by issn
+	by ssn and product (group products - no issn)
+

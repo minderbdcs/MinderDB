@@ -1,0 +1,4 @@
+select pick_order,ship_via,wh_id,pick_status,p_post_code,p_state,p_post_code_depot_id,(select first 1 carrier_02_col_03 from postcode_depot p2 where p2.country = 'AU' and p2.state=pick_order.p_state and p2.post_code=pick_order.p_post_code) as depot from pick_order where ship_via='COURIERP';
+
+update  pick_order set p_post_code_depot_id = (select first 1 carrier_02_col_03 from postcode_depot p2 where p2.country = 'AU' and p2.state=pick_order.p_state and p2.post_code=pick_order.p_post_code)  where pick_order.ship_via='CPLEASE'; 
+

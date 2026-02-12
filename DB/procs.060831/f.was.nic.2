@@ -1,0 +1,9 @@
+update sys_hh set ip_address='\\192.168.61.131';
+update sys_hh set ip_address='\\192.168.61.131';
+update sys_hh set ftp_export='\export' where user_type='PR';
+update sys_hh set ftp_export='\test_export' where user_type='TR';
+update sys_hh set ftp_import='\import' where user_type='PR';
+update sys_hh set ftp_import='\test_import' where user_type='TR';
+update sys_hh set ftp_log='\log' where user_type='PR';
+update sys_hh set ftp_log='\log' where user_type='TR';
+select * from sys_hh;

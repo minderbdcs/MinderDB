@@ -1,0 +1,10 @@
+delete from options where  group_code='CANORDER';
+delete from options where  group_code='CANPICK';
+insert into options(group_code, code, description) values('CAN_ORDER','No Stock','No Stock');
+insert into options(group_code, code, description) values('CAN_ORDER','Damaged Stock','Damaged Stock');
+insert into options(group_code, code, description) values('CAN_ORDER','Wrong Stock','Wrong Stock');
+insert into options(group_code, code, description) values('CAN_ORDER','None','None');
+insert into options(group_code, code, description) values('CAN_PICK','No Stock','No Stock');
+insert into options(group_code, code, description) values('CAN_PICK','Damaged Stock','Damaged Stock');
+insert into options(group_code, code, description) values('CAN_PICK','Wrong Stock','Wrong Stock');
+insert into options(group_code, code, description) values('CAN_PICK','None','None');

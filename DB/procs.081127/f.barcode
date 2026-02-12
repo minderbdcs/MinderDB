@@ -1,0 +1,28 @@
+create table barcode_codes (
+record_id integer, /* primary key autoincrement */
+barcode_code code_255, /* text */
+item_count integer,
+date_add code, /* text */
+primary key(record_id));
+
+create generator barcode_code_gen;
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER   TRIGGER BARCODE_CODE_ID FOR BARCODE_CODES 
+ACTIVE BEFORE INSERT POSITION 0 
+AS
+BEGIN
+  IF (NEW.RECORD_ID IS NULL) THEN
+      NEW.RECORD_ID = GEN_ID(BARCODE_CODE_GEN, 1);
+  IF (NEW.RECORD_ID = 0) THEN
+      NEW.RECORD_ID = GEN_ID(BARCODE_CODE_GEN, 1);
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

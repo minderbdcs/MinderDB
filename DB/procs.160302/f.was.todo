@@ -1,0 +1,22 @@
+For APCD
+want a tran to un DSDX and DSOT DSOL an order
+
+have input of order no
+
+have to report order no, despatch_id, awb, service type, service type record id, despatch_location, pack_id
+
+update  pick_order set pick_status = 'DA' where pick_order= chosen one and pick_status in ('DX','DC');
+
+update pick_item set device_id = ?, person = bdcs  , despatch_location = an empty one,pick_line_status = 'PL'
+where pick_order = ? and pick_line_status in ('DC','DX');
+
+update pick_item_detail set  device_id = ? , pick_detail_status='PL',despatch_id = null,pack_id = null ,despatch_location = one in pick_item
+where pick_order = ? and pick_detail_status in ('DC','DX');
+
+possibly update issn's status and location and qty to chosen block.
+
+=============================================================================================
+create procedure mapi_import_purchase_order
+like import_pick_order_item_temp
+but only for the used fields at pinpoint
+

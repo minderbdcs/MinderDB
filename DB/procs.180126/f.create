@@ -1,0 +1,6 @@
+ /* in minder db */
+/* only for tifs
+insert into sys_mirror_var(smv_rules_name,smv_table,smv_fieldname,smv_sequence) values('PACK','PACK_ID',    'CREATE_DATE',110);
+insert into sys_mirror_var(smv_rules_name,smv_table,smv_fieldname,smv_sequence) values('PICKORDER','PICK_ORDER',    'CREATE_DATE',260);
+insert into sys_mirror_var(smv_rules_name,smv_table,smv_fieldname,smv_sequence) values('DESPATCH','PICK_DESPATCH',    'CREATE_DATE',200);
+*/

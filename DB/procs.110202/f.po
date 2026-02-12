@@ -1,0 +1,18 @@
+alter trigger save_purchase_order inactive;
+drop trigger save_purchase_order;
+commit;
+ 
+alter table purchase_order alter po_freight_cost type double precision;
+alter table purchase_order alter po_custom_fees  type double precision;
+alter table purchase_order alter po_storage_fees  type double precision;
+alter table purchase_order alter po_container_fees  type double precision;
+alter table purchase_order alter po_unloading_fees  type double precision;
+alter table purchase_order alter po_admin_fees  type double precision;
+alter table purchase_order alter po_other_fees  type double precision;
+
+alter table purchase_order alter po_insurance     type double precision;
+alter table purchase_order alter po_amount_paid   type double precision;
+
+alter table purchase_order alter po_tax_amount  type double precision;
+alter table purchase_order alter po_amount_due  type double precision;
+

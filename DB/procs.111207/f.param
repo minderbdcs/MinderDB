@@ -1,0 +1,1 @@
+insert into param(data_id,max_length,data_prefix,data_start_no,data_end_no,data_generator,data_type) values ('PROD_EAN',14,'',0,9999,null,3);

@@ -1,0 +1,577 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_PKCA FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 52 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_PI_PICKED_QTY INTEGER;
+DECLARE VARIABLE WK_PID_PICKED_QTY INTEGER;
+DECLARE VARIABLE WK_LABEL_NO VARCHAR(10);
+DECLARE VARIABLE WK_PI_STATUS CHAR(2);
+DECLARE VARIABLE WK_PI_SSN VARCHAR(20);
+DECLARE VARIABLE WK_PI_PROD VARCHAR(30);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_PID_SSN VARCHAR(20);
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_CANCEL CHAR(1);
+DECLARE VARIABLE WK_PID_FROM_WH CHAR(2);
+DECLARE VARIABLE WK_PID_FROM_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_CANCEL_SSN_STATUS CHAR(2);
+/* DECLARE VARIABLE WK_PI_ORDER VARCHAR(15); */
+DECLARE VARIABLE WK_PI_ORDER PICK_ORDER;
+DECLARE VARIABLE WK_DO_UASL CHAR(1);
+DECLARE VARIABLE WK_DO_UCIS CHAR(1);
+DECLARE VARIABLE WK_GM_MESSAGE VARCHAR(10);
+DECLARE VARIABLE WK_T4_DELIM CHAR(1);
+DECLARE VARIABLE WK_T4_TRAN_DATA TRN_DATA;
+DECLARE VARIABLE WK_T4_SOURCE VARCHAR(512);
+DECLARE VARIABLE WK_NEW_RECORD INTEGER;
+DECLARE VARIABLE WK_CN_PRIORITY SMALLINT;
+DECLARE VARIABLE WK_CANCEL_PICK_STATUS VARCHAR(40);
+DECLARE VARIABLE WK_PID_QTY_PICKED  INTEGER;
+DECLARE VARIABLE WK_DEFAULT_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_DEFAULT_WH_ID VARCHAR(2);
+DECLARE VARIABLE WK_IS_QTY  INTEGER;
+DECLARE VARIABLE WK_DEFAULT2_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_DEFAULT2_WH_ID VARCHAR(2);
+DECLARE VARIABLE WK_DO_SALE_CHANNEL VARCHAR(1);
+/* DECLARE VARIABLE WK_ORDER VARCHAR(15); */
+DECLARE VARIABLE WK_ORDER PICK_ORDER;
+DECLARE VARIABLE WK_PI_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_PID_QTY INTEGER;
+DECLARE VARIABLE WK_PI_QTY INTEGER;
+DECLARE VARIABLE WK_PO_SALE_CHANNEL VARCHAR(40);
+DECLARE VARIABLE WK_PO_WH_ID        VARCHAR(2);
+DECLARE VARIABLE WK_PR_RECORD_ID INTEGER;
+DECLARE VARIABLE WK_PSUR_REFERENCE  VARCHAR(1024);
+DECLARE VARIABLE WK_PSUR_QTY INTEGER;
+
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKCA') THEN
+  BEGIN
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_USER = NEW.PERSON_ID;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_CANCEL = NEW.TRN_CODE;
+     WK_CANCEL_SSN_STATUS = 'PA';
+     WK_CN_PRIORITY = 0;
+     WK_DO_SALE_CHANNEL = 'F';
+     SELECT PICK_CANCEL_SSN_STATUS, 
+            SEND_UASL_V4, 
+            SEND_UCIS_V4,
+            DEFAULT_PICK_PRIORITY,
+            PICK_CANCEL_PK_STATUS,
+            USE_SALE_CHANNEL
+     FROM CONTROL 
+     INTO :WK_CANCEL_SSN_STATUS, 
+          :WK_DO_UASL, 
+          :WK_DO_UCIS,
+          :WK_CN_PRIORITY,
+          :WK_CANCEL_PICK_STATUS,
+          :WK_DO_SALE_CHANNEL;
+
+     FOR SELECT LOCATION.WH_ID, LOCATION.LOCN_ID
+         FROM CONTROL
+         JOIN LOCATION ON CONTROL.DEFAULT_WH_ID = LOCATION.WH_ID
+         WHERE LOCATION.MOVE_STAT = 'RC'
+         INTO :WK_DEFAULT_WH_ID, :WK_DEFAULT_LOCN_ID
+     DO
+     BEGIN
+        WK_DEFAULT2_WH_ID = WK_DEFAULT_WH_ID;
+        WK_DEFAULT2_LOCN_ID = WK_DEFAULT_LOCN_ID;
+     END
+         
+     /* check whether can cancel */
+     IF (WK_CANCEL = 'C') THEN
+     BEGIN
+        WK_FOUND = 0;
+        BEGIN
+           /* AND PID.PICK_DETAIL_STATUS STARTING 'D' */
+           /*    AND PID2.PICK_DETAIL_STATUS IN ('PG','PL','AL') */
+           SELECT FIRST 1 1
+           FROM PICK_ITEM PI
+           JOIN PICK_ITEM_DETAIL PID ON PI.PICK_LABEL_NO = PID.PICK_LABEL_NO
+           WHERE PI.PICK_LABEL_NO IN (
+              SELECT PID2.PICK_LABEL_NO 
+               FROM PICK_ITEM_DETAIL PID2
+               WHERE PID2.DEVICE_ID = :WK_DEVICE 
+                 AND POS(:WK_CANCEL_PICK_STATUS,PID2.PICK_DETAIL_STATUS,0,1) > -1
+               GROUP BY PID2.PICK_LABEL_NO)
+              AND PID.PICK_DETAIL_STATUS IN ('DX','DC','DI','DQ')
+            INTO :WK_FOUND;
+        END
+/*
+        SELECT FIRST 1 1
+        FROM PICK_ITEM PI
+        JOIN PICK_ITEM_DETAIL PID ON PI.PICK_LABEL_NO = PID.PICK_LABEL_NO
+        WHERE PI.DEVICE_ID = :WK_DEVICE 
+           AND PID.PICK_DETAIL_STATUS STARTING 'D'
+         INTO :WK_FOUND;
+*/
+        IF (WK_FOUND = 1) THEN
+        BEGIN
+           /* found pid records for this device - already part despatched */
+           WK_CANCEL = 'D';
+        END
+     END
+
+     /* update issns for part picked */
+     /*    AND (PID.PICK_DETAIL_STATUS = 'PG'
+           OR (PID.PICK_DETAIL_STATUS = 'PL')) */
+     /* save prev status  and from location in issn for move back */
+     FOR SELECT PID.SSN_ID , PI.SSN_ID, PI.PROD_ID, PID.FROM_WH_ID, PID.FROM_LOCN_ID 
+         FROM PICK_ITEM_DETAIL PID
+         JOIN PICK_ITEM PI ON PI.PICK_LABEL_NO = PID.PICK_LABEL_NO
+         WHERE PID.DEVICE_ID = :WK_DEVICE 
+           AND POS(:WK_CANCEL_PICK_STATUS,PID.PICK_DETAIL_STATUS,0,1) > -1
+         ORDER by PID.SSN_ID, PID.LAST_UPDATE_DATE DESC
+         INTO :WK_PID_SSN, :WK_PI_SSN, :WK_PI_PROD, :WK_PID_FROM_WH, :WK_PID_FROM_LOCN 
+     DO
+     BEGIN
+        IF (WK_PI_SSN IS NOT NULL) THEN
+        BEGIN
+           IF (WK_CANCEL = 'C') THEN
+           BEGIN
+              /* UPDATE ISSN SET ISSN_STATUS = 'PA', */
+              UPDATE ISSN SET ISSN_STATUS = :WK_CANCEL_SSN_STATUS,
+                  WH_ID = :WK_PID_FROM_WH,
+                  LOCN_ID = :WK_PID_FROM_LOCN,
+                  PICK_ORDER = NULL
+               WHERE SSN_ID = :WK_PID_SSN;
+           END
+           ELSE
+           BEGIN
+              UPDATE ISSN SET ISSN_STATUS = 'RS',
+                  WH_ID = :WK_PID_FROM_WH,
+                  LOCN_ID = :WK_PID_FROM_LOCN
+               WHERE SSN_ID = :WK_PID_SSN;
+           END
+        END
+        ELSE
+        BEGIN
+           SELECT CURRENT_QTY 
+           FROM ISSN 
+           WHERE SSN_ID = :WK_PID_SSN
+           INTO :WK_IS_QTY;
+           IF (WK_IS_QTY IS NULL) THEN
+           BEGIN
+              WK_IS_QTY = 0;
+           END
+           /* IF (WK_PID_QTY_PICKED > 0) THEN */
+           IF (WK_IS_QTY > 0) THEN 
+           BEGIN
+              IF (STRLEN(WK_PID_FROM_LOCN) <> 2) THEN
+              BEGIN
+                 /* UPDATE ISSN SET ISSN_STATUS = 'PA', */
+                 UPDATE ISSN SET ISSN_STATUS = :WK_CANCEL_SSN_STATUS,
+                    WH_ID = :WK_PID_FROM_WH,
+                    LOCN_ID = :WK_PID_FROM_LOCN
+                 WHERE SSN_ID = :WK_PID_SSN;
+              END
+              ELSE
+              BEGIN
+                 /* UPDATE ISSN SET ISSN_STATUS = 'PA', */
+                 UPDATE ISSN SET ISSN_STATUS = :WK_CANCEL_SSN_STATUS,
+                    WH_ID = :WK_DEFAULT2_WH_ID,
+                    LOCN_ID = :WK_DEFAULT2_LOCN_ID
+                 WHERE SSN_ID = :WK_PID_SSN;
+              END
+           END
+           ELSE
+           BEGIN
+              UPDATE ISSN SET ISSN_STATUS = 'XX' ,
+                 WH_ID = 'XX',
+                 LOCN_ID = '00000000'
+              WHERE SSN_ID = :WK_PID_SSN;
+           END
+
+        END
+     END
+     IF (WK_CANCEL = 'C') THEN
+     BEGIN
+        UPDATE PICK_ORDER
+           SET PICK_STATUS = 'CN',
+           ORDER_CANCELLED = 'NOW'
+           WHERE PICK_ORDER IN (SELECT DISTINCT PICK_ORDER FROM PICK_ITEM WHERE DEVICE_ID = :WK_DEVICE);
+        IF (WK_DO_UCIS = 'T') THEN
+        BEGIN
+           /* now send of trans to update remote status */
+           WK_GM_MESSAGE = '';
+           SELECT MESSAGE_ID 
+           FROM GET_NEXT_MESSAGE 
+           INTO :WK_GM_MESSAGE;
+           WK_T4_DELIM = '|';
+           WK_T4_SOURCE = 'SSSSSS' ;
+           FOR
+              SELECT DISTINCT PICK_ORDER 
+              FROM PICK_ITEM 
+              WHERE DEVICE_ID = :WK_DEVICE
+              INTO :WK_PI_ORDER
+           DO
+           BEGIN
+              WK_T4_TRAN_DATA = WK_USER || WK_T4_DELIM ;
+              WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || WK_DEVICE || WK_T4_DELIM ;
+              WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || WK_GM_MESSAGE || WK_T4_DELIM ;
+              WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<ContactInstanceID>' || WK_PI_ORDER || WK_T4_DELIM ;
+              WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<ContactInstanceStatusCode>CN' || WK_T4_DELIM ;
+              WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<UpdateDateTime>' || MER_YEAR('NOW') || '-' || LPAD(MER_MONTH('NOW'),'0',2) || '-' || LPAD(MER_DAY('NOW'),'0',2) || 'T' || LPAD(MER_HOUR('NOW'),'0',2) || ':' || LPAD(MER_MINUTE('NOW'),'0',2) || ':' || LPAD(SEC('NOW'),'0',2) || WK_T4_DELIM ;
+              SELECT REC_ID FROM ADD_TRAN_V4 ( 'V4', 'UCIS','S',
+                 NEW.TRN_DATE,
+                 :WK_T4_DELIM,
+                 NEW.PERSON_ID,
+                 NEW.DEVICE_ID,
+                 :WK_GM_MESSAGE,
+                 :WK_T4_TRAN_DATA,
+                 'F','','MASTER',0,
+                 :WK_T4_SOURCE)
+              INTO :WK_NEW_RECORD;
+           END
+           EXECUTE PROCEDURE ADD_MESSAGE_V4 ( 
+              :WK_GM_MESSAGE,
+             'V4', 'UCIS','S',
+              NEW.TRN_DATE,
+              NEW.PERSON_ID,
+              NEW.DEVICE_ID,
+              :WK_CN_PRIORITY,
+              'WS','',NULL);
+        END 
+     END
+     ELSE
+     BEGIN
+        /* remove from prcl list */
+        UPDATE PICK_ORDER
+           SET ALLOCATED_BY = NULL
+           WHERE PICK_ORDER IN (SELECT DISTINCT PICK_ORDER FROM PICK_ITEM WHERE DEVICE_ID = :WK_DEVICE);
+     END
+
+     IF (WK_DO_SALE_CHANNEL = 'T') THEN
+     BEGIN
+        /* case 1
+           AL or Al status items - this uses the pick_items qtys
+           case 2
+           PG PL Pg Pl - this uses the pick_item_detail qtys for this device
+        */
+        FOR   SELECT PI.PROD_ID ,SUM(PI.PICK_ORDER_QTY - COALESCE(PI.PICKED_QTY,0)), PO.OTHER2, PO.WH_ID
+              FROM PICK_ORDER PO 
+              JOIN PICK_ITEM PI ON PI.PICK_ORDER = PO.PICK_ORDER
+              WHERE PI.PICK_LINE_STATUS IN ('AL','Al')
+              AND PI.DEVICE_ID = :WK_DEVICE 
+              AND (PI.PROD_ID IS NOT NULL)
+              GROUP BY PI.PROD_ID, PO.OTHER2, PO.WH_ID
+              INTO :WK_PI_PROD_ID, :WK_PI_QTY, :WK_PO_SALE_CHANNEL, :WK_PO_WH_ID
+        DO
+        BEGIN
+           IF (WK_PI_QTY IS NULL) THEN
+           BEGIN
+              WK_PI_QTY = 0;
+           END
+           IF (WK_PI_PROD_ID = '') THEN
+           BEGIN
+              WK_PI_PROD_ID = NULL;
+           END
+           IF (WK_PO_SALE_CHANNEL = '') THEN
+           BEGIN
+              WK_PO_SALE_CHANNEL = NULL;
+           END
+           IF ((WK_PI_QTY > 0) AND (WK_PI_PROD_ID IS NOT NULL) AND (WK_PO_SALE_CHANNEL IS NOT NULL)) THEN
+           BEGIN
+              WK_PR_RECORD_ID = NULL;
+              SELECT RECORD_ID
+              FROM PROD_RESERVATION
+              WHERE PR_PROD_ID = :WK_PI_PROD_ID
+              AND   PR_SALE_CHANNEL_CODE = :WK_PO_SALE_CHANNEL
+              AND   PR_RESERVATION_STATUS = 'OP'
+              INTO :WK_PR_RECORD_ID;
+              IF (WK_PR_RECORD_ID IS NOT NULL) THEN
+              BEGIN
+                 WK_PSUR_REFERENCE = WK_PO_SALE_CHANNEL || '|' || WK_PR_RECORD_ID || '|';
+                 WK_PSUR_QTY =  WK_PI_QTY;
+                 EXECUTE PROCEDURE ADD_TRAN(
+                    :WK_PO_WH_ID,
+                    '',
+                    :WK_PI_PROD_ID,
+                    'PSUR',
+                    'A',
+                    :WK_DATE,
+                    :WK_PSUR_REFERENCE,
+                    :WK_PSUR_QTY,
+                    'F',
+                    '',
+                    'MASTER',
+                    0,
+                    '',
+                    'SSSSSSSSS',
+                    :WK_USER,
+                    :WK_DEVICE);
+                    /* have the adjustment qty passed in the qty field */
+                    /* have the product in the object field */
+                    /* have the channel code in the reference field */
+                    /* have the record_id passed in the reference field */
+              END
+           END
+        END
+        FOR   SELECT PI.PROD_ID ,SUM(COALESCE(PID.QTY_PICKED,0)), PO.OTHER2, PO.WH_ID
+              FROM PICK_ORDER PO 
+              JOIN PICK_ITEM PI ON PI.PICK_ORDER = PO.PICK_ORDER
+              JOIN PICK_ITEM_DETAIL PID ON PID.PICK_LABEL_NO = PI.PICK_LABEL_NO
+              WHERE PI.PICK_LINE_STATUS IN ('PL','Pl','PG','Pg')
+              AND PID.PICK_DETAIL_STATUS IN ('PL','Pl','PG','Pg')
+              AND PI.DEVICE_ID = :WK_DEVICE 
+              AND (PI.PROD_ID IS NOT NULL)
+              GROUP BY PI.PROD_ID, PO.OTHER2, PO.WH_ID
+              INTO :WK_PI_PROD_ID, :WK_PI_QTY, :WK_PO_SALE_CHANNEL, :WK_PO_WH_ID
+        DO
+        BEGIN
+           IF (WK_PI_QTY IS NULL) THEN
+           BEGIN
+              WK_PI_QTY = 0;
+           END
+           IF (WK_PI_PROD_ID = '') THEN
+           BEGIN
+              WK_PI_PROD_ID = NULL;
+           END
+           IF (WK_PO_SALE_CHANNEL = '') THEN
+           BEGIN
+              WK_PO_SALE_CHANNEL = NULL;
+           END
+           IF ((WK_PI_QTY > 0) AND (WK_PI_PROD_ID IS NOT NULL) AND (WK_PO_SALE_CHANNEL IS NOT NULL)) THEN
+           BEGIN
+              WK_PR_RECORD_ID = NULL;
+              SELECT RECORD_ID
+              FROM PROD_RESERVATION
+              WHERE PR_PROD_ID = :WK_PI_PROD_ID
+              AND   PR_SALE_CHANNEL_CODE = :WK_PO_SALE_CHANNEL
+              AND   PR_RESERVATION_STATUS = 'OP'
+              INTO :WK_PR_RECORD_ID;
+              IF (WK_PR_RECORD_ID IS NOT NULL) THEN
+              BEGIN
+                 WK_PSUR_REFERENCE = WK_PO_SALE_CHANNEL || '|' || WK_PR_RECORD_ID || '|';
+                 WK_PSUR_QTY = WK_PI_QTY;
+                 EXECUTE PROCEDURE ADD_TRAN(
+                    :WK_PO_WH_ID,
+                    '',
+                    :WK_PI_PROD_ID,
+                    'PSUR',
+                    'A',
+                    :WK_DATE,
+                    :WK_PSUR_REFERENCE,
+                    :WK_PSUR_QTY,
+                    'F',
+                    '',
+                    'MASTER',
+                    0,
+                    '',
+                    'SSSSSSSSS',
+                    :WK_USER,
+                    :WK_DEVICE);
+                    /* have the adjustment qty passed in the qty field */
+                    /* have the product in the object field */
+                    /* have the channel code in the reference field */
+                    /* have the record_id passed in the reference field */
+              END
+           END
+        END
+     END
+     /* ================================================================== */
+     /* update pick item part picked - from pid */
+     /*    AND (PICK_DETAIL_STATUS = 'PG'
+           OR (PICK_DETAIL_STATUS = 'PL')) */
+     FOR SELECT SUM(QTY_PICKED), PICK_LABEL_NO 
+         FROM PICK_ITEM_DETAIL
+         WHERE DEVICE_ID = :WK_DEVICE 
+           AND POS(:WK_CANCEL_PICK_STATUS,PICK_DETAIL_STATUS,0,1) > -1
+         GROUP BY PICK_LABEL_NO
+         INTO :WK_PID_PICKED_QTY, :WK_LABEL_NO
+     DO
+     BEGIN
+        SELECT PICKED_QTY, PROD_ID 
+        FROM PICK_ITEM
+        WHERE PICK_LABEL_NO = :WK_LABEL_NO
+         INTO :WK_PI_PICKED_QTY, :WK_PI_PROD;
+        WK_PI_PICKED_QTY = WK_PI_PICKED_QTY - WK_PID_PICKED_QTY; 
+        /* recalc pick_item status */
+        IF (WK_PI_PICKED_QTY = 0) THEN
+        BEGIN
+           IF (WK_CANCEL = 'C') THEN
+           BEGIN
+              WK_PI_STATUS = 'CN';
+           END
+           ELSE
+           BEGIN
+              WK_PI_STATUS = 'OP';
+           END
+        END
+        ELSE
+        BEGIN
+           WK_PI_STATUS = 'PG';
+        END
+        IF (WK_PI_STATUS = 'CN' OR WK_PI_STATUS = 'OP') THEN
+        BEGIN
+           UPDATE PICK_ITEM
+           SET  PICK_LINE_STATUS = :WK_PI_STATUS,
+                DEVICE_ID  = NULL,
+                PICKED_QTY = :WK_PI_PICKED_QTY
+           WHERE PICK_LABEL_NO = :WK_LABEL_NO;
+        END
+        ELSE
+        BEGIN
+           UPDATE PICK_ITEM
+           SET  PICK_LINE_STATUS = :WK_PI_STATUS,
+                PICKED_QTY = :WK_PI_PICKED_QTY
+           WHERE PICK_LABEL_NO = :WK_LABEL_NO;
+        END
+        UPDATE PICK_ITEM_DETAIL
+        SET  PICK_DETAIL_STATUS = 'CN',
+             ORIGINAL_QTY_PICKED = QTY_PICKED,
+             QTY_PICKED = NULL 
+        WHERE PICK_LABEL_NO = :WK_LABEL_NO
+          AND (PICK_DETAIL_STATUS IN ('XX'))
+          AND DESPATCH_LOCATION IS NULL;
+        UPDATE PICK_ITEM_DETAIL
+        SET  PICK_DETAIL_STATUS = 'CN',
+             ORIGINAL_QTY_PICKED = QTY_PICKED,
+             QTY_PICKED = NULL , 
+             DESPATCH_LOCATION =  'XX' || SUBSTR(DESPATCH_LOCATION,3,10)
+        WHERE PICK_LABEL_NO = :WK_LABEL_NO
+          AND (PICK_DETAIL_STATUS IN ('XX'))
+          AND ( DESPATCH_LOCATION IS NOT NULL);
+        /* send to remote the available qty of the prod */
+        IF (WK_DO_UASL = 'T') THEN
+        BEGIN
+           EXECUTE PROCEDURE SEND_PICKABLE_STOCK (:WK_PI_PROD,
+              :WK_USER,
+              :WK_DEVICE,
+              :WK_DATE);
+        END
+     END
+     IF (WK_CANCEL = 'C') THEN
+     BEGIN
+        WK_PI_STATUS = 'CN';
+     END
+     ELSE
+     BEGIN
+        WK_PI_STATUS = 'OP';
+     END
+     /* update pick item  status for unpick - from pick item */
+     /*    AND (PICK_LINE_STATUS = 'PG'
+           OR (PICK_LINE_STATUS = 'PL')) */
+     FOR SELECT PICK_LABEL_NO, PROD_ID 
+         FROM PICK_ITEM
+         WHERE DEVICE_ID = :WK_DEVICE 
+           AND POS(:WK_CANCEL_PICK_STATUS,PICK_LINE_STATUS,0,1) > -1
+         INTO :WK_LABEL_NO, :WK_PI_PROD
+     DO
+     BEGIN
+        WK_FOUND = 0;
+     /*   (PICK_DETAIL_STATUS = 'PG'
+           OR (PICK_DETAIL_STATUS = 'PL')) */
+        SELECT COUNT(*) FROM PICK_ITEM_DETAIL
+           WHERE POS(:WK_CANCEL_PICK_STATUS,PICK_DETAIL_STATUS,0,1) > -1
+             AND PICK_LABEL_NO = :WK_LABEL_NO
+           INTO :WK_FOUND;
+        IF (WK_FOUND = 0) THEN
+        BEGIN
+           /* no details for pick item */
+           UPDATE PICK_ITEM
+           SET  PICK_LINE_STATUS = :WK_PI_STATUS,
+                DEVICE_ID = NULL
+           WHERE DEVICE_ID = :WK_DEVICE 
+             AND PICK_LABEL_NO = :WK_LABEL_NO;
+           /* send to remote the available qty of the prod */
+           IF (WK_DO_UASL = 'T') THEN
+           BEGIN
+              EXECUTE PROCEDURE SEND_PICKABLE_STOCK (:WK_PI_PROD,
+                 :WK_USER,
+                 :WK_DEVICE,
+                 :WK_DATE);
+           END
+        END
+     END
+     /* update pick item for 'AL' */
+     /*  AND PICK_LINE_STATUS IN ('AL') */
+     FOR SELECT PROD_ID, PICK_LABEL_NO
+     FROM PICK_ITEM 
+     WHERE DEVICE_ID = :WK_DEVICE 
+       AND PICK_LINE_STATUS IN ('AL','Al')
+     INTO :WK_PI_PROD, :WK_LABEL_NO
+     DO
+     BEGIN
+        UPDATE PICK_ITEM
+        SET  PICK_LINE_STATUS = :WK_PI_STATUS,
+             DEVICE_ID = NULL
+        WHERE PICK_LABEL_NO = :WK_LABEL_NO; 
+        /* send to remote the available qty of the prod */
+        IF (WK_DO_UASL = 'T') THEN
+        BEGIN
+           EXECUTE PROCEDURE SEND_PICKABLE_STOCK (:WK_PI_PROD,
+              :WK_USER,
+              :WK_DEVICE,
+              :WK_DATE);
+        END
+     END
+     /* update pick item detail for picked */
+     /*    AND (PICK_DETAIL_STATUS = 'PG'
+           OR (PICK_DETAIL_STATUS = 'PL')) */
+     UPDATE PICK_ITEM_DETAIL
+     SET  PICK_DETAIL_STATUS = 'XX',
+          DEVICE_ID = LOWER(:WK_DEVICE),
+          ORIGINAL_QTY_PICKED = QTY_PICKED,
+          QTY_PICKED = NULL
+     WHERE DEVICE_ID = :WK_DEVICE 
+        AND POS(:WK_CANCEL_PICK_STATUS,PICK_DETAIL_STATUS,0,1) > -1
+        AND DESPATCH_LOCATION IS NULL;
+     UPDATE PICK_ITEM_DETAIL
+     SET  PICK_DETAIL_STATUS = 'XX',
+          DEVICE_ID = LOWER(:WK_DEVICE),
+          ORIGINAL_QTY_PICKED = QTY_PICKED,
+          QTY_PICKED = NULL,
+          DESPATCH_LOCATION =  'XX' || SUBSTR(DESPATCH_LOCATION,3,10)
+     WHERE DEVICE_ID = :WK_DEVICE 
+        AND POS(:WK_CANCEL_PICK_STATUS,PICK_DETAIL_STATUS,0,1) > -1
+        AND (DESPATCH_LOCATION IS NOT NULL);
+
+     UPDATE PICK_LOCATION
+     SET PICK_LOCATION_STATUS='CN'
+     WHERE DEVICE_ID = :WK_DEVICE ;
+     
+     IF (WK_CANCEL = 'D') THEN
+        EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F','Cannot Cancel Already Part Despatched');
+     ELSE
+        EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+/*
+   EXECUTE PROCEDURE ADD_TRAN(
+        :WK_DEVICE,
+        '',
+        '',
+        'PKUA',
+        'I',
+        :WK_DATE,
+        '',
+        0,
+        'F',
+        '',
+        'MASTER',
+        0,
+        '',
+        'SSSSSSSSS',
+        :WK_USER,
+        :WK_DEVICE);
+*/
+   /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+  END
+ END
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

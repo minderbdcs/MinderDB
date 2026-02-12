@@ -1,0 +1,35 @@
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+
+CREATE OR ALTER TRIGGER UPDATE_PACK_ID_TIME FOR PACK_ID
+ACTIVE BEFORE UPDATE POSITION 20 
+AS
+BEGIN
+   NEW.LAST_UPDATE_DATE = 'NOW';
+   /* want to get carriers dimensional factor */
+/*
+CREATE OR ALTER PROCEDURE CALC_CHARGE_WEIGHT ( DIMENSION_X NUMERIC(9, 3),
+        DIMENSION_Y NUMERIC(9, 3),
+        DIMENSION_Z NUMERIC(9, 3),
+        DIMENSION_X_UOM CODE_TWO,
+        DIMENSION_Y_UOM CODE_TWO,
+        DIMENSION_Z_UOM CODE_TWO,
+        WEIGHT_ACTUAL WEIGHT_NUM93 ,
+        DIMENSIONAL_FACTOR DIMENSION_FACTOR 
+*/
+/* use actual weight = pack_weight this is KG
+   get carriers dimensional factor
+   run calc_charge_weight
+   put the results into the pack_id fields
+*/
+END^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+

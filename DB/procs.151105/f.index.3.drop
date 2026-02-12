@@ -1,0 +1,1 @@
+alter table training_skill drop constraint TRAINING_SKILL_PRIMARY ;

@@ -1,0 +1,2 @@
+alter table company add DESPATCH_PACK_SLIP_SUB_TYPE CODE;
+

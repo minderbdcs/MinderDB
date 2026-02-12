@@ -1,0 +1,63 @@
+/* domains */;
+create domain ASN_NO             VARCHAR(10);
+create domain CODE_THREE         VARCHAR(3);
+create domain EDI_FIELDNAME      VARCHAR(10);
+create domain EDI_NO             VARCHAR(35) ;
+create domain EDI_LOCN_NO        VARCHAR(20);
+create domain SSCC_ID            VARCHAR(20);
+create domain DATE_YYMMDD        VARCHAR(6)		;
+create domain DATE_YYYYMMDD      VARCHAR(8);
+create domain DATE_DDMMYY        VARCHAR(6);
+create domain DATE_DDMMYYYY      VARCHAR(8);
+create domain DATE_DDMM          VARCHAR(4)	;
+create domain TIME_HH_MM         VARCHAR(5)	;
+create domain TIME_HHMM          VARCHAR(4)		;
+create domain BATCH              VARCHAR(20);
+create domain GTIN8              VARCHAR(8)	;
+create domain GTIN12             VARCHAR(12)		;
+create domain GTIN13             VARCHAR(13)		;
+create domain GTIN14             VARCHAR(16)		;
+create domain GS1_COMPANY_ID     VARCHAR(10)	;
+create domain GS1_EXTENSION      CHAR(1)		;
+create domain GS1_APP_IDENTIFIER VARCHAR(4);
+create domain DIM_DECIMAL3       NUMERIC(9,3);
+create domain ORDER_DESC         VARCHAR(30)	;
+/* Fields */
+alter table COMPANY add COMPANY_EDI_VENDOR_NO EDI_NO;
+alter table COMPANY add GS1_SSCC_DEFAULT_EXTENSION GS1_EXTENSION;
+ 
+alter table PERSON add PERSON_EDI_NO EDI_NO;
+alter table PERSON add PERSON_EDI_IN_HOUSE_NO EDI_NO;
+ 
+alter table PERSON_ADDRESS add ADDR_EDI_LOCN_NO EDI_LOCN_NO;
+alter table PERSON_ADDRESS add ADDR_EDI_IN_HOUSE_LOCN_NO EDI_LOCN_NO;
+alter table PERSON_ADDRESS add ADDR_EDI_NO EDI_NO;
+alter table PERSON_ADDRESS add ADDR_EDI_IN_HOUSE_NO EDI_NO;
+ 
+/* alter table PICK_DESPATCH add PICK_ORDER,PICK_ORDER,VARCHAR(15) */
+ 
+alter table PICK_ORDER_ITEM_TEMP add L_CANCEL_DEL_AFTER_DATE DATE_YYYYMMDD;
+alter table PICK_ORDER_ITEM_TEMP add H_CANCEL_DEL_AFTER_DATE DATE_YYYYMMDD;
+alter table PICK_ORDER_ITEM_TEMP add L_S_DC_EDI_NO EDI_NO;
+alter table PICK_ORDER_ITEM_TEMP add L_S_DC_EDI_IN_HOUSE_NO EDI_NO;
+alter table PICK_ORDER_ITEM_TEMP add L_S_STORE_EDI_NO EDI_NO;
+alter table PICK_ORDER_ITEM_TEMP add L_S_STORE_EDI_IN_HOUSE_NO EDI_NO;
+alter table PICK_ORDER_ITEM_TEMP add L_PROD_ID_ALTERNATE PRODUCT;
+ 
+alter table PICK_ORDER add CANCEL_DEL_AFTER_DATE DATE_YYYYMMDD;
+ 
+alter table PICK_ITEM add CANCEL_DEL_AFTER_DATE DATE_YYYYMMDD;
+alter table PICK_ITEM add PROD_ID_ALTERNATE PRODUCT;
+alter table PICK_ITEM add S_DC_EDI_LOCN_NO EDI_LOCN_NO;
+alter table PICK_ITEM add S_DC_EDI_IN_HOUSE_LOCN_NO EDI_LOCN_NO;
+alter table PICK_ITEM add S_STORE_EDI_LOCN_NO EDI_LOCN_NO;
+alter table PICK_ITEM add S_STORE_EDI_IN_HOUSE_LOCN_NO EDI_LOCN_NO;
+/* archive */
+alter table PICK_ORDER_DX add CANCEL_DEL_AFTER_DATE DATE_YYYYMMDD;
+
+alter table PICK_ITEM_DX add CANCEL_DEL_AFTER_DATE DATE_YYYYMMDD;
+alter table PICK_ITEM_DX add PROD_ID_ALTERNATE PRODUCT;
+alter table PICK_ITEM_DX add S_DC_EDI_LOCN_NO EDI_LOCN_NO;
+alter table PICK_ITEM_DX add S_DC_EDI_IN_HOUSE_LOCN_NO EDI_LOCN_NO;
+alter table PICK_ITEM_DX add S_STORE_EDI_LOCN_NO EDI_LOCN_NO;
+alter table PICK_ITEM_DX add S_STORE_EDI_IN_HOUSE_LOCN_NO EDI_LOCN_NO;

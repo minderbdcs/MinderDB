@@ -1,0 +1,2 @@
+alter domain year to years;
+alter table depreciation alter year to DEPR_YEAR;

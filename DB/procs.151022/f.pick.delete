@@ -1,0 +1,304 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/*
+CREATE OR ALTER PROCEDURE DELETE_SALE_ORDER_LINES (PICK_ORDER VARCHAR(15) CHARACTER SET NONE)
+*/
+CREATE OR ALTER PROCEDURE DELETE_SALE_ORDER_LINES (PICK_ORDER PICK_ORDER )
+AS 
+DECLARE VARIABLE WK_LABEL VARCHAR(7);
+DECLARE VARIABLE WK_STATUS CHAR(2);
+DECLARE VARIABLE WK_DOIT CHAR(2);
+DECLARE VARIABLE WK_SSN VARCHAR(20);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_DO_UNPICK  CHAR(1);
+DECLARE VARIABLE WK_DO_UASL  CHAR(1);
+DECLARE VARIABLE WK_DO_UCIS CHAR(1);
+DECLARE VARIABLE WK_DO_CANCEL_FILE CHAR(1);
+DECLARE VARIABLE WK_CN_PRIORITY SMALLINT;
+DECLARE VARIABLE WK_DO_DELETE  CHAR(1);
+DECLARE VARIABLE WK_PICKED_QTY  INTEGER;
+
+BEGIN
+        
+    WK_CN_PRIORITY = 0;
+    SELECT SEND_UASL_V4, 
+           ALLOW_UNPICK_IN_PICK_CANCEL,
+           SEND_UCIS_V4,
+           DEFAULT_PICK_PRIORITY,
+           SEND_SO_CANCEL,
+           ALLOW_DELETE_IN_PICK_CANCEL
+    FROM CONTROL 
+    INTO :WK_DO_UASL,
+         :WK_DO_UNPICK,
+         :WK_DO_UCIS,
+         :WK_CN_PRIORITY,
+         :WK_DO_CANCEL_FILE,
+         :WK_DO_DELETE;
+    /* Update Pick Item Status */
+    FOR SELECT PICK_LABEL_NO, PICK_LINE_STATUS, SSN_ID, PROD_ID, PICKED_QTY
+       FROM PICK_ITEM 
+       WHERE PICK_ORDER = :PICK_ORDER
+       INTO :WK_LABEL, :WK_STATUS, :WK_SSN, :WK_PROD, :WK_PICKED_QTY
+    DO
+    BEGIN
+       WK_DOIT = 'N';
+       IF (WK_STATUS IS NULL) THEN
+       BEGIN
+          WK_DOIT = 'UC';
+       END
+       IF (WK_STATUS = 'UC') THEN
+       BEGIN
+          WK_DOIT = 'UC';
+       END
+       IF (WK_STATUS = 'CF') THEN
+       BEGIN
+          WK_DOIT = 'CF';
+       END
+       IF (WK_STATUS = 'OP') THEN
+       BEGIN
+          WK_DOIT = 'CF';
+       END
+       IF (WK_STATUS = 'UP') THEN
+       BEGIN
+          WK_DOIT = 'CF';
+       END
+       IF (WK_STATUS = 'HD') THEN
+       BEGIN
+          WK_DOIT = 'CF';
+       END
+       IF (WK_STATUS = 'AL') THEN
+       BEGIN
+          WK_DOIT = 'PL';
+       END
+       IF (WK_STATUS = 'Al') THEN
+       BEGIN
+          WK_DOIT = 'PL';
+       END
+       IF (WK_STATUS = 'PG') THEN
+       BEGIN
+          WK_DOIT = 'PL';
+       END
+       IF (WK_STATUS = 'Pg') THEN
+       BEGIN
+          WK_DOIT = 'PL';
+       END
+       IF (WK_STATUS = 'PL') THEN
+       BEGIN
+          WK_DOIT = 'PL';
+       END
+       IF (WK_STATUS = 'Pl') THEN
+       BEGIN
+          WK_DOIT = 'PL';
+       END
+       IF (WK_STATUS = 'DS') THEN
+       BEGIN
+          WK_DOIT = 'DS';
+       END
+       IF (WK_STATUS = 'AS') THEN
+       BEGIN
+          IF ((WK_PICKED_QTY IS NULL) OR (WK_PICKED_QTY = 0)) THEN
+          BEGIN
+             WK_DOIT = 'CF';
+          END
+          ELSE
+          BEGIN
+             WK_DOIT = 'PL';
+          END
+       END
+       IF (WK_DOIT = 'UC') THEN
+       BEGIN
+          /* Unconfirmed line so can just cancel the line - no change to issn */
+          IF (WK_DO_DELETE = 'T') THEN
+          BEGIN
+             DELETE FROM PICK_ITEM
+             WHERE PICK_LABEL_NO = :WK_LABEL;
+          END
+          ELSE
+          BEGIN
+             UPDATE PICK_ITEM
+             SET PICK_LINE_STATUS = 'CN'
+             WHERE PICK_LABEL_NO = :WK_LABEL;
+          END
+       END
+       IF (WK_DOIT = 'CF') THEN
+       BEGIN
+          /* Confirmed line so cancel the line and change status of issn*/
+          IF (WK_SSN IS NOT NULL) THEN
+          BEGIN
+             UPDATE ISSN SET ISSN_STATUS = 'PA', PICK_ORDER = NULL
+             WHERE ORIGINAL_SSN = :WK_SSN
+               AND PICK_ORDER = :WK_LABEL;
+          END
+          IF (WK_DO_DELETE = 'T') THEN
+          BEGIN
+             DELETE FROM PICK_ITEM
+             WHERE PICK_LABEL_NO = :WK_LABEL;
+          END
+          ELSE
+          BEGIN
+             UPDATE PICK_ITEM
+             SET PICK_LINE_STATUS = 'CN'
+             WHERE PICK_LABEL_NO = :WK_LABEL;
+          END
+       END
+       /* if any other status have to use the pick cancel procedure */
+       IF (WK_DOIT = 'PL') THEN
+       BEGIN
+          EXECUTE PROCEDURE CANCEL_SALE_LINE (:WK_LABEL ,'Delete Pick Item');
+       END
+    END
+END ^
+
+
+CREATE OR ALTER PROCEDURE DELETE_SALE_ORDER_LINE (PICK_LABEL VARCHAR(7) )
+AS 
+DECLARE VARIABLE WK_LABEL VARCHAR(7);
+DECLARE VARIABLE WK_STATUS CHAR(2);
+DECLARE VARIABLE WK_DOIT CHAR(2);
+DECLARE VARIABLE WK_SSN VARCHAR(20);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_DO_UNPICK  CHAR(1);
+DECLARE VARIABLE WK_DO_UASL  CHAR(1);
+DECLARE VARIABLE WK_DO_UCIS CHAR(1);
+DECLARE VARIABLE WK_DO_CANCEL_FILE CHAR(1);
+DECLARE VARIABLE WK_CN_PRIORITY SMALLINT;
+DECLARE VARIABLE WK_DO_DELETE  CHAR(1);
+DECLARE VARIABLE WK_PICKED_QTY  INTEGER;
+
+BEGIN
+        
+    WK_CN_PRIORITY = 0;
+    SELECT SEND_UASL_V4, 
+           ALLOW_UNPICK_IN_PICK_CANCEL,
+           SEND_UCIS_V4,
+           DEFAULT_PICK_PRIORITY,
+           SEND_SO_CANCEL,
+           ALLOW_DELETE_IN_PICK_CANCEL
+    FROM CONTROL 
+    INTO :WK_DO_UASL,
+         :WK_DO_UNPICK,
+         :WK_DO_UCIS,
+         :WK_CN_PRIORITY,
+         :WK_DO_CANCEL_FILE,
+         :WK_DO_DELETE;
+    /* Update Pick Item Status */
+    FOR SELECT PICK_LABEL_NO, PICK_LINE_STATUS, SSN_ID, PROD_ID, PICKED_QTY
+       FROM PICK_ITEM 
+       WHERE PICK_LABEL_NO = :PICK_LABEL
+       INTO :WK_LABEL, :WK_STATUS, :WK_SSN, :WK_PROD, :WK_PICKED_QTY
+    DO
+    BEGIN
+       WK_DOIT = 'N';
+       IF (WK_STATUS IS NULL) THEN
+       BEGIN
+          WK_DOIT = 'UC';
+       END
+       IF (WK_STATUS = 'UC') THEN
+       BEGIN
+          WK_DOIT = 'UC';
+       END
+       IF (WK_STATUS = 'CF') THEN
+       BEGIN
+          WK_DOIT = 'CF';
+       END
+       IF (WK_STATUS = 'OP') THEN
+       BEGIN
+          WK_DOIT = 'CF';
+       END
+       IF (WK_STATUS = 'UP') THEN
+       BEGIN
+          WK_DOIT = 'CF';
+       END
+       IF (WK_STATUS = 'HD') THEN
+       BEGIN
+          WK_DOIT = 'CF';
+       END
+       IF (WK_STATUS = 'AL') THEN
+       BEGIN
+          WK_DOIT = 'PL';
+       END
+       IF (WK_STATUS = 'Al') THEN
+       BEGIN
+          WK_DOIT = 'PL';
+       END
+       IF (WK_STATUS = 'PG') THEN
+       BEGIN
+          WK_DOIT = 'PL';
+       END
+       IF (WK_STATUS = 'Pg') THEN
+       BEGIN
+          WK_DOIT = 'PL';
+       END
+       IF (WK_STATUS = 'PL') THEN
+       BEGIN
+          WK_DOIT = 'PL';
+       END
+       IF (WK_STATUS = 'Pl') THEN
+       BEGIN
+          WK_DOIT = 'PL';
+       END
+       IF (WK_STATUS = 'DS') THEN
+       BEGIN
+          WK_DOIT = 'DS';
+       END
+       IF (WK_STATUS = 'AS') THEN
+       BEGIN
+          IF ((WK_PICKED_QTY IS NULL) OR (WK_PICKED_QTY = 0)) THEN
+          BEGIN
+             WK_DOIT = 'CF';
+          END
+          ELSE
+          BEGIN
+             WK_DOIT = 'PL';
+          END
+       END
+       IF (WK_DOIT = 'UC') THEN
+       BEGIN
+          /* Unconfirmed line so can just cancel the line - no change to issn */
+          IF (WK_DO_DELETE = 'T') THEN
+          BEGIN
+             DELETE FROM PICK_ITEM
+             WHERE PICK_LABEL_NO = :WK_LABEL;
+          END
+          ELSE
+          BEGIN
+             UPDATE PICK_ITEM
+             SET PICK_LINE_STATUS = 'CN'
+             WHERE PICK_LABEL_NO = :WK_LABEL;
+          END
+       END
+       IF (WK_DOIT = 'CF') THEN
+       BEGIN
+          /* Confirmed line so cancel the line and change status of issn*/
+          IF (WK_SSN IS NOT NULL) THEN
+          BEGIN
+             UPDATE ISSN SET ISSN_STATUS = 'PA', PICK_ORDER = NULL
+             WHERE ORIGINAL_SSN = :WK_SSN
+               AND PICK_ORDER = :WK_LABEL;
+          END
+          IF (WK_DO_DELETE = 'T') THEN
+          BEGIN
+             DELETE FROM PICK_ITEM
+             WHERE PICK_LABEL_NO = :WK_LABEL;
+          END
+          ELSE
+          BEGIN
+             UPDATE PICK_ITEM
+             SET PICK_LINE_STATUS = 'CN'
+             WHERE PICK_LABEL_NO = :WK_LABEL;
+          END
+       END
+       /* if any other status have to use the pick cancel procedure */
+       IF (WK_DOIT = 'PL') THEN
+       BEGIN
+          EXECUTE PROCEDURE CANCEL_SALE_LINE (:WK_LABEL ,'Delete Pick Item');
+       END
+    END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

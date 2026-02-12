@@ -1,0 +1,2 @@
+add id column to tables issn location and warehouse
+this is a numeric field for the laravel maintenance - also is populared via a trigger and generator

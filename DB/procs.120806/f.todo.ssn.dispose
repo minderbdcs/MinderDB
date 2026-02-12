@@ -1,0 +1,15 @@
+/*
+TABLE = SSN_DISPOSE 
+Which has the following fields (again can we prefix all field names with SSN_?):
+
+*SSN_ID
+DISPOSED			-> SSN_DISPOSE
+DISPOSAL_COST		-> SSN_DISPOSAL_COST indicates payment to dispose.
+DISPOSAL_PRICE  	-> SSN_DISPOSAL_INCOME to indicate income received.
+DISPOSAL_DATE		-> SSN_DISPOSE_DATE	
+DISPOSAL_NOTES	-> SSN_DISPOSE_NOTES
+SSN_DISPOSE_METHOD CODE - New Field for Museums - use OPTIONS
+SSN_DISPOSE_LAST_UPDTD_BY
+SSN_DISPOSE_LAST_UPDTD_DATE
+SSN_DISPOSE_LAST_UPDTD_DEVICE  /* length = 29 characters */
+*/

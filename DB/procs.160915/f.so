@@ -1,0 +1,2 @@
+alter table pick_order add COMPANY_NAME COMPANY_NAME;
+alter table pick_order_DX add COMPANY_NAME COMPANY_NAME;

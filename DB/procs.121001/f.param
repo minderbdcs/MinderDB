@@ -1,0 +1,3 @@
+alter table param add data_sequence  sequence_no;
+alter table param add data_type_id data_id;
+

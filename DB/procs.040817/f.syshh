@@ -1,0 +1,2 @@
+alter table sys_hh add batch_modules varchar(40);
+update sys_hh set batch_modules=';TE;TR;ST;DE;';

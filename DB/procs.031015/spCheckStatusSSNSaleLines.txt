@@ -1,0 +1,26 @@
+CREATE PROCEDURE CHECK_STATUS_SSN_SALE_LINES ( 
+  SSN_ID VARCHAR(20)
+) RETURNS (
+  VALID_SSN CHAR(1)
+) AS      
+DECLARE VARIABLE iCount INTEGER;
+BEGIN
+    iCount = 0;
+    VALID_SSN = 'F';    
+    
+    /* Check Status SSN in SSN */     
+    SELECT COUNT(*)
+    FROM SSN
+    WHERE SSN_ID = :SSN_ID
+    AND (STATUS_SSN = 'PA' OR STATUS_SSN = 'ST' 
+         OR STATUS_SSN = 'TS')
+    INTO :iCount;
+    
+    IF (:iCount > 0) THEN
+    BEGIN
+       VALID_SSN = 'T';
+       EXIT;
+    END         
+   
+END^
+

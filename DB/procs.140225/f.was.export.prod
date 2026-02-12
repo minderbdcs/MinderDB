@@ -1,0 +1,153 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+/* want export of prod_profile given a start date time and end date time  a null end date will mean until now
+or a prod_id
+or a short_description 
+or a long_description 
+
+*/
+/* 270613 add fields from import_prod_profile */
+/*
+P_PROD_ID                       VARCHAR(30) ,  yes
+P_SHORT_DESC                    VARCHAR(255) , yes
+P_LONG_DESC                     VARCHAR(255) , yes
+P_COMPANY_ID                    VARCHAR(20) , yes
+P_STOCK                         CHAR(1) , yes
+P_UOM                           CHAR(2) , yes
+P_SPECIAL_INSTR                 VARCHAR(50) , yes
+P_PROD_TYPE                     CHAR(2) , yes
+P_TOG_C                         CHAR(2) , yes
+P_STOCK_ON_HAND                 INTEGER , yes
+P_DIMENSION_X                   NUMERIC(9, 3) , yes
+P_DIMENSION_Y                   NUMERIC(9, 3) , yes
+P_DIMENSION_Z                   NUMERIC(9, 3) , yes
+P_DIMENSION_X_UOM               CHAR(2) , yes
+P_DIMENSION_Y_UOM               CHAR(2) , yes
+P_DIMENSION_Z_UOM               CHAR(2) , yes
+P_SSN_TYPE                      VARCHAR(40) , yes 
+P_ORDER_WEIGHT                  DECIMAL(5, 3) , yes
+P_SSN_TRACK                     CHAR(1) , 
+P_NET_WEIGHT_UOM                CHAR(2) , 
+P_ORDER_WEIGHT_UOM              CHAR(2) , 
+P_NET_WEIGHT                    DECIMAL(4, 2) , 
+P_INNER_WEIGHT                  DECIMAL(4, 2) , 
+P_PACK_WEIGHT                   DECIMAL(4, 3) , 
+P_ISSUE_PER_PALLET              INTEGER , 
+P_ISSUE_PER_OUTER_CARTON        INTEGER , 
+P_ISSUE_PER_INNER_UNIT          INTEGER , 
+P_ISSUE_PER_ORDER_UNIT          INTEGER , 
+P_INNER_WEIGHT_UOM              CHAR(2) , 
+P_ORDER_QTY                     DOUBLE PRECISION  
+P_ALTERNATE_ID                  VARCHAR(30)  
+*/
+
+CREATE OR ALTER PROCEDURE EXPORT_PROD_PROFILE  (
+IN_START_DATE      TIMESTAMP  ,
+IN_END_DATE        TIMESTAMP  ,
+IN_PROD_ID VARCHAR(30)  ) 
+RETURNS (
+PROD_ID              VARCHAR(30) ,
+LAST_UPDATE_DATE     TIMESTAMP ,
+SHORT_DESC           VARCHAR(255),
+LONG_DESC            VARCHAR(255),
+COMPANY_ID           VARCHAR(10),
+STOCK                VARCHAR(1) ,
+UOM                  VARCHAR(2) ,
+SPECIAL_INSTR        VARCHAR(50),
+PROD_TYPE            VARCHAR(2),
+SSN_TYPE             VARCHAR(40),
+TOG_C                VARCHAR(2),
+STOCK_ON_HAND        INTEGER,    
+DIMENSION_X                   NUMERIC(9, 3) , 
+DIMENSION_Y                   NUMERIC(9, 3) , 
+DIMENSION_Z                   NUMERIC(9, 3) , 
+DIMENSION_X_UOM               VARCHAR(2) , 
+DIMENSION_Y_UOM               VARCHAR(2) , 
+DIMENSION_Z_UOM               VARCHAR(2) , 
+ORDER_WEIGHT                  DECIMAL(6, 3), 
+SSN_TRACK                     CHAR(1) , 
+NET_WEIGHT_UOM                CHAR(2) , 
+ORDER_WEIGHT_UOM              CHAR(2) , 
+NET_WEIGHT                    DECIMAL(4, 2) , 
+INNER_WEIGHT                  DECIMAL(4, 2) , 
+PACK_WEIGHT                   DECIMAL(4, 3) , 
+ISSUE_PER_PALLET              INTEGER , 
+ISSUE_PER_OUTER_CARTON        INTEGER , 
+ISSUE_PER_INNER_UNIT          INTEGER , 
+ISSUE_PER_ORDER_UNIT          INTEGER , 
+INNER_WEIGHT_UOM              CHAR(2) , 
+ORDER_QTY                     DOUBLE PRECISION ,
+ALTERNATE_ID                  VARCHAR(30)  
+ )
+AS 
+BEGIN 
+   /* =================================================================================================== */
+    IF (IN_START_DATE IS NULL) THEN
+    BEGIN
+       IN_START_DATE = CAST('2000-01-01' AS TIMESTAMP);
+    END
+    BEGIN
+       IF (IN_END_DATE IS NULL) THEN
+       BEGIN
+          IN_END_DATE = MAXTIME('TODAY');
+       END
+       IF (COALESCE(IN_PROD_ID,'')  = '') THEN
+       BEGIN
+             FOR SELECT T1.PROD_ID, T1.LAST_UPDATE_DATE, T1.SHORT_DESC, T1.LONG_DESC, T1.COMPANY_ID, T1.STOCK, 
+                        T1.UOM , T1.SPECIAL_INSTR, T1.PROD_TYPE, T1.SSN_TYPE, T1.TOG_C, T1.STOCK_ON_HAND  ,
+                        T1.DIMENSION_X, T1.DIMENSION_Y, T1.DIMENSION_Z, T1.DIMENSION_X_UOM, T1.DIMENSION_Y_UOM, T1.DIMENSION_Z_UOM, 
+                        T1.ORDER_WEIGHT,
+                        T1.SSN_TRACK , T1.NET_WEIGHT_UOM , T1.ORDER_WEIGHT_UOM , T1.NET_WEIGHT , T1.INNER_WEIGHT , 
+                        T1.PACK_WEIGHT , T1.ISSUE_PER_PALLET , T1.ISSUE_PER_OUTER_CARTON , T1.ISSUE_PER_INNER_UNIT , 
+                        T1.ISSUE_PER_ORDER_UNIT , T1.INNER_WEIGHT_UOM , T1.ORDER_QTY, T1.ALTERNATE_ID                       
+             FROM PROD_PROFILE T1  
+             WHERE T1.LAST_UPDATE_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             ORDER BY T1.PROD_ID
+             INTO :PROD_ID, :LAST_UPDATE_DATE, :SHORT_DESC, :LONG_DESC, :COMPANY_ID, :STOCK, 
+                  :UOM , :SPECIAL_INSTR, :PROD_TYPE, :SSN_TYPE, :TOG_C, :STOCK_ON_HAND  ,
+                  :DIMENSION_X, :DIMENSION_Y, :DIMENSION_Z, :DIMENSION_X_UOM, :DIMENSION_Y_UOM, :DIMENSION_Z_UOM,
+                  :ORDER_WEIGHT,
+                  :SSN_TRACK , :NET_WEIGHT_UOM , :ORDER_WEIGHT_UOM , :NET_WEIGHT , :INNER_WEIGHT , 
+                  :PACK_WEIGHT , :ISSUE_PER_PALLET , :ISSUE_PER_OUTER_CARTON , :ISSUE_PER_INNER_UNIT , 
+                  :ISSUE_PER_ORDER_UNIT , :INNER_WEIGHT_UOM , :ORDER_QTY , :ALTERNATE_ID                      
+             DO
+             BEGIN
+                SUSPEND;
+             END
+       END
+       ELSE
+       BEGIN
+             FOR SELECT T1.PROD_ID, T1.LAST_UPDATE_DATE, T1.SHORT_DESC, T1.LONG_DESC, T1.COMPANY_ID, T1.STOCK, 
+                        T1.UOM , T1.SPECIAL_INSTR, T1.PROD_TYPE, T1.SSN_TYPE, T1.TOG_C, T1.STOCK_ON_HAND  ,
+                        T1.DIMENSION_X, T1.DIMENSION_Y, T1.DIMENSION_Z, T1.DIMENSION_X_UOM, T1.DIMENSION_Y_UOM, T1.DIMENSION_Z_UOM,
+                        T1.ORDER_WEIGHT,
+                        T1.SSN_TRACK , T1.NET_WEIGHT_UOM , T1.ORDER_WEIGHT_UOM , T1.NET_WEIGHT , T1.INNER_WEIGHT , 
+                        T1.PACK_WEIGHT , T1.ISSUE_PER_PALLET , T1.ISSUE_PER_OUTER_CARTON , T1.ISSUE_PER_INNER_UNIT , 
+                        T1.ISSUE_PER_ORDER_UNIT , T1.INNER_WEIGHT_UOM , T1.ORDER_QTY , T1.ALTERNATE_ID                      
+             FROM PROD_PROFILE T1  
+             WHERE T1.LAST_UPDATE_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.PROD_ID LIKE :IN_PROD_ID
+             ORDER BY T1.PROD_ID
+             INTO :PROD_ID, :LAST_UPDATE_DATE, :SHORT_DESC, :LONG_DESC, :COMPANY_ID, :STOCK, 
+                  :UOM , :SPECIAL_INSTR, :PROD_TYPE, :SSN_TYPE, :TOG_C, :STOCK_ON_HAND  ,
+                  :DIMENSION_X, :DIMENSION_Y, :DIMENSION_Z, :DIMENSION_X_UOM, :DIMENSION_Y_UOM, :DIMENSION_Z_UOM,
+                  :ORDER_WEIGHT,
+                  :SSN_TRACK , :NET_WEIGHT_UOM , :ORDER_WEIGHT_UOM , :NET_WEIGHT , :INNER_WEIGHT , 
+                  :PACK_WEIGHT , :ISSUE_PER_PALLET , :ISSUE_PER_OUTER_CARTON , :ISSUE_PER_INNER_UNIT , 
+                  :ISSUE_PER_ORDER_UNIT , :INNER_WEIGHT_UOM , :ORDER_QTY, :ALTERNATE_ID                       
+             DO
+             BEGIN
+                SUSPEND;
+             END
+       END
+    END
+
+END ^
+
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

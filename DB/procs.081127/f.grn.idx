@@ -1,0 +1,2 @@
+create index grn_lot_idx on grn(last_lot_no);
+

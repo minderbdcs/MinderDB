@@ -1,0 +1,10 @@
+/*
+498:DECLARE EXTERNAL FUNCTION MSEC
+501:ENTRY_POINT 'fudlib_msec' MODULE_NAME 'fudlib';
+603:DECLARE EXTERNAL FUNCTION SEC
+606:ENTRY_POINT 'fudlib_sec' MODULE_NAME 'fudlib';
+*/
+
+drop external function msec;
+drop external function sec;
+

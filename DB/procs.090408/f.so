@@ -1,0 +1,3 @@
+alter table pick_order add earliest_date datetime;
+alter table pick_item  add earliest_date datetime;
+

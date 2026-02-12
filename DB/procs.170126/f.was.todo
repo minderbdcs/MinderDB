@@ -1,0 +1,7 @@
+update pick_items description = prod_profile.short_desc
+when has prod_id and prod_profile exists
+
+update pick_items description = ssn.ssn_description
+when has ssn_id and ssn exists
+
+when status < 'DX' or 'CN'

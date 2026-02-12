@@ -1,0 +1,7 @@
+create domain code_two_var varchar(2);
+
+alter table carrier alter last_pack_indicator type code_two_var;
+alter table carrier alter not_last_pack_indicator type code_two_var;
+
+alter table pack_id alter pack_last_sequence_indicator type code_two_var;
+

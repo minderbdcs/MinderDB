@@ -1,0 +1,265 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_PKSN FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 173 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_OBJECT  VARCHAR(30);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_TRN_TYPE VARCHAR(4);
+DECLARE VARIABLE WK_TRN_CODE CHAR(1);
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+
+DECLARE VARIABLE WK_AUDIT_DESC VARCHAR(40);
+DECLARE VARIABLE WK_PICK_LABEL_NO VARCHAR(8);
+DECLARE VARIABLE WK_SERIAL_NO VARCHAR(30);
+DECLARE VARIABLE WK_ISSN_ID VARCHAR(30);
+DECLARE VARIABLE WK_PID_QTY  INTEGER;
+DECLARE VARIABLE WK_PID_NEW_QTY INTEGER;
+DECLARE VARIABLE WK_PID_ID   INTEGER;
+DECLARE VARIABLE WK_PID_FROM_WH_ID VARCHAR(2);
+DECLARE VARIABLE WK_PID_FROM_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_PID_DESPATCH_LOCATION VARCHAR(10);
+DECLARE VARIABLE WK_PID_STATUS VARCHAR(2);
+DECLARE VARIABLE WK_PID_DESPATCH_ID DESPATCH_ID;
+DECLARE VARIABLE WK_PID_PACK_ID PACK_ID;
+DECLARE VARIABLE WK_APPLIED VARCHAR(3);
+DECLARE VARIABLE WK_REASON VARCHAR(1024);
+DECLARE VARIABLE WK_REFERENCE VARCHAR(1024);
+DECLARE VARIABLE WK_REFERENCE2 VARCHAR(1024);
+DECLARE VARIABLE WK_QTY_TOGET INTEGER;
+
+DECLARE VARIABLE WK_ISSN_PREFIX VARCHAR(20);
+DECLARE VARIABLE iSSN_ID INTEGER;
+DECLARE VARIABLE P_SSN_ID INTEGER;
+DECLARE VARIABLE I_SSN_ID VARCHAR(20);
+DECLARE VARIABLE WK_ISSN_WH_ID VARCHAR(2);
+DECLARE VARIABLE WK_ISSN_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_ISSN_STATUS  VARCHAR(2);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_RESPONSE VARCHAR(255);
+
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKSN') THEN
+  BEGIN
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_PICK_LABEL_NO = NEW.SUB_LOCN_ID;
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_SERIAL_NO = NEW.OBJECT;
+     WK_REFERENCE2 = NEW.REFERENCE;
+     IF (WK_REFERENCE2 IS NULL) THEN
+     BEGIN
+        WK_REFERENCE2 = 'Apply Serial Picked to ';
+     END
+     WK_REFERENCE = '';
+     WK_QTY = NEW.QTY;
+     IF (WK_QTY IS NULL) THEN
+     BEGIN
+        WK_QTY = 0;
+     END
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_TRN_CODE = NEW.TRN_CODE;
+     WK_TRN_TYPE = NEW.TRN_TYPE;
+     WK_RESPONSE = '';
+
+     WK_AUDIT_DESC = :WK_REFERENCE || :WK_DEVICE ;
+     /* now get ssn_ids from picklabel_no where pick_label_no matches */
+     IF (WK_TRN_CODE = 'S') THEN
+     BEGIN
+        /* apply a serial no to an issn that was picked - split to make one issn per qty 1 */
+        WK_APPLIED = 'F';
+        WK_ISSN_ID = NULL; 
+        I_SSN_ID = NULL;
+        WK_PID_QTY = NULL; 
+        WK_PID_ID = NULL;
+        WK_PID_FROM_WH_ID = NULL;
+        WK_PID_FROM_LOCN_ID = NULL;
+        WK_PID_DESPATCH_LOCATION = NULL;
+        WK_PID_STATUS = NULL;
+        WK_PID_DESPATCH_ID = NULL;
+        WK_PID_PACK_ID = NULL;
+        WK_ISSN_WH_ID = NULL;
+        WK_ISSN_LOCN_ID = NULL;
+        WK_ISSN_STATUS = NULL;
+        FOR SELECT PID.SSN_ID, 
+           PID.QTY_PICKED, 
+           PID.PICK_DETAIL_ID, 
+           PID.FROM_WH_ID, 
+           PID.FROM_LOCN_ID, 
+           PID.DESPATCH_LOCATION,
+           PID.PICK_DETAIL_STATUS,
+           PID.DESPATCH_ID,
+           PID.PACK_ID,
+           I1.WH_ID,
+           I1.LOCN_ID, 
+           I1.ISSN_STATUS
+        FROM PICK_ITEM_DETAIL PID
+        JOIN ISSN I1 ON PID.SSN_ID = I1.SSN_ID
+        WHERE PID.PICK_LABEL_NO = :WK_PICK_LABEL_NO
+        AND PID.PICK_DETAIL_STATUS IN ('PL','DS','DC')
+        AND PID.QTY_PICKED > 0
+        AND I1.SERIAL_NUMBER IS NULL
+        INTO :WK_ISSN_ID, 
+             :WK_PID_QTY, 
+             :WK_PID_ID,
+             :WK_PID_FROM_WH_ID,
+             :WK_PID_FROM_LOCN_ID,
+             :WK_PID_DESPATCH_LOCATION,
+             :WK_PID_STATUS,
+             :WK_PID_DESPATCH_ID,
+             :WK_PID_PACK_ID,
+             :WK_ISSN_WH_ID,
+             :WK_ISSN_LOCN_ID,
+             :WK_ISSN_STATUS
+        DO
+        BEGIN
+           IF (WK_APPLIED = 'F') THEN
+           BEGIN
+              IF (:WK_PID_QTY = 1) THEN
+              BEGIN
+                 /* update ISSN's serial number */
+                 UPDATE ISSN 
+                 SET PICK_ORDER = :WK_PICK_LABEL_NO,
+                 SERIAL_NUMBER = :WK_SERIAL_NO,
+                 OTHER1 = :WK_SERIAL_NO
+                 WHERE SSN_ID = :WK_ISSN_ID;
+                 WK_APPLIED = 'T';
+                 WK_QTY_TOGET = 1;
+                 /* now have to do an SSN_HIST and transactions_archive record for this issn */
+                 WK_REASON = 'Applied Serial ' || :WK_SERIAL_NO || 'to ISSN ' || :WK_ISSN_ID  ;
+                 EXECUTE PROCEDURE ADD_SSN_HIST(:WK_WH_ID, :WK_LOCN_ID, :WK_ISSN_ID, 
+                          :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                          :WK_AUDIT_DESC , :WK_REASON, :WK_QTY_TOGET, :WK_USER, :WK_DEVICE); 
+              END
+              ELSE
+              BEGIN
+                 /* have the original issn - need to split one from it */
+                 /* then add a pid record */
+                 WK_QTY_TOGET = 1;
+                 WK_ISSN_PREFIX = '';
+                 WK_FOUND = 0;
+                 SELECT  1, PARAM.DATA_PREFIX 
+                 FROM PARAM 
+                 JOIN SYS_EQUIP ON SYS_EQUIP.DEVICE_ID = :WK_DEVICE  
+                 WHERE PARAM.DATA_ID = 'BARCODE' 
+                   AND PARAM.DATA_BRAND = SYS_EQUIP.SE_BRAND 
+                   AND PARAM.DATA_MODEL = SYS_EQUIP.SE_MODEL   
+                 INTO :WK_FOUND, :WK_ISSN_PREFIX;
+                 IF (WK_FOUND IS NULL) THEN
+                 BEGIN
+                    WK_FOUND = 0;
+                 END
+                 IF (WK_FOUND = 0) THEN
+                 BEGIN
+                    SELECT FIRST 1 DATA_PREFIX FROM PARAM WHERE DATA_ID = 'BARCODE' AND DATA_BRAND = 'DEFAULT' AND DATA_MODEL = 'DEFAULT' INTO :WK_ISSN_PREFIX;
+                 END
+                 IF (WK_ISSN_PREFIX IS NULL) THEN
+                 BEGIN
+                    WK_ISSN_PREFIX = '';
+                 END
+                 iSSN_ID = GEN_ID(ISSN_SSN_ID, 1);
+                 P_SSN_ID = iSSN_ID - 1;
+                 SELECT ISSN_ID FROM GET_ISSN_BARCODE('BARCODE', :P_SSN_ID, 36) INTO :I_SSN_ID;
+                    
+                 EXECUTE PROCEDURE PC_TRSS 
+                 :WK_RECORD ,
+                 :WK_ISSN_WH_ID,
+                 :WK_ISSN_LOCN_ID,
+                 :WK_ISSN_ID,
+                 'TRSS',
+                 'A',
+                 :WK_DATE,
+                 :I_SSN_ID,
+                 :WK_QTY_TOGET,
+                 :WK_USER,
+                 :WK_DEVICE;
+                 /* take all this of the split issn */
+                 UPDATE ISSN 
+                 SET PICK_ORDER = :WK_PICK_LABEL_NO,
+                 SERIAL_NUMBER = :WK_SERIAL_NO,
+                 OTHER1 = :WK_SERIAL_NO,
+                 ISSN_STATUS = :WK_ISSN_STATUS
+                 WHERE SSN_ID = :I_SSN_ID;
+                 WK_APPLIED = 'T';
+                  WK_REASON = 'Issued Split ' || :WK_QTY_TOGET || 'from ' || :WK_ISSN_ID;
+                  EXECUTE PROCEDURE ADD_SSN_HIST(:WK_ISSN_WH_ID, :WK_ISSN_LOCN_ID, :I_SSN_ID, 
+                          :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                          :WK_AUDIT_DESC , :WK_REASON, :WK_QTY_TOGET, :WK_USER, :WK_DEVICE); 
+                 WK_REASON = 'Applied Serial ' || :WK_SERIAL_NO || 'to ISSN ' || :I_SSN_ID  ;
+                 EXECUTE PROCEDURE ADD_SSN_HIST(:WK_ISSN_WH_ID, :WK_ISSN_LOCN_ID, :I_SSN_ID, 
+                          :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                          :WK_AUDIT_DESC , :WK_REASON, :WK_QTY_TOGET, :WK_USER, :WK_DEVICE); 
+                  INSERT INTO PICK_ITEM_DETAIL 
+                      (PICK_LABEL_NO, 
+                       SSN_ID, 
+                       PICK_DETAIL_STATUS, 
+                       QTY_PICKED,
+                       USER_ID, 
+                       DEVICE_ID, 
+                       CREATE_DATE,
+                       FROM_WH_ID,
+                       FROM_LOCN_ID,
+                       DESPATCH_LOCATION,
+                       DESPATCH_ID,
+                       PACK_ID)
+                  VALUES (:WK_PICK_LABEL_NO, 
+                       :I_SSN_ID,
+                       :WK_PID_STATUS,
+                       :WK_QTY_TOGET,
+                       :WK_USER,
+                       :WK_DEVICE,
+                       :WK_DATE,
+                       :WK_PID_FROM_WH_ID,
+                       :WK_PID_FROM_LOCN_ID,
+                       :WK_PID_DESPATCH_LOCATION,
+                       :WK_PID_DESPATCH_ID,
+                       :WK_PID_PACK_ID);
+                  /* now adjust the qty picked in the original pid down by 1 */
+                  WK_PID_NEW_QTY = WK_PID_QTY - WK_QTY_TOGET ;
+                  UPDATE PICK_ITEM_DETAIL SET QTY_PICKED = :WK_PID_NEW_QTY
+                  WHERE PICK_DETAIL_ID = :WK_PID_ID;
+              END
+           END
+        END
+        IF (WK_APPLIED = 'F') THEN
+        BEGIN
+           EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F','Could Not find a Suitable ISSN to Split for Serial Number');
+        END
+        ELSE
+        BEGIN
+          IF (WK_PID_QTY = 1) THEN
+           BEGIN
+              WK_RESPONSE = 'Processed successfully|ISSN_ID=' || :WK_ISSN_ID || '|ORIGINAL_ISSN_ID=' || :WK_ISSN_ID || '|';
+              EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T',:WK_RESPONSE);
+           END
+           ELSE
+           BEGIN
+              WK_RESPONSE = 'Processed successfully|ISSN_ID=' || :I_SSN_ID || '|ORIGINAL_ISSN_ID=' || :WK_ISSN_ID || '|';
+              EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T',:WK_RESPONSE );
+           END
+        END
+
+     END
+     
+     /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+  END
+ END
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,2 @@
+alter table sys_user add user_login_device_id device_id;
+alter table sys_user add user_extra_device_id device_id;

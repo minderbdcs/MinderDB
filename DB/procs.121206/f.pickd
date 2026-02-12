@@ -1,0 +1,5 @@
+alter table carrier add default_connote_type code_two;
+alter table carrier add default_label_type code_two;
+alter table pick_despatch add pickd_connote_type code_two;
+alter table pack_id add pack_label_type code_two;
+

@@ -1,0 +1,7 @@
+/*
+703:DECLARE EXTERNAL FUNCTION V6SUBSTRING
+ENTRY_POINT 'fudlib_substrv6' MODULE_NAME 'fudlib';
+
+*/
+
+drop external function v6substring;

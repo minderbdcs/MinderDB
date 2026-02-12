@@ -1,0 +1,3 @@
+/* alter table variance drop var_status ; */
+alter table variance add variance_status status;
+

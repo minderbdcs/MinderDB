@@ -1,0 +1,42 @@
+take out /tmp log file
+
+12/10/20 add ISSN_ATTRIBUTES.ATTR_ID VARCHAR(30)
+/* note bad name since the code is the id */
+
+table SSN_ACTION
+CREATE TABLE SSN_ACTION (
+RECORD_ID NOT NULL Unique,
+SSN_ACT_ASSET_ID SSN_ID,   
+/* holds SSN.SSN_ID of the machine we are using - we have 2 label cutting machines here plus about 8 Label Printers */
+SSN_ACT_ORDER_NO VARCHAR(30) ,  
+/* Optional - Works Order/Job Number/Invoice # */
+SSN_ACT_START_DATE NOT NULL TIMESTAMP  ,
+SSN_ACT_END_DATE TIMESTAMP   ,
+/* this must be populated the moment we change to the next roll of material  as we will then close current record and open the next to continue until whole job is finished - see also SOURCE1 below */
+SSN_ACT_OUTPUT_QTY DECIMAL DEFAULT 1  ,  
+/* can be large i.e. 200,000 units and we may also produce decimal values i.e. x.y meters of a product, I may have to return to this screen later once I know the total number of labels produced. 
+Plus, I have been waiting for Graham Davies to return and install a label counter which will enable me to enter this immediately. Then one day we can collect this automatically from Graham's system */
+SSN_ACT_RATE VARCHAR(10) ,
+/* hold the speed the machine is run at currently the USA machine displays speed as Inches per second and some older label printers */
+SSN_ACT_UOM UOM ,
+ /* enable converting from "/sec to mm/second */
+SSN_ACT_ISSN_SOURCE1 SSN_ID,
+  /* This is the Label Material Roll number used to produce the blank labels. We may use multiple rolls hence we need to close out current record and start a new one if we change rolls - closes END_DATE and starts new START_DATE  */
+SSN_ACT_ISSN_SOURCE2 SSN_ID,
+  /* This is the Material Roll number used if labels require over-laminating with say rolls of clear Polypropylene - these rolls will not coincide with the main label material roll start and end. 
+We may use multiple rolls hence again we need to close out current record and start a new one if we change rolls */
+SSN_ACT_COMMENTS COMMENTS,
+ /* used to record problems encountered or machine settings that helped production. */
+SSN_ACT_LAST_UPDATED TIMESTAMP,
+SSN_ACT_LAST UPDATE BY USER_ID,
+PRIMARY KEY (RECORD_ID ));
+
+/*
+Can we create a desktop screen (LARAVEL? ) where I can record the above details of each job which I would leave open whilst running the job. 
+BUT I may also have multiple screens running multiple jobs simultaneously?
+E.g. Recently I was cutting blank labels on the MP850 plus I had 2 Label Printers printing labels at the same time so that I could deliver as soon as possible.
+Hence, I would set up one screen recording the MP 850 and the label material roll numbers (ISSN.SSN_ID ), the speed, and any issues encountered. 
+Then I would also open a new screen for each of the Label printers e.g. Intermec PX6i (its SSN.SSN_ID to be created for the SSN_ACT_ASSET_ID ) and we would scan the ISSN Barcode printed for the blank labels that we cut by the MP 850 = SSN_ACT_ISSN_SOURCE1.
+Plus, SSN_ACT_ISSN_SOURCE2 = the ISSN.SSN_ID of the roll of Thermal Transfer Ribbon we are printing with along with the Speed start and end times and any comments e.g. Printer heat settings.
+I have been able recently to run two Barcode Printers simultaneously since I bought 2 new Label Rewinders.
+*/

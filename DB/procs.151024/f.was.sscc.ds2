@@ -1,0 +1,16 @@
+/* reduce the fone size for the FROM and Supplier top line
+   then move down so that the bottom is at the same place */
+/* ^A0N,34,37^FDFROM:^FS */
+update sys_label set sl_line = '^A0N,34,37^FDFROM:^FS' where record_id=2797; 
+/* update sys_label set sl_line = '^A0N,28,32^FDFROM:^FS' where record_id=2797; */
+/* 2795 ^FT3,37 */
+update sys_label set sl_line = '^FT3,37' where record_id=2795; 
+/* update sys_label set sl_line = '^FT3,43' where record_id=2795; */
+/***************************************************************/
+/* now the supplier name */
+/* ^A0N,34,47^FD%PICK_ADDRESS_SF.PIA_FIRST_NAME%^FS */
+/* update sys_label set sl_line = '^A0N,34,47^FD%Sent_From_First_Name%^FS' where record_id=2815; */
+update sys_label set sl_line = '^A0N,28,32^FD%Sent_From_First_Name%^FS' where record_id=2815;
+/* 2814 ^FT112,37 */
+/* update sys_label set sl_line = '^FT112,37' where record_id=2814; */
+update sys_label set sl_line = '^FT112,43' where record_id=2814;

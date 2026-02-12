@@ -1,0 +1,1 @@
+update sys_equip set se_brand='RAW' where device_id='PL';

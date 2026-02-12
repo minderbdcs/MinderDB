@@ -1,0 +1,2 @@
+alter table pick_item add prev_line_status status;
+

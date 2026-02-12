@@ -1,0 +1,4 @@
+
+update PACK_MANIFEST set mirror_data=last_update_date where mirror_data is null;
+update PACK_MANIFEST set mirror_data='NOW' where mirror_data is null;
+

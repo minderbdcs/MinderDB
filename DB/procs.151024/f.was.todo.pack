@@ -1,0 +1,3 @@
+add default carrier to pack_customer
+then in edi import if the field is not null use this to overide the company field
+since the pack_customer has a company . Thus its a subset of a companys orders involved.

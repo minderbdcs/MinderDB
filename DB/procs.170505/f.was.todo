@@ -1,0 +1,7 @@
+purchase orders purchase_order
+grn.order_no
+grn_order.order_no
+ssn.po_order
+ie domain purchase_order from varchar(10) to varchar(20)
+ie domain order_no from varchar(10) to varchar(20)
+ie domain po_order from varchar(10) to varchar(20)

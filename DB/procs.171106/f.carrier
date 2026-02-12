@@ -1,0 +1,2 @@
+alter table carrier add TRACK_PACK_TO_PID VALUE_TF;
+update carrier set track_pack_to_pid = 'F';

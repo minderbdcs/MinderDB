@@ -1,0 +1,14 @@
+in f.del;
+in f.size;
+set term ^;
+in f.manifest^
+in f.pclabel^
+in f.pickperson^
+in f.add.temp^
+in f.emp^
+in f.person^
+in f.plpk^
+in f.eia1^
+in f.plad^
+in f.plao^
+exit^

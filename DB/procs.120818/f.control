@@ -1,0 +1,4 @@
+alter table control add send_customer_po_wo_in_export value_tf;
+update control set send_customer_po_wo_in_export = 'F';
+
+

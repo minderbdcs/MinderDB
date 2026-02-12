@@ -1,0 +1,6 @@
+
+alter table pick_order add   alternate_companys  company_group;
+alter table pick_order_dx add   alternate_companys  company_group;
+
+alter table pick_order_item_temp add h_alternate_companys company_group;
+

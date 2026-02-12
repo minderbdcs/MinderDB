@@ -1,0 +1,2 @@
+alter table pick_item add pick_qty_difference integer;
+

@@ -1,0 +1,62 @@
+/*
+===============================================================================
+               if use_sale_channels
+               then
+               begin
+                    if product and sales channel exist and OP
+                    then 
+                    begin
+                       the available qty is the qty available in the prod_reservation
+                    end
+                    else
+                    begin
+                       the available qty is wk_available_qty - 
+                            sum(prod_reservations.available_qty OP for all channels for this product)
+                    end
+               end
+===============================================================================
+*/
+                    IF (WK_DO_SALE_CHANNEL = 'T') THEN
+                    BEGIN
+                       /* ================================================================== */
+                       /* have WK_ORDER WK_WORK_PROD WK_WORK_TOPICK_QTY  WK_PO_WH_ID WK_PO_COMPANY_ID */
+                       WK_PR_RECORD_ID = NULL;
+                       BEGIN
+                          IF (WK_PO_SALE_CHANNEL = '') THEN
+                          BEGIN
+                             WK_PO_SALE_CHANNEL = NULL;
+                          END
+                          IF ((WK_WORK_TOPICK_QTY > 0) AND (WK_WORK_PROD IS NOT NULL) AND (WK_PO_SALE_CHANNEL IS NOT NULL)) THEN
+                          BEGIN
+                             WK_PR_RECORD_ID = NULL;
+                             SELECT RECORD_ID, PR_AVAILABLE_QTY
+                             FROM PROD_RESERVATION
+                             WHERE PR_PROD_ID = :WK_WORK_PROD
+                             AND   PR_SALE_CHANNEL_CODE = :WK_PO_SALE_CHANNEL
+                             AND   PR_RESERVATION_STATUS = 'OP'
+                             INTO :WK_PR_RECORD_ID, :WK_PR_AVAILABLE_QTY;
+                             IF (WK_PR_RECORD_ID IS NOT NULL) THEN
+                             BEGIN      
+                                IF (WK_PR_AVAILABLE_QTY IS NULL) THEN
+                                BEGIN
+                                   WK_PR_AVAILABLE_QTY = 0;
+                                END
+                                WK_AVAILABLE_QTY = WK_PR_AVAILABLE_QTY;
+                             END
+                          END
+                       END 
+                       IF (WK_PR_RECORD_ID IS NULL) THEN
+                       BEGIN
+                          SELECT SUM( PR_AVAILABLE_QTY)
+                          FROM PROD_RESERVATION
+                          WHERE PR_PROD_ID = :WK_WORK_PROD
+                          AND   PR_RESERVATION_STATUS = 'OP'
+                          INTO :WK_PR_AVAILABLE_QTY;
+                          IF (WK_PR_AVAILABLE_QTY IS NULL) THEN
+                          BEGIN
+                             WK_PR_AVAILABLE_QTY = 0;
+                          END
+                          WK_AVAILABLE_QTY = WK_AVAILABLE_QTY - WK_PR_AVAILABLE_QTY;
+                       END
+                       /* ================================================================== */
+                    END

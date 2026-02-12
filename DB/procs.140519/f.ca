@@ -1,0 +1,4 @@
+alter table carrier add merchant_id despatch_carrier; /*  '20152217' */
+alter table carrier add lodgement_id code; /* 'Alexandria BMLC' */
+/* alter table carrier add merchant_location_id 'MEY' */ /* PREFIX and CARRIER_SERVICE.SERVICE_LOCATION_ID  */
+/* alter table carrier add post_to_account '8994073' */ /* ACCOUNT and CONNOTE_ACCOUNT and CARRIER_SERVICE.SERVICE_ACCOUNT */

@@ -1,0 +1,14 @@
+Done
+add field pp_batch_name for prod_profile
+procedure import_prod_profile
+trigger add_prod_profile_temp
+
+============================================================
+Christo wants to add a product to an order
+this is not picked
+and dosn't consume anything
+like a service or NOPROD
+he intends to use the python import to add the lines
+does ProdTYPKST options record work in the pick_order_item_temp import ?
+then this can be added using pick line status of DX
+

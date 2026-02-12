@@ -1,0 +1,2 @@
+alter table sys_screen_action add ssa_function descr;
+

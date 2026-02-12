@@ -1,0 +1,33 @@
+add to carrier service 
+international delivery t/f
+
+then in dsot or awaiting checking  return error if p_country or d_country not local country
+local country is country of sent from
+country of sent from is in PICK_ORDER.S_COUNTRY
+in Manifest processing can see that if the d_address fields are null use the p_address fields
+use upper first two bytes in check.
+country check upper(country)[1:2]
+All imported orders since march 2017 have the S_COUNTRY populated.
+I can see used in the S_COUNTRY values
+AUSTRALIA
+
+In the P_COUNTRY and D_COUNTRY I see
+AUSTRALIA
+AU
+AUS
+AUST
+
+Australia
+Au
+Aus
+Aust
+
+australia
+au
+aus
+aust
+
+also mispellings
+Austraia
+Australai
+

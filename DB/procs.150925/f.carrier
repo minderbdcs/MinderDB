@@ -1,0 +1,2 @@
+alter table carrier add email_tracking value_tf;
+

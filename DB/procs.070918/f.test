@@ -1,0 +1,1 @@
+alter table test_questions add  QUESTION_TYPE CODE_TWO;

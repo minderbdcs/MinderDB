@@ -1,0 +1,2 @@
+alter table control add legacy_db_account code;
+

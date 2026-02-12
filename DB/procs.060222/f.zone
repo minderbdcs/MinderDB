@@ -1,0 +1,1 @@
+alter table zone add company_id company;

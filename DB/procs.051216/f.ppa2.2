@@ -1,0 +1,252 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP TRIGGER RUN_TRANSACTION_PPA2 ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_PPA2 FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 13 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_ALT_PROD VARCHAR(30);
+DECLARE VARIABLE WK_COMPANY VARCHAR(20);
+DECLARE VARIABLE WK_ALT_COMPANY VARCHAR(20);
+DECLARE VARIABLE WK_DESC VARCHAR(50);
+DECLARE VARIABLE WK_LONG_DESC VARCHAR(255);
+DECLARE VARIABLE WK_WEIGHT_X VARCHAR(10);
+DECLARE VARIABLE WK_WEIGHT DECIMAL(9,3);
+DECLARE VARIABLE WK_VOLUME_X VARCHAR(10);
+DECLARE VARIABLE WK_VOLUME DECIMAL(9,3);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_SIZE VARCHAR(10);
+DECLARE VARIABLE WK_COST_X VARCHAR(10);
+DECLARE VARIABLE WK_COST NUMERIC(9,2);
+DECLARE VARIABLE WK_BUFFER VARCHAR(512);
+DECLARE VARIABLE WK_FILENAME VARCHAR(80);
+DECLARE VARIABLE WK_RESULT INTEGER;
+DECLARE VARIABLE WK_DESC2 VARCHAR(50);
+DECLARE VARIABLE WK_DESC3 VARCHAR(50);
+DECLARE VARIABLE WK_PROD_TYPE VARCHAR(50);
+DECLARE VARIABLE WK_PROD_TYPE_ID CHAR(2);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF (NEW.TRN_TYPE = 'PPA2') THEN
+      BEGIN
+         /* WK_FILENAME = 'd:\tmp\ppa2.log'; */
+         WK_FILENAME = '/tmp/ppa2.log';
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the product code
+            field 2 is the company code 
+            field 3 is the alternate product code
+            field 4 is the alternate company code 
+            field 5 is the short description
+            field 6 is the weight 
+            field 7 is the volume
+            field 8 is the active (stock) 
+            field 9 is the size
+            field 10 is the standard cost 
+            field 11 is the long description
+         */
+         WK_STATUS = '';
+         WK_PROD = '';
+         WK_COMPANY = '';
+         WK_ALT_PROD = '';
+         WK_ALT_COMPANY = '';
+         WK_DESC = '';
+         WK_WEIGHT_X = '';
+         WK_WEIGHT = 0;
+         WK_VOLUME_X = '';
+         WK_VOLUME = 0;
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WK_PROD_TYPE = '';
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = '<EANNumber') THEN
+            BEGIN
+               WK_BUFFER = 'have EANNumber ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_PROD = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<Company') THEN
+            BEGIN
+               WK_BUFFER = 'have Company ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_COMPANY = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<AltEANNumber') THEN
+            BEGIN
+               WK_BUFFER = 'have AltEANNumber ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_ALT_PROD = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<AltCompany') THEN
+            BEGIN
+               WK_BUFFER = 'have AltCompany ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_ALT_COMPANY = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<ShortDescription') THEN
+            BEGIN
+               WK_BUFFER = 'have Description ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_DESC = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<LongDescription') THEN
+            BEGIN
+               WK_BUFFER = 'have longDescription ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_LONG_DESC = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<Weight') THEN
+            BEGIN
+               WK_BUFFER = 'have Weight ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_WEIGHT_X = WK_WORK_DATA;
+               WK_WEIGHT = CAST(WK_WEIGHT_X AS DECIMAL(9,3));
+               WHEN SQLCODE -413
+               DO
+               BEGIN
+                  /* No Number */
+                  WK_WEIGHT = 0;
+               END
+            END
+            IF (WK_WORK_LABEL = '<Volume') THEN
+            BEGIN
+               WK_BUFFER = 'have Volume ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_VOLUME_X = WK_WORK_DATA;
+               WK_VOLUME = CAST(WK_VOLUME_X AS DECIMAL(9,3));
+               WHEN SQLCODE -413
+               DO
+               BEGIN
+                  /* No Number */
+                  WK_VOLUME = 0;
+               END
+            END
+            IF (WK_WORK_LABEL = '<StockStatus') THEN
+            BEGIN
+               WK_BUFFER = 'have StockStatus ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_STATUS = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<Size') THEN
+            BEGIN
+               WK_BUFFER = 'have Size ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_SIZE = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<StandardCost') THEN
+            BEGIN
+               WK_BUFFER = 'have Cost ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_COST_X = WK_WORK_DATA;
+               WK_COST = CAST(WK_COST_X AS NUMERIC(9,2));
+               WHEN SQLCODE -413
+               DO
+               BEGIN
+                  /* No Number */
+                  WK_COST = 0;
+               END
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_PROD_TYPE = '') THEN
+         BEGIN
+            SELECT DEFAULT_PROD_TYPE
+            FROM CONTROL
+            INTO :WK_PROD_TYPE;
+            IF (WK_PROD_TYPE IS NULL) THEN
+            BEGIN
+               WK_PROD_TYPE = '';
+            END
+         END
+         /* does prod type exist */
+         WK_FOUND = 0;
+         SELECT 1, CODE FROM PROD_TYPE
+         WHERE DESCRIPTION = :WK_PROD_TYPE
+         INTO :WK_FOUND, :WK_PROD_TYPE_ID ;
+         /* does product exist */
+/*         WK_RESULT = FILE_WRITELN(WK_FILENAME, 'past input');*/
+         WK_FOUND = 0;
+         SELECT 1 
+         FROM PROD_PROFILE
+         WHERE PROD_ID = :WK_PROD
+         INTO :WK_FOUND ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no product */
+/*            WK_RESULT = FILE_WRITELN(WK_FILENAME, 'insert prod');*/
+            INSERT INTO PROD_PROFILE(PROD_ID, 
+               COMPANY_ID, 
+               ALTERNATE_ID,
+               ALTERNATE_COMPANY_ID,
+               SHORT_DESC,
+               NET_WEIGHT,
+               VOLUME,
+               STOCK,
+               UOM_SIZE,
+               STANDARD_COST,
+               PROD_TYPE,
+               LONG_DESC)
+            VALUES (:WK_PROD, 
+               :WK_COMPANY, 
+               :WK_ALT_PROD, 
+               :WK_ALT_COMPANY, 
+               :WK_DESC,
+               :WK_WEIGHT,
+               :WK_VOLUME,
+               :WK_STATUS,
+               :WK_SIZE,
+               :WK_COST,
+               :WK_PROD_TYPE_ID,
+               :WK_LONG_DESC);
+         END
+         ELSE
+         BEGIN
+/*            WK_RESULT = FILE_WRITELN(WK_FILENAME, 'update prod');*/
+            UPDATE PROD_PROFILE SET
+               COMPANY_ID = :WK_COMPANY, 
+               ALTERNATE_ID = :WK_ALT_PROD, 
+               ALTERNATE_COMPANY_ID = :WK_ALT_COMPANY, 
+               SHORT_DESC = :WK_DESC,
+               LONG_DESC = :WK_LONG_DESC,
+               NET_WEIGHT = :WK_WEIGHT,
+               VOLUME = :WK_VOLUME,
+               STOCK = :WK_STATUS,
+               UOM_SIZE = :WK_SIZE,
+               STANDARD_COST = :WK_COST
+            WHERE PROD_ID = :WK_PROD; 
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

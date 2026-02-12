@@ -1,0 +1,29 @@
+/* prev sales order
+update param  set data_expression = '(00|1[38]|3[13]|45|83|DX|PS|S[01345IKMOPS]|WP)[0-9A-Z]*'  where data_id='SALESORDER';
+*/
+/* change sales order expression to be
+'^(0(?=0)|1(?=3|8)|3(?=1|3)|4(?=5)|8(?=3)|D(?=X)|P(?=S)|S(?=0|1|3|4|5|I|K|M|O|P|S)|W(?=P))[0-9A-Z]{1,14}'
+*/
+update param  set data_expression = 
+'^(0(?=0)|1(?=3|8)|3(?=1|3)|4(?=5)|8(?=3)|D(?=X)|P(?=S)|S(?=0|1|3|4|5|I|K|M|O|P|S)|W(?=P))[0-9A-Z]{1,14}'
+  where data_id='SALESORDER';
+
+/*                      
+DATA_ID         MAX_LENGTH  FIXED_LENGTH    SYMBOLOGY_PREFIX    DATA_EXPRESSION
+SERIAL10        10          T               ]C0;                ^(5(?=C|A)|C(?=N)|S(?=A|C|D))[0-9A-Z]{9}
+SERIAL11_13     13          F               ]C0;                ^S(?=A|C|D)[0-9A-Z]{10,12}
+*/
+/* prev values for serials 
+update param set data_expression='5CG[A-Z0-9]{7,7}' where data_id='SERIAL1' and data_brand='DEFAULT';
+update param set data_expression='CN4[A-Z0-9]{7,7}' where data_id='SERIAL2' and data_brand='DEFAULT';
+update param set data_expression='SAU[A-Z0-9]{8,8}' where data_id='SERIAL4' and data_brand='DEFAULT';
+update param set data_expression='SDL[A-Z0-9]{10,10}', max_length=13 where data_id='SERIAL5' and data_brand='DEFAULT';
+update param set data_expression='SC3[A-Z0-9]{10,10}' where data_id='SERIAL6' and data_brand='DEFAULT';
+*/
+update param set data_id='SERIAL10', max_length=10,fixed_length='T',symbology_prefix=']C0;',data_expression=
+'^(5(?=C|A)|C(?=N)|S(?=A|C|D))[0-9A-Z]{9}' 
+where data_id='SERIAL1' and data_brand='DEFAULT';
+update param set data_id='SERIAL11_13', max_length=13,fixed_length='F',symbology_prefix=']C0;',data_expression=
+'^S(?=A|C|D)[0-9A-Z]{10,12}' 
+where data_id='SERIAL2' and data_brand='DEFAULT';
+delete from param where data_id in ('SERIAL4','SERIAL5','SERIAL6') and data_brand='DEFAULT';

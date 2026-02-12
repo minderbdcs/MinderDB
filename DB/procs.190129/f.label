@@ -1,0 +1,4 @@
+create domain LABEL_LINE VARCHAR(512);
+
+alter table sys_label alter sl_line type LABEL_LINE;
+

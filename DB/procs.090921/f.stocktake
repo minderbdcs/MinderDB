@@ -1,0 +1,2 @@
+alter table stocktake add st_prod_id product;
+

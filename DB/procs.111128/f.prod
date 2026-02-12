@@ -1,0 +1,4 @@
+alter table prod_profile add original_stock_on_hand qty;
+alter table prod_profile add original_cost double precision ;
+alter table prod_profile add original_date last_update_date;
+

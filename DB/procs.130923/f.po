@@ -1,0 +1,3 @@
+alter table pick_order add zone_c code_two;
+alter table pick_order_dx add zone_c code_two;
+

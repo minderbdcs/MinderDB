@@ -1,0 +1,14 @@
+grn
+	pallets_yn should hold the code for the pallet owner
+		in tran UGHP reference updates the pallets_yn 
+	
+pick order and line cancel's
+	allow cancel (and delete) of DX lines
+	which are for services
+	(these have No pick item details)
+=============================================================
+done
+pkol
+	I or B
+	split can use the grn based numering for the next issn ssn_id
+

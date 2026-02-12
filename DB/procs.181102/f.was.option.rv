@@ -1,0 +1,4 @@
+update or insert  into options(group_code,code,description, description2) 
+values('LOCATION_HR','RV','HR for RV',
+ "'['||WH_ID||'-'||SUBSTRING(LOCN_ID FROM 1 FOR 2)||'-'||SUBSTRING(LOCN_ID FROM 3 FOR 2)||'-'||SUBSTRING(LOCN_ID FROM 5 FOR 2)||'-'||
+SUBSTRING(LOCN_ID FROM 7 FOR 2)||']'");

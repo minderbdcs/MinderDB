@@ -1,0 +1,28 @@
+739:CREATE DOMAIN "YEAR" AS VARCHAR(4);
+1318:        "YEAR" "YEAR", in depreciation
+7273:        "COMMENT" CODE_255, in transaction_types
+
+=========================================
+create procedure to remove duplicate record_id in ssn_hist at apcd
+then have to add primary key
+=========================================
+
+7751:DECLARE EXTERNAL FUNCTION "LOWER"
+lower in 
+run_transaction_pkca
+run_transaction_pkcn
+run_transaction_pkco
+run_transaction_pkao
+change to use vlower
+then remove function lower
+then change to use lower internal function
+=========================================
+365 CREATE TABLE SYS_HH (USER_TYPE CODE_TWO NOT NULL,
+# have updated the /test_export record to be usertype TR
+# so make user_type primary key
+430 CREATE TABLE TRANSACTION_TYPES (SEQ INTEGER,
+# he has put some comments here, but essentialy unique by trn_type,seq
+6 CREATE TABLE LOG (SEQ INTEGER,
+# unique by seq
+411 CREATE TABLE TERMS (TERM VARCHAR(20));
+#unique by term

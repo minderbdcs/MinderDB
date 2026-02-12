@@ -1,0 +1,176 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+ALTER PROCEDURE PC_STLO (RECORD_ID INTEGER,
+WH_ID CHAR(2) CHARACTER SET NONE,
+LOCN_ID VARCHAR(10) CHARACTER SET NONE,
+DEVICE VARCHAR(10) CHARACTER SET NONE,
+TRN_DATE TIMESTAMP)
+AS 
+DECLARE VARIABLE LOCN_EXIST INTEGER;
+  DECLARE VARIABLE WH_EXIST INTEGER;    
+  DECLARE VARIABLE LOCN_NAME VARCHAR(50); 
+  DECLARE VARIABLE LOCN_STAT CHAR(2); 
+  DECLARE VARIABLE LOCN_OWNER VARCHAR(10); 
+  DECLARE VARIABLE COUNT_ISSN_IN_LOCN INTEGER;
+
+BEGIN
+  LOCN_EXIST = 0;   
+  WH_EXIST = 0;
+  COUNT_ISSN_IN_LOCN = 0;
+  LOCN_NAME = LEFTS(LOCN_ID || ' Created during audit ' || :TRN_DATE,50);
+
+  /* Check if Location exists */
+  LOCN_EXIST = 0;
+  SELECT 1,LOCN_STAT,LOCN_OWNER
+  FROM LOCATION
+  WHERE WH_ID = :WH_ID
+  AND LOCN_ID = :LOCN_ID 
+  INTO :LOCN_EXIST, :LOCN_STAT, :LOCN_OWNER;  
+  
+  
+  /* Location exists, then update transaction and Last_Audited */
+  IF (LOCN_EXIST <> 0) THEN
+  BEGIN  
+       IF (LOCN_STAT = "OK") THEN
+       BEGIN
+
+            /* TRACK 216
+            ASK GLEN if WHERE CLAUSE RELATED TO AUDIT IS NOT NULL CORRECT? BECAUSE I BELIEVE
+            THAT if (AUDIT IS NOT NULL) then THE ISSN IS UNDERGOING SOME AUDIT PROCESS AND HENCE SHOULD
+            NOT BE CONSIDERED. REFER THIS TO GLEN... */
+              SELECT COUNT(*) FROM ISSN
+              WHERE LOCN_ID = :LOCN_ID
+              AND WH_ID = :WH_ID
+              INTO :COUNT_ISSN_IN_LOCN;
+              
+               
+               UPDATE ISSN
+               SET AUDITED = 'M', AUDIT_DATE = :TRN_DATE
+               WHERE WH_ID = :WH_ID
+               AND LOCN_ID = :LOCN_ID;
+               
+               /* END OF TRACK 216 */
+       
+              /* Update Last_Audited in LOCATION table */
+              UPDATE LOCATION
+              SET LAST_AUDITED_DATE = :TRN_DATE,
+                  LOCN_STAT = 'ST',
+                  LOCN_OWNER = :DEVICE
+              WHERE WH_ID = :WH_ID
+              AND LOCN_ID = :LOCN_ID;
+              
+                             /* Update transactions table */
+               UPDATE TRANSACTIONS
+               SET COMPLETE = 'T', ERROR_TEXT = 'Processed successfully' || '|' || :COUNT_ISSN_IN_LOCN || '|'
+               WHERE RECORD_ID = :RECORD_ID;
+
+       END
+       ELSE
+       BEGIN
+               IF (LOCN_STAT = 'ST' AND LOCN_OWNER = DEVICE) THEN
+               BEGIN
+                  /* TRACK 216
+            ASK GLEN if WHERE CLAUSE RELATED TO AUDIT IS NOT NULL CORRECT? BECAUSE I BELIEVE
+            THAT if (AUDIT IS NOT NULL) then THE ISSN IS UNDERGOING SOME AUDIT PROCESS AND HENCE SHOULD
+            NOT BE CONSIDERED. REFER THIS TO GLEN... */
+            
+            /* I THINK THERE COULD BE A CASE WHERE IN THE LOCN_STAT = 'ST' AND USER TRIES TO INITIATE STOCK TAKE AGAIN
+            MAYBE MORE RECORDS HAVE BEEN ADDED TO THE LOCN BY THEN.. AND THIS TIME EVEN THOUGH THE STATUS IS OF THE LOCATION IS UNDER STOCKTAKE
+            WE WOULD LIKE TO UPDATE THE PENDING ISSN WITH AUDITED = 'M' AS PER GLENS 216 TRACK NUMBER */
+              SELECT SUM(CURRENT_QTY) FROM ISSN
+              WHERE LOCN_ID = :LOCN_ID
+              AND WH_ID = :WH_ID
+              INTO :COUNT_ISSN_IN_LOCN;
+
+
+               UPDATE ISSN
+               SET AUDITED = 'M', AUDIT_DATE = :TRN_DATE
+               WHERE WH_ID = :WH_ID
+               AND LOCN_ID = :LOCN_ID;
+
+               /* END OF TRACK 216 */
+                       /* Update transactions table */
+                       UPDATE TRANSACTIONS
+                       SET COMPLETE = 'T', ERROR_TEXT = 'Processed successfully'
+                       || '|'  || :COUNT_ISSN_IN_LOCN || '|'
+                       WHERE RECORD_ID = :RECORD_ID; 
+               END
+               ELSE
+               BEGIN
+                       /* Update transactions table */
+                       UPDATE TRANSACTIONS
+                       SET COMPLETE = 'F', ERROR_TEXT = 'Cannot Stocktake - Not an Open Location'
+                       WHERE RECORD_ID = :RECORD_ID; 
+       
+               END
+       END
+  END
+  ELSE
+  BEGIN
+        /* Check WH_ID */     
+       WH_EXIST = 0;
+       SELECT 1 
+       FROM WAREHOUSE
+       WHERE WH_ID = :WH_ID       
+       INTO :WH_EXIST; 
+
+       IF (WH_EXIST <> 0) THEN
+       BEGIN
+              /* Add new Location record */
+              INSERT INTO LOCATION (LOCN_ID, WH_ID, LOCN_NAME, LAST_AUDITED_DATE,LOCN_STAT,LOCN_OWNER)
+              VALUES (:LOCN_ID, :WH_ID, :LOCN_NAME, :TRN_DATE,'ST',:DEVICE);
+
+              /* Update transactions table */
+              UPDATE TRANSACTIONS
+              SET COMPLETE = 'T', ERROR_TEXT = 'New location created'
+              WHERE RECORD_ID = :RECORD_ID; 
+       END
+       ELSE
+       BEGIN
+              /* Update transactions table */
+              UPDATE TRANSACTIONS
+              SET COMPLETE = 'F', ERROR_TEXT = 'Warehouse master not found'
+              WHERE RECORD_ID = :RECORD_ID;
+       END    
+  END
+END ^
+
+
+DROP TRIGGER RUN_TRANSACTION_STLO ^
+COMMIT^
+
+CREATE TRIGGER RUN_TRANSACTION_STLO FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 74 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'STLO') THEN
+  BEGIN
+   /* open last stocktake location for device */
+   EXECUTE PROCEDURE PC_STLX 
+    NEW.RECORD_ID ,
+    NEW.WH_ID,
+    NEW.LOCN_ID,
+    NEW.DEVICE_ID,
+    NEW.TRN_DATE;
+   /* start stocktake of location for device */
+   EXECUTE PROCEDURE PC_STLO 
+    NEW.RECORD_ID ,
+    NEW.WH_ID,
+    NEW.LOCN_ID,
+    NEW.DEVICE_ID,
+    NEW.TRN_DATE;
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+  END
+ END
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

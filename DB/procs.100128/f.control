@@ -1,0 +1,8 @@
+create domain due_date_days integer;
+
+COMMENT ON DOMAIN       due_date_days IS 'Used to Calculate a Default Due Date for Orders 
+Null or 0 means NOW 
+Otherwise the Number of days From NOW 
+';
+
+alter table control add default_due_date_days due_date_days;

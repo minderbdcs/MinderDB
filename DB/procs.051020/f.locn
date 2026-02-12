@@ -1,0 +1,4 @@
+insert into options(group_code, code, description) values('LOC_ST_AR','AR','Archive');
+
+insert into sys_moves(from_status,into_status,update_flag,move_allowed) values('ST','AR','T','T');
+insert into sys_moves(from_status,into_status,update_flag,move_allowed) values('AR','ST','T','T');

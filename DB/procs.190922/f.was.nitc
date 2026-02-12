@@ -1,0 +1,118 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+
+CREATE OR ALTER  TRIGGER RUN_TRANSACTION_NITC FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 145 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_SSN VARCHAR(30);
+/* DECLARE VARIABLE WK_REFERENCE VARCHAR(40); */
+DECLARE VARIABLE WK_REFERENCE VARCHAR(1024);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_TRN_CODE CHAR(1);
+DECLARE VARIABLE WK_TRN_TYPE VARCHAR(4);
+DECLARE VARIABLE WK_TEST_DATE_X VARCHAR(40);
+DECLARE VARIABLE WK_TEST_DATE_FMT VARCHAR(40);
+DECLARE VARIABLE WK_TEST_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PASSED CHAR(1);
+DECLARE VARIABLE WK_STATUS CHAR(2);
+DECLARE VARIABLE WK_GLOBAL VARCHAR(40);
+DECLARE VARIABLE WK_AUDIT_DESC VARCHAR(40) ;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF (NEW.TRN_TYPE = 'NITC') THEN
+      BEGIN
+         WK_DEVICE = NEW.DEVICE_ID;
+         WK_WH_ID = NEW.WH_ID;
+         WK_LOCN_ID = NEW.LOCN_ID;
+         WK_USER = NEW.PERSON_ID;
+         WK_SSN = NEW.OBJECT;
+         WK_REFERENCE = NEW.REFERENCE;
+         WK_QTY = NEW.QTY;
+         WK_DATE = NEW.TRN_DATE;
+         WK_RECORD = NEW.RECORD_ID;
+         WK_TRN_CODE = NEW.TRN_CODE;
+         WK_TRN_TYPE = NEW.TRN_TYPE;
+         WK_TEST_DATE_X = '';
+         WK_TEST_DATE_FMT = '';
+	/* object = ssn
+	   locn and wh_id for where
+	   reference = 'timestamp|' or 
+	               '' -> failed test
+	               'timestamp|date format|' for different timestamp
+	   update ssn's loan_safety_calibrate_date
+	                loan_status ='XS' if failed test
+	                other2 -> global conditions description for '2'
+                                  'P' or 'F' for failed
+           what about pick order of type for 'LC'
+	*/
+/*
+         EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 1  RETURNING_VALUES :WK_TEST_DATE_X ; 
+         EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 2  RETURNING_VALUES :WK_TEST_DATE_FMT ; 
+*/
+         SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 1, '|' ) INTO :WK_TEST_DATE_X ;
+         SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 2, '|' ) INTO :WK_TEST_DATE_FMT ;
+         WK_TEST_DATE_X = ALLTRIM(WK_TEST_DATE_X); 
+         WK_TEST_DATE_FMT = ALLTRIM(WK_TEST_DATE_FMT); 
+         IF (WK_TEST_DATE_FMT = '') THEN
+         BEGIN
+            WK_TEST_DATE_FMT = 'YYYY/MM/DD HH:MM:SS';
+         END
+         WK_TEST_DATE  = WK_DATE;
+         IF (WK_TEST_DATE_X = '') THEN
+         BEGIN
+            /* failed test */
+            WK_PASSED = 'F';
+            WK_STATUS = 'XS';
+         END
+         ELSE
+         BEGIN
+            /* passed test */
+            WK_PASSED = 'P';
+            WK_STATUS = 'PS';
+         END
+         IF (WK_TEST_DATE_FMT = 'YYYY/MM/DD HH:MM:SS') THEN
+         BEGIN
+            WK_TEST_DATE = CAST(WK_TEST_DATE_X AS TIMESTAMP);
+            WK_PASSED = 'P';
+         END
+         EXECUTE PROCEDURE GET_GLOBAL_CONDITION 2, :WK_PASSED RETURNING_VALUES :WK_GLOBAL;
+         IF (WK_PASSED = 'P') THEN
+         BEGIN
+            UPDATE SSN
+            SET OTHER2 = :WK_GLOBAL,
+                LOAN_LAST_CALIBRATE_CHECK_DATE = :WK_TEST_DATE
+            WHERE SSN_ID = :WK_SSN;
+         END
+         ELSE
+         BEGIN
+            UPDATE SSN
+            SET OTHER2 = :WK_GLOBAL,
+                LOAN_STATUS = :WK_STATUS
+            WHERE SSN_ID = :WK_SSN;
+         END
+         WK_AUDIT_DESC = ' Calibration Test '  ;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:WK_WH_ID, :WK_LOCN_ID, :WK_SSN, 
+                       :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                       :WK_AUDIT_DESC , :WK_REFERENCE, :WK_QTY, :WK_USER, :WK_DEVICE); 
+         EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+         /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+      END
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,7 @@
+select * from param;
+update param set max_length=12 where data_id='BARCODE';
+update param set max_length=12,data_expression='[A-Z0-9][A-Z0-9][0-9]*' where data_id='BARCODE';
+update param set max_length=12,data_expression='[A-Z0-9]*' where data_id='BARCODE';
+update param set max_length=8,data_expression='[0-9]*' where data_id='ALTBARCODE';
+update param set max_length=8,data_expression='[0-9]*',fixed_length='T',symbology_prefix=']C0;;' where data_id='ALTBARCODE';
+select * from param;

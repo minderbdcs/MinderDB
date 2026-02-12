@@ -1,0 +1,5 @@
+insert into module(module_id, module_sub_type, description, enabled) values('WM','WM','DELPHIWM','T');
+insert into module(module_id, module_sub_type, description, enabled) values('OM','OM','DELPHIOM','T');
+insert into module(module_id, module_sub_type, description, enabled) values('AM','AM','DELPHIAM','T');
+insert into module(module_id, module_sub_type, description, enabled) values('RM','RM','DELPHIRM','T');
+insert into module(module_id, module_sub_type, description, enabled) values('AU','AU','DELPHIAU','T');

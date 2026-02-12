@@ -1,0 +1,69 @@
+ALTER INDEX  INVOICE_LINE_INV_NO_IDX  INACTIVE;
+ALTER INDEX  INVOICE_LINE_INV_ID_IDX  INACTIVE;
+DROP  INDEX  INVOICE_LINE_INV_NO_IDX  ;
+DROP  INDEX  INVOICE_LINE_INV_ID_IDX  ;
+
+DROP   TRIGGER ADD_PICK_INVOICE_LINE ;
+DROP   TRIGGER UPD_PICK_INVOICE_LINE  ;
+commit;
+
+alter table pick_invoice_line alter invoice_no                 to invline_invoice_no;
+alter table pick_invoice_line alter invoice_id                 to invline_invoice_id;
+alter table pick_invoice_line alter invoice_exported_date      to invline_exported_date;
+alter table pick_invoice_line alter invoice_line_type          to invline_line_type    ;
+alter table pick_invoice_line alter invoiced_qty               to invline_qty          ;
+alter table pick_invoice_line alter invoice_sale_price         to invline_sale_price          ;
+alter table pick_invoice_line alter invoice_discount           to invline_discount            ;
+alter table pick_invoice_line alter invoice_line_total         to invline_line_total          ;
+alter table pick_invoice_line alter invoice_tax_rate           to invline_tax_rate            ;
+alter table pick_invoice_line alter invoice_unit_cost          to invline_unit_cost           ;
+alter table pick_invoice_line alter legacy_ledger_code         to invline_legacy_ledger_code  ;
+alter table pick_invoice_line alter created_date               to invline_created_date        ;
+alter table pick_invoice_line alter created_by                 to invline_created_by          ;
+alter table pick_invoice_line alter last_update_date           to invline_update_date        ;
+alter table pick_invoice_line alter last_updated_by            to invline_updated_by          ;
+
+alter table pick_invoice_line add   invline_pick_order pick_order     ;
+alter table pick_invoice_line add   invline_pick_label_no pick_label_no  ;
+
+alter table pick_invoice_line drop invoice_pick_id                       ;
+alter table pick_invoice_line drop invoice_pick_type                     ;
+
+commit;
+
+/*
+cannot do this generally since each db has a differing constraint no
+ alter table pick_invoice_line alter invoice_line_id            to invline_line_id; 
+*/
+
+alter table pick_invoice_line add   invline_total_cost         numeric(13,4)  ;
+
+alter table pick_invoice_line alter invline_invoice_no         position 2;
+alter table pick_invoice_line alter invline_pick_order         position 3 ;
+alter table pick_invoice_line alter invline_pick_label_no      position 4 ;
+alter table pick_invoice_line alter invline_exported_date      position 5 ;
+alter table pick_invoice_line alter invline_line_type          position 6 ;
+alter table pick_invoice_line alter invline_qty                position 7 ;
+alter table pick_invoice_line alter invline_sale_price         position 8 ;
+alter table pick_invoice_line alter invline_discount           position 9 ;
+alter table pick_invoice_line alter invline_line_total         position 10 ;
+alter table pick_invoice_line alter invline_tax_rate           position 11 ;
+alter table pick_invoice_line alter invline_unit_cost          position 12 ;
+
+alter table pick_invoice_line alter invline_total_cost         position 13 ;
+
+alter table pick_invoice_line alter invline_legacy_ledger_code position 14 ;
+alter table pick_invoice_line alter invline_created_date       position 15 ;
+alter table pick_invoice_line alter invline_created_by         position 16 ;
+alter table pick_invoice_line alter invline_update_date        position 17 ;
+alter table pick_invoice_line alter invline_updated_by         position 18 ;
+alter table pick_invoice_line alter invline_invoice_id         position 19 ;
+
+commit;
+
+alter table pick_invoice_line add   invline_line_id integer not null  ;
+
+alter table pick_invoice_line alter invoice_line_id            position 6 ;
+alter table pick_invoice_line alter invline_line_id            position 1 ;
+
+

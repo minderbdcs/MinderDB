@@ -1,0 +1,52 @@
+                                  IF (OBJECT = strSSN) THEN
+                                  BEGIN
+                                        UPDATE SSN
+                                        SET WH_ID = :WH_ID, LOCN_ID = :LOCN_ID, INTO_DATE = :TRN_DATE,
+                                            AUDITED = 'C', GRN = :strNewGRN, AUDIT_DATE = :TRN_DATE, AUDITED_QTY = :QTY, CURRENT_QTY = CURRENT_QTY + :diff_qty
+                                        WHERE SSN_ID = :strSSN;
+                                  END
+                                  ELSE
+                                  BEGIN
+                                        UPDATE SSN
+                                        SET CURRENT_QTY = CURRENT_QTY + :diff_qty  
+                                        WHERE SSN_ID = :strSSN;
+                                  END
+                                  strAUDIT_DESC = "Item found in different location";  
+                            END
+                            ELSE
+                            BEGIN
+                                  strAUDIT_DESC = "Item found in different location Past";  
+                            END
+                      END
+                      ELSE
+                      BEGIN                           
+                            /* object found in expected location, upload object found */
+                            IF (last_date < TRN_DATE) THEN
+                            BEGIN
+                                  UPDATE ISSN
+                                  SET INTO_DATE = :TRN_DATE,
+                                      CURRENT_QTY = :QTY,
+                                      AUDITED = 'F'
+                                  WHERE SSN_ID = :OBJECT;
+                                  IF (OBJECT = strSSN) THEN
+                                  BEGIN
+                                        UPDATE SSN
+                                        SET INTO_DATE = :TRN_DATE, AUDITED = 'F',  
+                                            GRN = :strNewGRN, AUDIT_DATE = :TRN_DATE, AUDITED_QTY = :QTY, CURRENT_QTY = CURRENT_QTY + :diff_qty
+                                        WHERE SSN_ID = :strSSN;
+                                  END
+                                  ELSE
+                                  BEGIN
+                                        UPDATE SSN
+                                        SET CURRENT_QTY = CURRENT_QTY + :diff_qty
+                                        WHERE SSN_ID = :strSSN;
+                                  END
+                                  strAUDIT_DESC = "Item found in correct location";
+                            END
+                            ELSE
+                            BEGIN
+
+                                  strAUDIT_DESC = "Item found in correct location Past";
+                            END
+                      END
+                END

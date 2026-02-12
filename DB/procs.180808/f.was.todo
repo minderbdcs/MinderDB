@@ -1,0 +1,11 @@
+add fields for austpost api's
+
+============================================================
+
+carrier service code x50 from 4 = will break dsot and dsst trn_data layout.
+ seperate the fields by |
+
+in carrier have default_service_type code_6 holds a code or record id.
+in carrier_service have service_type service_type 
+in pick_despatch have pickd_service_type and pickd_prev_service_type type service_type
+

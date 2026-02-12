@@ -1,0 +1,12 @@
+add to transactions and transactions_archive
+	company_id
+	prod_id
+
+then to add_tran and add_tran_response the 2 new fields
+
+In import of prod_profile have the legacy qty
+	then a transaction to add the ssn's and issn's for the qty
+	then zero the legacy qty
+=======================================================================================
+#create grn_dx for archiving
+

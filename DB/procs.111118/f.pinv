@@ -1,0 +1,531 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_PINV FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 153 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_RECORD  INTEGER;
+DECLARE VARIABLE WK_INVOICE_NO VARCHAR(10);
+DECLARE VARIABLE WK_OBJECT  VARCHAR(30);
+DECLARE VARIABLE WK_CLASS CHAR(1);
+DECLARE VARIABLE WK_REF  VARCHAR(255);
+DECLARE VARIABLE WK_WH_ID  VARCHAR(2);
+DECLARE VARIABLE WK_LOCN_ID  VARCHAR(10);
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_DEVICE VARCHAR(2);
+
+DECLARE VARIABLE WK_NEW_INVOICE CHAR(1);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_INVOICE_TYPE CHAR(2);
+DECLARE VARIABLE WK_PRINTER_ID CHAR(2);
+DECLARE VARIABLE WK_OUTPUT_TYPE VARCHAR(4);
+DECLARE VARIABLE WK_DO_INVOICE CHAR(1);
+DECLARE VARIABLE WK_INVOICE_ID INTEGER;
+
+DECLARE VARIABLE WK_SO  VARCHAR(10);
+DECLARE VARIABLE WK_SO_LEGACY_LEDGER_ADMIN_FEE    VARCHAR(40) ;
+DECLARE VARIABLE WK_SO_LEGACY_LEDGER_FREIGHT      VARCHAR(40) ;
+DECLARE VARIABLE WK_SO_LEGACY_LEDGER_DEPOSIT      VARCHAR(40) ;
+DECLARE VARIABLE WK_SO_SUB_TOTAL_AMOUNT           DOUBLE PRECISION;
+DECLARE VARIABLE WK_SO_SUB_TOTAL_TAX              DOUBLE PRECISION;
+DECLARE VARIABLE WK_SO_FREIGHT                    DOUBLE PRECISION;
+DECLARE VARIABLE WK_SO_FREIGHT_TAX_AMOUNT         DOUBLE PRECISION;
+DECLARE VARIABLE WK_SO_ADMIN_FEE_RATE             DOUBLE PRECISION ;
+DECLARE VARIABLE WK_SO_ADMIN_FEE_AMOUNT           DOUBLE PRECISION;
+DECLARE VARIABLE WK_SO_ADMIN_TAX_AMOUNT           DOUBLE PRECISION;
+DECLARE VARIABLE WK_SO_TAX_RATE                   DOUBLE PRECISION ;
+DECLARE VARIABLE WK_SO_TAX_AMOUNT                 DOUBLE PRECISION;
+DECLARE VARIABLE WK_SO_DUE_AMOUNT                 DOUBLE PRECISION;
+DECLARE VARIABLE WK_SO_AMOUNT_PAID                DOUBLE PRECISION;
+DECLARE VARIABLE WK_SO_COMPANY_ID                 VARCHAR(20);
+DECLARE VARIABLE WK_SO_WH_ID                      VARCHAR(2);
+DECLARE VARIABLE WK_SO_SHIPPING_METHOD            VARCHAR(10);
+DECLARE VARIABLE WK_SO_FREIGHT_EVERY_INVOICE      VARCHAR(1);
+DECLARE VARIABLE WK_SO_LAST_INVOICE_DATE          TIMESTAMP;
+
+DECLARE VARIABLE WK_PD_DESPATCH_ID                INTEGER;
+DECLARE VARIABLE WK_PD_AWB_CONSIGNMENT_NO         VARCHAR(30);
+DECLARE VARIABLE WK_PI_1ST_DESPATCH_ID            INTEGER;
+DECLARE VARIABLE WK_PI_1ST_AWB_CONSIGNMENT_NO     VARCHAR(30);
+DECLARE VARIABLE WK_PI_LABEL_NO                   VARCHAR(10);
+DECLARE VARIABLE WK_DETAIL_ID                     INTEGER;
+DECLARE VARIABLE WK_LABEL_QTY                     INTEGER;
+DECLARE VARIABLE WK_PI2_INV_TOTAL_AMOUNT          DOUBLE PRECISION; 
+
+DECLARE VARIABLE WK_RES                           INTEGER;
+DECLARE VARIABLE WK_BUFFER                        VARCHAR(1024);
+
+DECLARE VARIABLE WK_ERROR_TEXT                    VARCHAR(255);
+DECLARE VARIABLE WK_FIELD_NO                      INTEGER;
+DECLARE VARIABLE WK_TRN_DELIMITER                 CHAR(1);
+DECLARE VARIABLE WK_REF_CMD                       VARCHAR(255);
+DECLARE VARIABLE WK_WORK_END                      CHAR(1);
+DECLARE VARIABLE WK_WORK_FIELD                    VARCHAR(255);
+DECLARE VARIABLE WK_WORK_LABEL                    VARCHAR(255);
+DECLARE VARIABLE WK_WORK_DATA                     VARCHAR(255);
+DECLARE VARIABLE WK_OP_DESC                       VARCHAR(50);
+DECLARE VARIABLE WK_OP_TABLE                      VARCHAR(50);
+DECLARE VARIABLE WK_OP_FIELD                      VARCHAR(50);
+
+DECLARE VARIABLE WK_IN_STATUS                     VARCHAR(2) ;
+DECLARE VARIABLE WK_LOG_FILENAME                  VARCHAR(80) ;
+DECLARE VARIABLE WK_LOG_RESULT                    INTEGER;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PINV') THEN
+  BEGIN
+     WK_LOG_FILENAME = '/tmp/pinv.log';
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'start pinv ');
+     WK_CLASS = NEW.TRN_CODE;
+     /* has values C create P print E export U update */ 
+     WK_INVOICE_NO = NEW.SUB_LOCN_ID;
+     WK_OBJECT = NEW.OBJECT;
+     WK_LABEL_QTY = NEW.QTY;
+     /* what do I do with this - since I dont send off any requests for copyes of label */
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     WK_RECORD = NEW.RECORD_ID; 
+     WK_DATE = NEW.TRN_DATE;
+     WK_USER = NEW.PERSON_ID;
+     WK_REF = NEW.REFERENCE;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'got params ');
+     WK_DO_INVOICE  = 'F';
+     SELECT USE_INVOICE FROM CONTROL INTO :WK_DO_INVOICE ;
+     IF (WK_DO_INVOICE IS NULL) THEN
+     BEGIN 
+        WK_DO_INVOICE = 'F';
+     END
+     IF (WK_DO_INVOICE <> 'T') THEN
+     BEGIN 
+        UPDATE TRANSACTIONS SET COMPLETE='T',ERROR_TEXT='| Cannot Invoice :Invoicing Turned Off' WHERE RECORD_ID = :WK_RECORD;
+        WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'no invoicing allowed ');
+        EXIT;
+     END
+     WK_PI_1ST_DESPATCH_ID = NULL;
+     WK_PI_1ST_AWB_CONSIGNMENT_NO = NULL;
+     WK_SO_LAST_INVOICE_DATE  = NULL;
+     WK_SO_FREIGHT_EVERY_INVOICE = NULL;
+
+     IF ((WK_CLASS = 'C') OR (WK_CLASS = 'U')) THEN
+     BEGIN
+        /* create */
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_OBJECT, 1  RETURNING_VALUES :WK_SO ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_OBJECT, 2  RETURNING_VALUES :WK_INVOICE_TYPE ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_OBJECT, 3  RETURNING_VALUES :WK_PRINTER_ID   ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_OBJECT, 4  RETURNING_VALUES :WK_OUTPUT_TYPE ; 
+        WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'got params from object ');
+        IF (WK_INVOICE_NO IS NULL) THEN
+        BEGIN
+           WK_INVOICE_NO = '';
+        END
+        WK_NEW_INVOICE = 'F';
+        IF (WK_INVOICE_NO = '') THEN
+        BEGIN
+           WK_NEW_INVOICE = 'T';
+           /* calculate the next invoice no to use */
+           EXECUTE PROCEDURE  GET_PICK_INVOICE_NO RETURNING_VALUES :WK_INVOICE_NO ;
+           WK_INVOICE_ID = GEN_ID(PICK_INVOICE_ID_GEN,1); 
+        END
+        ELSE
+        BEGIN
+           SELECT FIRST 1 INVOICE_ID 
+           FROM PICK_INVOICE
+           WHERE INVOICE_NO = :WK_INVOICE_NO
+           AND   INVOICE_TYPE = :WK_INVOICE_TYPE
+           INTO WK_INVOICE_ID; 
+           IF (WK_INVOICE_ID IS NULL) THEN
+           BEGIN
+              WK_NEW_INVOICE = 'T';
+              WK_INVOICE_ID = GEN_ID(PICK_INVOICE_ID_GEN,1); 
+           END
+        END
+        WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'about to get defaults from order ');
+        SELECT
+           LEGACY_LEDGER_ADMIN_FEE_CODE,  
+           LEGACY_LEDGER_FREIGHT_CODE,   
+           LEGACY_LEDGER_DEPOSIT_CODE,  
+           SUB_TOTAL_AMOUNT,          
+           /* SUB_TOTAL_TAX, */         
+           FREIGHT,                 
+           FREIGHT_TAX_AMOUNT,     
+           ADMIN_FEE_RATE,        
+           ADMIN_FEE_AMOUNT,    
+           /* ADMIN_TAX_AMOUNT, */
+           TAX_RATE,          
+           TAX_AMOUNT,       
+           DUE_AMOUNT,      
+           AMOUNT_PAID,
+           COMPANY_ID,
+           WH_ID,   
+           ADMIN_FEE_TAX_AMOUNT,
+           FREIGHT_EVERY_INVOICE,
+           LAST_INVOICE_DATE
+           FROM PICK_ORDER
+           WHERE PICK_ORDER = :WK_SO
+           INTO 
+              :WK_SO_LEGACY_LEDGER_ADMIN_FEE,  
+              :WK_SO_LEGACY_LEDGER_FREIGHT,   
+              :WK_SO_LEGACY_LEDGER_DEPOSIT,  
+              :WK_SO_SUB_TOTAL_AMOUNT,          
+              /* :WK_SO_SUB_TOTAL_TAX, */           
+              :WK_SO_FREIGHT,                 
+              :WK_SO_FREIGHT_TAX_AMOUNT,     
+              :WK_SO_ADMIN_FEE_RATE,        
+              :WK_SO_ADMIN_FEE_AMOUNT,    
+              /* :WK_SO_ADMIN_TAX_AMOUNT, */
+              :WK_SO_TAX_RATE,          
+              :WK_SO_TAX_AMOUNT,       
+              :WK_SO_DUE_AMOUNT,      
+              :WK_SO_AMOUNT_PAID,
+              :WK_SO_COMPANY_ID,
+              :WK_SO_WH_ID,
+              :WK_SO_ADMIN_TAX_AMOUNT,   
+              :WK_SO_FREIGHT_EVERY_INVOICE,
+              :WK_SO_LAST_INVOICE_DATE;
+        WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'got defaults from order ');
+        WK_IN_STATUS = 'NC';
+        WK_SO_SUB_TOTAL_TAX = 0; /* from the lines in pick_invoice_lines ie in pick_item_detail that we include */
+        IF (WK_SO_FREIGHT_EVERY_INVOICE IS NULL) THEN
+        BEGIN
+           WK_SO_FREIGHT_EVERY_INVOICE = 'F';
+        END
+        IF ( (WK_SO_FREIGHT_EVERY_INVOICE  = 'F') AND (WK_SO_LAST_INVOICE_DATE IS NOT NULL) ) THEN
+        BEGIN
+           /* secondary invoice so clear the freight */
+           WK_SO_FREIGHT = NULL;
+           WK_SO_FREIGHT_TAX_AMOUNT = NULL;
+        END
+/*
+>>>>    whats this 
+        WK_SO_ADMIN_TAX_AMOUNT = WK_SO_ADMIN_FEE_AMOUNT * WK_SO_TAX_RATE; 
+*/
+        /* WK_PI2_INV_TOTAL_AMOUNT = WK_SO_DUE_AMOUNT - WK_SO_DEPOSIT_AMOUNT_PAID; */
+        WK_PI2_INV_TOTAL_AMOUNT = WK_SO_DUE_AMOUNT  ; 
+        /*
+        now for groups in the reference field
+        split the code=value out
+        lookup the code in the options table
+        gives the field to be populated
+        */
+         WK_FIELD_NO = 1;
+         WK_WORK_END = 'F';
+         WK_TRN_DELIMITER = '|';
+         WHILE (WK_WORK_END = 'F') DO
+         BEGIN
+            SELECT WK_FIELD_TEXT , WK_AT_END
+            FROM GET_REFERENCE_FIELD4 (NEW.REFERENCE, :WK_FIELD_NO, :WK_TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD, :WK_WORK_END;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '=')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            SELECT DESCRIPTION
+            FROM OPTIONS
+            WHERE GROUP_CODE = 'REF_CODE'
+            AND CODE = :WK_WORK_LABEL
+            INTO :WK_OP_DESC;
+            IF (WK_OP_DESC IS NULL) THEN
+            BEGIN
+               WK_OP_DESC = '';
+            END
+            IF (WK_OP_DESC <> '') THEN
+            BEGIN
+               SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+               FROM GET_DATA_REFERENCE_FIELD4 (:WK_OP_DESC, '.')
+               INTO :WK_OP_TABLE, :WK_OP_FIELD;
+               /* WK_REF_CMD = WK_REF_CMD || WK_OP_DESC || " = '" || WK_WORK_DATA || "',"; */
+               IF (WK_OP_FIELD =  'INVOICE_STATUS') THEN
+               BEGIN
+                  WK_IN_STATUS = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'LEGACY_LEDGER_ADMIN_FEE_CODE') THEN
+               BEGIN
+                  WK_SO_LEGACY_LEDGER_ADMIN_FEE  = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'LEGACY_LEDGER_FREIGHT_CODE') THEN
+               BEGIN
+                  WK_SO_LEGACY_LEDGER_FREIGHT    = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'LEGACY_LEDGER_DEPOSIT_CODE') THEN
+               BEGIN
+                  WK_SO_LEGACY_LEDGER_DEPOSIT    = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'SUB_TOTAL_AMOUNT') THEN
+               BEGIN
+                   WK_SO_SUB_TOTAL_AMOUNT = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'SUB_TOTAL_TAX') THEN
+               BEGIN
+                   WK_SO_SUB_TOTAL_TAX    = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'FREIGHT') THEN
+               BEGIN
+                   WK_SO_FREIGHT          = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'FREIGHT_TAX_AMOUNT') THEN
+               BEGIN
+                   WK_SO_FREIGHT_TAX_AMOUNT = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'ADMIN_TAX_AMOUNT') THEN
+               BEGIN
+                   WK_SO_ADMIN_TAX_AMOUNT = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'ADMIN_FEE_AMOUNT') THEN
+               BEGIN
+                   WK_SO_ADMIN_FEE_AMOUNT = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'ADMIN_FEE_RATE') THEN
+               BEGIN
+                   WK_SO_ADMIN_FEE_RATE   = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'TAX_RATE') THEN
+               BEGIN
+                   WK_SO_TAX_RATE   = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'TAX_AMOUNT') THEN
+               BEGIN
+                   WK_SO_TAX_AMOUNT = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'DUE_AMOUNT') THEN
+               BEGIN
+                   WK_SO_DUE_AMOUNT = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'AMOUNT_PAID') THEN
+               BEGIN
+                   WK_SO_AMOUNT_PAID = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INV_TOTAL_AMOUNT') THEN
+               BEGIN
+                   WK_PI2_INV_TOTAL_AMOUNT = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'COMPANY_ID') THEN
+               BEGIN
+                   WK_SO_COMPANY_ID = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'WH_ID') THEN
+               BEGIN
+                   WK_SO_WH_ID = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'SHIPPING_METHOD') THEN
+               BEGIN
+                   WK_SO_SHIPPING_METHOD = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVOICE_1ST_DESPATCH_ID') THEN
+               BEGIN
+                   IF (WK_WORK_DATA <> '') THEN
+                   BEGIN
+                      WK_PI_1ST_DESPATCH_ID = WK_WORK_DATA;
+                   END
+               END
+               IF (WK_OP_FIELD =  'INVOICE_1ST_AWB_CONSIGNMENT_NO') THEN
+               BEGIN
+                   WK_PI_1ST_AWB_CONSIGNMENT_NO = WK_WORK_DATA;
+               END
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+        WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'got values from reference ');
+
+        /* create the invoice record */
+        IF (WK_NEW_INVOICE = 'T') THEN
+        BEGIN
+           INSERT INTO PICK_INVOICE (
+              INVOICE_ID,  
+              INVOICE_NO, 
+              INVOICE_TYPE,  
+              INVOICE_STATUS,
+              PICK_ORDER,     
+              LEGACY_LEDGER_ADMIN_FEE_CODE,  
+              LEGACY_LEDGER_FREIGHT_CODE,   
+              LEGACY_LEDGER_DEPOSIT_CODE,  
+              SUB_TOTAL_AMOUNT,          
+              SUB_TOTAL_TAX,            
+              FREIGHT,                 
+              FREIGHT_TAX_AMOUNT,     
+              ADMIN_FEE_RATE,        
+              ADMIN_FEE_AMOUNT,    
+              ADMIN_TAX_AMOUNT,   
+              TAX_RATE,          
+              TAX_AMOUNT,       
+              DUE_AMOUNT,      
+              AMOUNT_PAID,    
+              INV_TOTAL_AMOUNT,      
+              CREATE_DATE,            
+              CREATED_BY,            
+              LAST_UPDATE_DATE,     
+              LAST_UPDATE_BY ,
+              COMPANY_ID,
+              WH_ID,
+              SHIPPING_METHOD)
+           VALUES (:WK_INVOICE_ID,
+                   :WK_INVOICE_NO,
+                   :WK_INVOICE_TYPE,
+                   :WK_IN_STATUS,
+                   :WK_SO,
+                   :WK_SO_LEGACY_LEDGER_ADMIN_FEE,  
+                   :WK_SO_LEGACY_LEDGER_FREIGHT,   
+                   :WK_SO_LEGACY_LEDGER_DEPOSIT,  
+                   :WK_SO_SUB_TOTAL_AMOUNT,          
+                   :WK_SO_SUB_TOTAL_TAX,            
+                   :WK_SO_FREIGHT,                 
+                   :WK_SO_FREIGHT_TAX_AMOUNT,     
+                   :WK_SO_ADMIN_FEE_RATE,        
+                   :WK_SO_ADMIN_FEE_AMOUNT,    
+                   :WK_SO_ADMIN_TAX_AMOUNT,   
+                   :WK_SO_TAX_RATE,          
+                   :WK_SO_TAX_AMOUNT,       
+                   :WK_SO_DUE_AMOUNT,      
+                   :WK_SO_AMOUNT_PAID,    
+                   :WK_PI2_INV_TOTAL_AMOUNT,      
+                   :WK_DATE,
+                   :WK_USER,
+                   :WK_DATE,
+                   :WK_USER,
+                   :WK_SO_COMPANY_ID,
+                   :WK_SO_WH_ID, 
+                   :WK_SO_SHIPPING_METHOD); 
+            WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'insert into pick_invoice  ');
+        END
+        ELSE
+        BEGIN
+           UPDATE PICK_INVOICE SET
+              INVOICE_NO =                   :WK_INVOICE_NO,
+              INVOICE_TYPE =                 :WK_INVOICE_TYPE,
+              INVOICE_STATUS =               :WK_IN_STATUS,
+              PICK_ORDER =                   :WK_SO,
+              LEGACY_LEDGER_ADMIN_FEE_CODE = :WK_SO_LEGACY_LEDGER_ADMIN_FEE,  
+              LEGACY_LEDGER_FREIGHT_CODE =   :WK_SO_LEGACY_LEDGER_FREIGHT,   
+              LEGACY_LEDGER_DEPOSIT_CODE =   :WK_SO_LEGACY_LEDGER_DEPOSIT,  
+              SUB_TOTAL_AMOUNT =             :WK_SO_SUB_TOTAL_AMOUNT,          
+              SUB_TOTAL_TAX =                :WK_SO_SUB_TOTAL_TAX,            
+              FREIGHT =                      :WK_SO_FREIGHT,                 
+              FREIGHT_TAX_AMOUNT =           :WK_SO_FREIGHT_TAX_AMOUNT,     
+              ADMIN_FEE_RATE =               :WK_SO_ADMIN_FEE_RATE,        
+              ADMIN_FEE_AMOUNT =             :WK_SO_ADMIN_FEE_AMOUNT,    
+              ADMIN_TAX_AMOUNT =             :WK_SO_ADMIN_TAX_AMOUNT,   
+              TAX_RATE =                     :WK_SO_TAX_RATE,          
+              TAX_AMOUNT =                   :WK_SO_TAX_AMOUNT,       
+              DUE_AMOUNT =                   :WK_SO_DUE_AMOUNT,      
+              AMOUNT_PAID =                  :WK_SO_AMOUNT_PAID,    
+              INV_TOTAL_AMOUNT =             :WK_PI2_INV_TOTAL_AMOUNT ,     
+              LAST_UPDATE_DATE =             :WK_DATE,
+              LAST_UPDATE_BY =               :WK_USER,
+              COMPANY_ID =                   :WK_SO_COMPANY_ID,
+              WH_ID =                        :WK_SO_WH_ID,
+              SHIPPING_METHOD =              :WK_SO_SHIPPING_METHOD
+              WHERE INVOICE_ID = :WK_INVOICE_ID;
+            WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'update pick_invoice  ');
+        END
+        /* so update /insert the pick_invoice */
+        /* now get the pick_despatches for this order
+           that are not on an invoice 
+           then put them on this invoice */
+        IF (WK_PI_1ST_AWB_CONSIGNMENT_NO = '') THEN
+        BEGIN
+           WK_PI_1ST_DESPATCH_ID = NULL;
+        END
+        IF (WK_INVOICE_TYPE = 'TI') THEN
+        BEGIN
+           FOR SELECT PD.DESPATCH_ID, PD.AWB_CONSIGNMENT_NO
+           FROM PICK_ORDER PO
+           JOIN PICK_ITEM PI ON PO.PICK_ORDER = PI.PICK_ORDER
+           JOIN PICK_ITEM_DETAIL PID ON PI.PICK_LABEL_NO = PID.PICK_LABEL_NO
+           JOIN PICK_DESPATCH PD ON PID.DESPATCH_ID = PD.DESPATCH_ID
+           WHERE PO.PICK_ORDER = :WK_SO
+           AND (PD.INVOICE_TYPE IS NULL
+                OR PD.INVOICE_TYPE = 'QT')
+           INTO :WK_PD_DESPATCH_ID, :WK_PD_AWB_CONSIGNMENT_NO
+           DO 
+           BEGIN
+              UPDATE PICK_DESPATCH
+              SET INVOICE_ID = :WK_INVOICE_ID,
+                  INVOICE_NO = :WK_INVOICE_NO,
+                  INVOICE_TYPE = :WK_INVOICE_TYPE
+              WHERE DESPATCH_ID = :WK_PD_DESPATCH_ID;
+              IF (WK_PI_1ST_DESPATCH_ID IS NULL) THEN
+              BEGIN
+                 WK_PI_1ST_DESPATCH_ID = :WK_PD_DESPATCH_ID;
+              END
+              IF (WK_PI_1ST_AWB_CONSIGNMENT_NO IS NULL) THEN
+              BEGIN
+                 WK_PI_1ST_AWB_CONSIGNMENT_NO = :WK_PD_AWB_CONSIGNMENT_NO ;
+              END
+              /* add in pick_invoice_line for this ssn_id */
+           END
+           WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'update pick_despatches ');
+        END
+        ELSE
+        BEGIN
+           FOR SELECT PD.DESPATCH_ID
+           FROM PICK_ORDER PO
+           JOIN PICK_ITEM PI ON PO.PICK_ORDER = PI.PICK_ORDER
+           JOIN PICK_ITEM_DETAIL PID ON PI.PICK_LABEL_NO = PID.PICK_LABEL_NO
+           JOIN PICK_DESPATCH PD ON PID.DESPATCH_ID = PD.DESPATCH_ID
+           WHERE PO.PICK_ORDER = :WK_SO
+           AND PD.INVOICE_TYPE IS NULL
+           INTO :WK_PD_DESPATCH_ID
+           DO 
+           BEGIN
+              UPDATE PICK_DESPATCH
+              SET INVOICE_ID = :WK_INVOICE_ID,
+                  INVOICE_NO = :WK_INVOICE_NO,
+                  INVOICE_TYPE = :WK_INVOICE_TYPE
+              WHERE DESPATCH_ID = :WK_PD_DESPATCH_ID;
+              /* add in pick_invoice_line for this ssn_id */
+           END
+        END
+        /* update the invoice for the ssns added the lines tax amount */
+        UPDATE PICK_INVOICE SET
+        SUB_TOTAL_TAX =                    :WK_SO_SUB_TOTAL_TAX ,
+        INVOICE_1ST_DESPATCH_ID =          :WK_PI_1ST_DESPATCH_ID,
+        INVOICE_1ST_AWB_CONSIGNMENT_NO  =  :WK_PI_1ST_AWB_CONSIGNMENT_NO
+        WHERE INVOICE_ID = :WK_INVOICE_ID;
+        WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'update pick_invoice  ');
+        UPDATE PICK_ORDER   SET
+        LAST_INVOICE_DATE =                :WK_DATE ,
+        LAST_INVOICE_NO =                  :WK_INVOICE_NO 
+        WHERE PICK_ORDER = :WK_SO;
+        WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'update pick_order    ');
+
+        /* WK_ERROR_TEXT = 'Created ' || :WK_INVOICE_NO || '|Processed successfully' ; */
+        IF (WK_NEW_INVOICE = 'T') THEN
+        BEGIN
+           WK_ERROR_TEXT = 'Created ' || :WK_INVOICE_NO || '|Processed successfully' ;
+        END
+        ELSE
+        BEGIN
+           WK_ERROR_TEXT = 'Updated ' || :WK_INVOICE_NO || '|Processed successfully' ;
+        END
+     END
+     ELSE
+     IF (WK_CLASS = 'E') THEN
+     BEGIN
+        /* export */
+        WK_ERROR_TEXT = 'Export but not yet ' || :WK_INVOICE_NO || '|Not Processed successfully' ;
+     END
+     ELSE
+     IF (WK_CLASS = 'P') THEN
+     BEGIN
+        /* print  but how */
+        WK_ERROR_TEXT = 'Cannot Print Here ' || :WK_INVOICE_NO || '|Run from Minder PHP' ;
+     END
+
+     UPDATE TRANSACTIONS SET COMPLETE='T',ERROR_TEXT=:WK_ERROR_TEXT WHERE RECORD_ID = :WK_RECORD;
+
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'end   pinv ');
+   /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+  END
+ END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,13 @@
+update carrier_warehouse set 
+carrier_despatch_other1='POSTCODE_DEPOT.CARRIER_02_COL_01', 
+carrier_despatch_other2='POSTCODE_DEPOT.CARRIER_02_COL_02', 
+carrier_despatch_other3='POSTCODE_DEPOT.CARRIER_02_COL_03', 
+carrier_despatch_other4='POSTCODE_DEPOT.CARRIER_02_COL_04'  
+where carrier_id='CPLEASE' and wh_id='RZ';
+update carrier_warehouse set 
+carrier_despatch_other1='POSTCODE_DEPOT.CARRIER_02_COL_01' ,
+carrier_despatch_other2='POSTCODE_DEPOT.CARRIER_02_COL_02' ,
+carrier_despatch_other3='POSTCODE_DEPOT.CARRIER_02_COL_03' ,
+carrier_despatch_other4='POSTCODE_DEPOT.CARRIER_02_COL_04'  
+where carrier_id='COURIERP' and wh_id='RZ';
+

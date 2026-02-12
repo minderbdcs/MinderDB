@@ -1,0 +1,3 @@
+CREATE DOMAIN WEIGHT_DECIMAL3 AS DECIMAL(4, 3);
+
+alter table prod_profile add pack_weight weight_decimal3;

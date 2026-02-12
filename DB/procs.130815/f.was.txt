@@ -1,0 +1,2 @@
+tifs have add_pick_from_temp 234 triggers
+

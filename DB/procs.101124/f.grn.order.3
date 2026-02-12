@@ -1,0 +1,50 @@
+alter table grn_order_cancel alter grn_label_no type grn_label_no;
+alter table grn_order_cancel add grn_parent_label_id grn_label_no;
+alter table grn_order_cancel add label_extension  code_6;
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE TRIGGER SAVE_GRN_ORDER FOR GRN_ORDER 
+ACTIVE BEFORE DELETE POSITION 0 
+AS
+BEGIN
+   INSERT INTO GRN_ORDER_CANCEL (
+        GRN  ,
+        ORDER_NO ,
+        GRN_LABEL_NO  ,
+        COMPANY_ID ,
+        SUPPLIER_ID ,
+        CREATE_DATE ,
+        CREATED_BY ,
+        LOT_NO ,
+        LOT_LINE_NO ,
+        REASON ,
+        LAST_UPDATE_DATE ,
+        CANCEL_METHOD,
+        LABEL_EXTENSION,
+        GRN_PARENT_LABEL_ID )
+   VALUES (
+        OLD.GRN  ,
+        OLD.ORDER_NO ,
+        OLD.GRN_LABEL_NO  ,
+        OLD.COMPANY_ID ,
+        OLD.SUPPLIER_ID ,
+        OLD.CREATE_DATE ,
+        OLD.CREATED_BY ,
+        OLD.LOT_NO ,
+        OLD.LOT_LINE_NO ,
+        'Record Deleted' ,
+        'NOW' ,
+        'D',
+        OLD.LABEL_EXTENSION ,
+        OLD.GRN_PARENT_LABEL_ID );
+
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,12 @@
+/*
+CREATE DOMAIN FIB$BOOLEAN AS SMALLINT
+         DEFAULT 1
+         CHECK (VALUE IN (0,1)) NOT NULL;
+*/
+CREATE DOMAIN EQUIPMENT_STATUS AS CHAR(2)
+         DEFAULT 'OK'
+         CHECK (VALUE IN ('OK','NK','CM')) NOT NULL;
+update sys_equip set equipment_status='NK' where equipment_status is NULL;
+commit;
+alter table sys_equip alter equipment_status type equipment_status;
+

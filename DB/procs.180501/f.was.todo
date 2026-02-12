@@ -1,0 +1,15 @@
+1. alter size of state to be 50 
+   ok
+2. first have done the triggers
+
+3. now the 4 procedures
+
+
+4.  mail_state is only in the person table
+
+5. then can adjust the domain - probably unless in a primary key
+
+done all that
+===================================================================
+6. want to change the dsot to produce and error when have puntuation chars in the awb_consignment no
+   including & ' " chars

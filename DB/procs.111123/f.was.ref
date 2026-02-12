@@ -1,0 +1,3 @@
+alter domain input_source type varchar(15);
+alter domain reference    type varchar(255);
+

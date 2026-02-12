@@ -1,0 +1,11 @@
+#
+for linux environment
+have file creation via the database
+have file finding via the cmdrserver using find
+
+need to extract data from the file and create a print task
+in the database have a table for a printer and format to use
+with comment lines and place holders
+create a tmp file with the place holders replaced with those in the line of the file
+and print to the system printer
+

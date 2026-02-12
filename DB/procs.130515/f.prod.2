@@ -1,0 +1,21 @@
+set echo;
+create index prod_profile_prod_idx  on prod_profile(prod_id);
+create index prod_profile_company_idx  on prod_profile(company_id,prod_id);
+update prod_profile  set company_id='ALL' where company_id is null;
+commit;
+alter table prod_profile drop constraint integ_30;
+drop index prod_profile_company_idx;
+commit;
+alter table prod_profile alter company_id to xx_company_id;
+commit;
+alter table prod_profile add company_id company not null;
+alter table prod_profile alter company_id position 4;
+commit;
+create index prod_profile_company_idx  on prod_profile(company_id,prod_id);
+commit;
+update prod_profile set company_id = xx_company_id;
+commit;
+alter table prod_profile  add constraint prod_company_primary primary key(prod_id, company_id);
+
+set echo;
+

@@ -1,0 +1,527 @@
+
+CREATE TRIGGER RUN_TRANSACTION_PILN FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 154 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_RECORD  INTEGER;
+DECLARE VARIABLE WK_OBJECT  VARCHAR(30);
+DECLARE VARIABLE WK_CLASS CHAR(1);
+DECLARE VARIABLE WK_WH_ID  VARCHAR(2);
+DECLARE VARIABLE WK_LOCN_ID  VARCHAR(10);
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_DEVICE VARCHAR(2);
+DECLARE VARIABLE WK_SUB_LOCN_ID VARCHAR(10);
+
+DECLARE VARIABLE WK_NEW_INVOICE CHAR(1);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_INVOICE_NO VARCHAR(10);
+DECLARE VARIABLE WK_INVOICE_TYPE CHAR(2);
+DECLARE VARIABLE WK_DO_INVOICE CHAR(1);
+DECLARE VARIABLE WK_INVOICE_ID INTEGER;
+DECLARE VARIABLE WK_NEW_INVOICE_LINE CHAR(1);
+
+DECLARE VARIABLE WK_SO  VARCHAR(10);
+
+DECLARE VARIABLE WK_PIL_LINE_ID                    INTEGER;
+DECLARE VARIABLE WK_PIL_LEGACY_LEDGER_CODE         VARCHAR(40) ;
+DECLARE VARIABLE WK_PIL_PICK_LABEL_NO              VARCHAR(10) ;
+DECLARE VARIABLE WK_PIL_PICK_ID                    VARCHAR(50) ;
+DECLARE VARIABLE WK_PIL_PICK_TYPE                  VARCHAR(2) ;
+DECLARE VARIABLE WK_PIL_LINE_TYPE                  VARCHAR(2) ;
+DECLARE VARIABLE WK_PIL_QTY                        DOUBLE PRECISION ;
+DECLARE VARIABLE WK_PIL_SALE_PRICE                 DOUBLE PRECISION ;
+DECLARE VARIABLE WK_PIL_DISCOUNT                   DOUBLE PRECISION ;
+DECLARE VARIABLE WK_PIL_LINE_TOTAL                 DOUBLE PRECISION ;
+DECLARE VARIABLE WK_PIL_TAX_RATE                   DOUBLE PRECISION;
+DECLARE VARIABLE WK_PIL_UNIT_COST                  DOUBLE PRECISION ;
+DECLARE VARIABLE WK_PIL_TOTAL_COST                 DOUBLE PRECISION ;
+DECLARE VARIABLE WK_PIL_UNIT_SALE                  DOUBLE PRECISION ;
+DECLARE VARIABLE WK_PIL_TAX_AMOUNT                 DOUBLE PRECISION;
+DECLARE VARIABLE WK_PIL_BACK_ORDER_QTY             INTEGER;
+DECLARE VARIABLE WK_PIL_ORDERED_QTY                INTEGER;
+DECLARE VARIABLE WK_PIL_WARRANTY_CODE              VARCHAR(20);
+
+DECLARE VARIABLE WK_PD_DESPATCH_ID INTEGER;
+DECLARE VARIABLE WK_PI_LABEL_NO VARCHAR(10);
+DECLARE VARIABLE WK_PI_PROD_ID  VARCHAR(30);
+DECLARE VARIABLE WK_PI_SSN_ID   VARCHAR(20);
+DECLARE VARIABLE WK_PI_PICK_ORDER_QTY              INTEGER;
+DECLARE VARIABLE WK_PI_BACK_ORDER_QTY              INTEGER;
+DECLARE VARIABLE WK_PI_BACK_ORDER_QTY2             INTEGER;
+DECLARE VARIABLE WK_PI_TAX_AMOUNT                  DOUBLE PRECISION;
+DECLARE VARIABLE WK_PI_WARRANTY_TERM               VARCHAR(20);
+DECLARE VARIABLE WK_DETAIL_ID INTEGER;
+DECLARE VARIABLE WK_LABEL_QTY INTEGER;
+
+DECLARE VARIABLE WK_RES INTEGER;
+DECLARE VARIABLE WK_BUFFER VARCHAR(1044);
+
+DECLARE VARIABLE WK_ERROR_TEXT VARCHAR(255);
+DECLARE VARIABLE WK_FIELD_NO  INTEGER;
+DECLARE VARIABLE WK_TRN_DELIMITER  CHAR(1);
+DECLARE VARIABLE WK_WORK_END  CHAR(1);
+DECLARE VARIABLE WK_WORK_FIELD  VARCHAR(255);
+DECLARE VARIABLE WK_WORK_LABEL  VARCHAR(255);
+DECLARE VARIABLE WK_WORK_DATA   VARCHAR(255);
+DECLARE VARIABLE WK_OP_DESC     VARCHAR(50);
+DECLARE VARIABLE WK_OP_TABLE    VARCHAR(50);
+DECLARE VARIABLE WK_OP_FIELD    VARCHAR(50);
+
+DECLARE VARIABLE WK_IN_STATUS                     VARCHAR(2) ;
+
+DECLARE VARIABLE WK_LOG_FILENAME                  VARCHAR(80) ;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PILN') THEN
+  BEGIN
+     WK_LOG_FILENAME = '/tmp/piln.log';
+     WK_CLASS = NEW.TRN_CODE;
+     /* has values C create U update */ 
+     WK_INVOICE_TYPE = NEW.SUB_LOCN_ID;
+     WK_OBJECT = NEW.OBJECT;
+     WK_LABEL_QTY = NEW.QTY;
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     WK_RECORD = NEW.RECORD_ID; 
+     WK_DATE = NEW.TRN_DATE;
+     WK_USER = NEW.PERSON_ID;
+     WK_DO_INVOICE  = 'F';
+     SELECT USE_INVOICE FROM CONTROL INTO :WK_DO_INVOICE ;
+     IF (WK_DO_INVOICE IS NULL) THEN
+     BEGIN 
+        WK_DO_INVOICE = 'F';
+     END
+     IF (WK_DO_INVOICE <> 'T') THEN
+     BEGIN 
+        UPDATE TRANSACTIONS SET COMPLETE='T',ERROR_TEXT='| Cannot Invoice :Invoicing Turned Off' WHERE RECORD_ID = :WK_RECORD;
+        EXIT;
+     END
+
+     IF ((WK_CLASS = 'C') OR (WK_CLASS = 'U')) THEN
+     BEGIN
+        /* create */
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_OBJECT, 1  RETURNING_VALUES :WK_SO ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_OBJECT, 2  RETURNING_VALUES :WK_INVOICE_NO ; 
+        WK_NEW_INVOICE = 'F';
+        IF (WK_INVOICE_NO = '') THEN
+        BEGIN
+           WK_NEW_INVOICE = 'T';
+           /* calculate the next invoice no to use */
+           EXECUTE PROCEDURE  GET_PICK_INVOICE_NO RETURNING_VALUES :WK_INVOICE_NO ;
+           /* WK_INVOICE_ID = GEN_ID(DESPATCH_ID_GEN,1);  */
+           WK_INVOICE_ID = GEN_ID(PICK_INVOICE_ID_GEN,1); 
+        END
+        ELSE
+        BEGIN
+           SELECT FIRST 1 INVOICE_ID 
+           FROM PICK_INVOICE
+           WHERE INVOICE_NO = :WK_INVOICE_NO
+           AND   INVOICE_TYPE = :WK_INVOICE_TYPE
+           INTO WK_INVOICE_ID; 
+           IF (WK_INVOICE_ID IS NULL) THEN
+           BEGIN
+              WK_NEW_INVOICE = 'T';
+              /* WK_INVOICE_ID = GEN_ID(DESPATCH_ID_GEN,1);  */
+              WK_INVOICE_ID = GEN_ID(PICK_INVOICE_ID_GEN,1); 
+           END
+        END
+        WK_BUFFER = 'SO:' || WK_SO;
+        WK_BUFFER = 'INvoice:' || WK_INVOICE_NO;
+        WK_IN_STATUS = 'NC';
+        WK_PIL_LINE_ID               = NULL ;
+        WK_PIL_LEGACY_LEDGER_CODE    = NULL ;
+        WK_PIL_PICK_LABEL_NO         = NULL ;
+        WK_PIL_PICK_ID               = NULL ;
+        WK_PIL_PICK_TYPE             = NULL ;
+        WK_PIL_LINE_TYPE             = NULL ;
+        WK_PIL_QTY                   = NULL ;
+        WK_PIL_SALE_PRICE            = NULL ;
+        WK_PIL_DISCOUNT              = NULL ;
+        WK_PIL_LINE_TOTAL            = NULL ;
+        WK_PIL_TAX_RATE              = NULL ;
+        WK_PIL_UNIT_COST             = NULL ;
+        WK_PIL_TOTAL_COST            = NULL ;
+        WK_PIL_TAX_AMOUNT            = NULL ;
+        WK_PIL_UNIT_SALE             = NULL ;
+        WK_PIL_TAX_AMOUNT            = NULL ;
+        WK_PIL_BACK_ORDER_QTY        = NULL ;
+        WK_PIL_ORDERED_QTY           = NULL ;
+        WK_PIL_WARRANTY_CODE         = NULL ;
+        /*
+        now for groups in the reference field
+        split the code=value out
+        lookup the code in the options table
+        gives the field to be populated
+        */
+         WK_FIELD_NO = 1;
+         WK_WORK_END = 'F';
+         WK_TRN_DELIMITER = '|';
+         WK_BUFFER = 'reference:' || NEW.REFERENCE;
+         WHILE (WK_WORK_END = 'F') DO
+         BEGIN
+            SELECT WK_FIELD_TEXT , WK_AT_END
+            FROM GET_REFERENCE_FIELD4 (NEW.REFERENCE, :WK_FIELD_NO, :WK_TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD, :WK_WORK_END;
+            WK_BUFFER = 'Work Field:' || WK_WORK_FIELD;
+            WK_BUFFER = 'Work End:' || WK_WORK_END;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '=')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+            WK_BUFFER = 'Work Label:' || WK_WORK_LABEL;
+            WK_BUFFER = 'Work data:' || WK_WORK_LABEL;
+
+            SELECT DESCRIPTION
+            FROM OPTIONS
+            WHERE GROUP_CODE = 'REF_CODE'
+            AND CODE = :WK_WORK_LABEL
+            INTO :WK_OP_DESC;
+            IF (WK_OP_DESC IS NULL) THEN
+            BEGIN
+               WK_OP_DESC = '';
+            END
+            WK_BUFFER = 'Op Desc:' || WK_OP_DESC;
+            IF (WK_OP_DESC <> '') THEN
+            BEGIN
+               SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+               FROM GET_DATA_REFERENCE_FIELD4 (:WK_OP_DESC, '.')
+               INTO :WK_OP_TABLE, :WK_OP_FIELD;
+               WK_BUFFER = 'Op Table:' || WK_OP_TABLE;
+               WK_BUFFER = 'Op Field:' || WK_OP_FIELD;
+               IF (WK_OP_FIELD =  'INVLINE_LEGACY_LEDGER_CODE') THEN
+               BEGIN
+                  WK_PIL_LEGACY_LEDGER_CODE  = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_PICK_LABEL_NO') THEN
+               BEGIN
+                  WK_PIL_PICK_LABEL_NO       = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_PICK_ID') THEN
+               BEGIN
+                  WK_PIL_PICK_ID             = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_PICK_TYPE') THEN
+               BEGIN
+                   WK_PIL_PICK_TYPE       = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_LINE_TYPE') THEN
+               BEGIN
+                   WK_PIL_LINE_TYPE       = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_QTY') THEN
+               BEGIN
+                   WK_PIL_QTY             = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_SALE_PRICE') THEN
+               BEGIN
+                   WK_PIL_SALE_PRICE        = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_DISCOUNT') THEN
+               BEGIN
+                   WK_PIL_DISCOUNT        = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_LINE_TOTAL') THEN
+               BEGIN
+                   WK_PIL_LINE_TOTAL      = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_TAX_RATE') THEN
+               BEGIN
+                   WK_PIL_TAX_RATE   = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_TAX_AMOUNT') THEN
+               BEGIN
+                   WK_PIL_TAX_AMOUNT = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_UNIT_COST') THEN
+               BEGIN
+                   WK_PIL_UNIT_COST = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_TOTAL_COST') THEN
+               BEGIN
+                   WK_PIL_TOTAL_COST       = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_UNIT_SALE') THEN
+               BEGIN
+                   WK_PIL_UNIT_SALE = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_LINE_TOTAL_TAX') THEN
+               BEGIN
+                   WK_PIL_TAX_AMOUNT = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_BACK_ORDER_QTY') THEN
+               BEGIN
+                   WK_PIL_BACK_ORDER_QTY = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_ORDERED_QTY') THEN
+               BEGIN
+                   WK_PIL_ORDERED_QTY = WK_WORK_DATA;
+               END
+               IF (WK_OP_FIELD =  'INVLINE_WARRANTY_CODE') THEN
+               BEGIN
+                   WK_PIL_WARRANTY_CODE = WK_WORK_DATA;
+               END
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_PIL_QTY IS NULL) THEN
+         BEGIN
+            WK_PIL_QTY = WK_LABEL_QTY;
+         END
+
+        /* create the invoice record */
+        IF (WK_NEW_INVOICE = 'T') THEN
+        BEGIN
+           INSERT INTO PICK_INVOICE (
+              INVOICE_ID,  
+              INVOICE_NO, 
+              INVOICE_TYPE,  
+              INVOICE_STATUS,
+              PICK_ORDER,     
+              CREATE_DATE,            
+              CREATED_BY,            
+              LAST_UPDATE_DATE,     
+              LAST_UPDATE_BY )
+           VALUES (:WK_INVOICE_ID,
+                   :WK_INVOICE_NO,
+                   :WK_INVOICE_TYPE,
+                   :WK_IN_STATUS,
+                   :WK_SO,
+                   :WK_DATE,
+                   :WK_USER,
+                   :WK_DATE,
+                   :WK_USER); 
+        END
+        /* now if label no populated this must be a pick_id */
+        IF (WK_PIL_PICK_ID IS NULL) THEN
+        BEGIN
+           IF (WK_PIL_PICK_LABEL_NO IS NOT NULL) THEN
+           BEGIN
+              SELECT SSN_ID, PROD_ID 
+              FROM PICK_ITEM 
+              WHERE PICK_LABEL_NO = :WK_PIL_PICK_LABEL_NO
+              INTO :WK_PI_SSN_ID, :WK_PI_PROD_ID;
+              IF (WK_PI_SSN_ID IS NOT NULL) THEN
+              BEGIN
+                 WK_PIL_PICK_TYPE = 'I';
+                 WK_PIL_PICK_ID = WK_PI_SSN_ID;
+              END
+              IF (WK_PI_PROD_ID IS NOT NULL) THEN
+              BEGIN
+                 WK_PIL_PICK_TYPE = 'P';
+                 WK_PIL_PICK_ID = WK_PI_PROD_ID;
+              END
+           END
+        END
+        IF (WK_PIL_TAX_AMOUNT IS NULL) THEN
+        BEGIN
+           IF (WK_PIL_PICK_LABEL_NO IS NOT NULL) THEN
+           BEGIN
+              SELECT TAX_AMOUNT , PICK_ORDER_QTY
+              FROM PICK_ITEM 
+              WHERE PICK_LABEL_NO = :WK_PIL_PICK_LABEL_NO
+              INTO :WK_PI_TAX_AMOUNT, :WK_PI_PICK_ORDER_QTY;
+              IF (WK_PI_TAX_AMOUNT IS NOT NULL) THEN
+              BEGIN
+                 WK_PIL_TAX_AMOUNT = ROUND( ((WK_PIL_QTY / WK_PI_PICK_ORDER_QTY) * WK_PI_TAX_AMOUNT), 2);
+              END
+              WK_PIL_ORDERED_QTY = WK_PI_PICK_ORDER_QTY;
+           END
+        END
+        IF (WK_PIL_ORDERED_QTY IS NULL) THEN
+        BEGIN
+           IF (WK_PIL_PICK_LABEL_NO IS NOT NULL) THEN
+           BEGIN
+              SELECT PICK_ORDER_QTY
+              FROM PICK_ITEM 
+              WHERE PICK_LABEL_NO = :WK_PIL_PICK_LABEL_NO
+              INTO :WK_PI_PICK_ORDER_QTY;
+              WK_PIL_ORDERED_QTY = WK_PI_PICK_ORDER_QTY;
+           END
+        END
+        IF (WK_PIL_WARRANTY_CODE IS NULL) THEN
+        BEGIN
+           IF (WK_PIL_PICK_LABEL_NO IS NOT NULL) THEN
+           BEGIN
+              WK_PI_WARRANTY_TERM = NULL;
+              SELECT WARRANTY_TERM
+              FROM PICK_ITEM 
+              WHERE PICK_LABEL_NO = :WK_PIL_PICK_LABEL_NO
+              INTO :WK_PI_WARRANTY_TERM;
+              IF (WK_PI_WARRANTY_TERM IS NULL) THEN
+              BEGIN
+                 /* have to get the default warranty code */
+                 SELECT DEFAULT_WARRANTY FROM CONTROL INTO :WK_PIL_WARRANTY_CODE;
+              END
+              ELSE
+              BEGIN
+                 WK_PIL_WARRANTY_CODE = WK_PI_WARRANTY_TERM;
+              END
+           END
+        END
+        IF (WK_PIL_BACK_ORDER_QTY IS NULL) THEN
+        BEGIN
+           IF (WK_PIL_PICK_LABEL_NO IS NOT NULL) THEN
+           BEGIN
+              WK_PI_BACK_ORDER_QTY = NULL;
+              WK_PI_BACK_ORDER_QTY2 = NULL;
+              /* the standard back_order_qty is the sum of required qty for this product in HD or AS status */
+              IF (WK_PIL_PICK_TYPE = 'I') THEN
+              BEGIN
+                 SELECT SUM((PICK_ITEM.PICK_ORDER_QTY - COALESCE(PICK_ITEM.PICKED_QTY, 0)))
+                 FROM PICK_ITEM 
+                 WHERE PICK_ITEM.PICK_ORDER = :WK_SO 
+                 AND PICK_ITEM.SSN_ID = :WK_PIL_PICK_ID 
+                 AND PICK_ITEM.PICK_LINE_STATUS IN ('HD','AS')
+                 INTO :WK_PI_BACK_ORDER_QTY;
+                 SELECT SUM((PICK_ITEM.PICK_ORDER_QTY - COALESCE(PICK_ITEM.PICKED_QTY, 0)))
+                 FROM PICK_ITEM 
+                 WHERE PICK_ITEM.PICK_ORDER = :WK_SO 
+                 AND PICK_ITEM.SSN_ID = :WK_PIL_PICK_ID 
+                 AND PICK_ITEM.PICK_LINE_STATUS IN ('OP','UC','CF','AL','PG','PL','DS','DC','UP')
+                 INTO :WK_PI_BACK_ORDER_QTY2;
+              END
+              IF (WK_PIL_PICK_TYPE = 'P') THEN
+              BEGIN
+                 SELECT SUM((PICK_ITEM.PICK_ORDER_QTY - COALESCE(PICK_ITEM.PICKED_QTY, 0)))
+                 FROM PICK_ITEM 
+                 WHERE PICK_ITEM.PICK_ORDER = :WK_SO 
+                 AND PICK_ITEM.PROD_ID = :WK_PIL_PICK_ID 
+                 AND PICK_ITEM.PICK_LINE_STATUS IN ('HD','AS')
+                 INTO :WK_PI_BACK_ORDER_QTY;
+                 SELECT SUM((PICK_ITEM.PICK_ORDER_QTY - COALESCE(PICK_ITEM.PICKED_QTY, 0)))
+                 FROM PICK_ITEM 
+                 WHERE PICK_ITEM.PICK_ORDER = :WK_SO 
+                 AND PICK_ITEM.PROD_ID = :WK_PIL_PICK_ID 
+                 AND PICK_ITEM.PICK_LINE_STATUS IN ('OP','UC','CF','AL','PG','PL','DS','DC','UP')
+                 INTO :WK_PI_BACK_ORDER_QTY2;
+              END
+              WK_PIL_BACK_ORDER_QTY = COALESCE( WK_PI_BACK_ORDER_QTY, 0) + COALESCE(WK_PI_BACK_ORDER_QTY2, 0);
+           END
+        END
+	/* check the pick invoice line exists */
+        SELECT FIRST 1 INVLINE_LINE_ID
+        FROM PICK_INVOICE_LINE
+        WHERE INVLINE_INVOICE_NO = :WK_INVOICE_NO
+        AND   INVLINE_PICK_ORDER = :WK_SO
+        AND   INVLINE_INVOICE_ID = :WK_INVOICE_ID
+        AND   (INVLINE_PICK_LABEL_NO = :WK_PIL_PICK_LABEL_NO OR ( 
+              INVLINE_PICK_ID = :WK_PIL_PICK_ID 
+        AND INVLINE_PICK_TYPE = :WK_PIL_PICK_TYPE   
+        AND INVLINE_PICK_LABEL_NO  IS NULL  )) 
+        INTO :WK_PIL_LINE_ID;
+
+        IF (WK_PIL_LINE_ID IS  NULL) THEN
+        BEGIN
+           WK_NEW_INVOICE_LINE = 'T';
+        END
+        ELSE
+        BEGIN
+           WK_NEW_INVOICE_LINE = 'F';
+        END
+        /* create the invoice record */
+        IF (WK_NEW_INVOICE_LINE = 'T') THEN
+        BEGIN
+           WK_PIL_LINE_ID =  GEN_ID(PICK_INVOICE_LINE_ID_GEN,1);
+           INSERT INTO PICK_INVOICE_LINE (
+              INVLINE_INVOICE_NO           , 
+              INVLINE_PICK_ORDER           , 
+              INVLINE_PICK_LABEL_NO        , 
+              INVLINE_PICK_ID              , 
+              INVLINE_PICK_TYPE            , 
+              INVLINE_LINE_TYPE            , 
+              INVLINE_QTY                  , 
+              INVLINE_SALE_PRICE           , 
+              INVLINE_DISCOUNT             , 
+              INVLINE_LINE_TOTAL           , 
+              INVLINE_TAX_RATE             , 
+              INVLINE_UNIT_COST            , 
+              INVLINE_TOTAL_COST           , 
+              INVLINE_LEGACY_LEDGER_CODE   , 
+              INVLINE_UPDATE_DATE          , 
+              INVLINE_UPDATED_BY           , 
+              INVLINE_INVOICE_ID           , 
+              INVLINE_CREATED_DATE         , 
+              INVLINE_CREATED_BY           , 
+              INVLINE_LINE_ID              ,
+              INVLINE_UNIT_SALE            ,
+              INVLINE_LINE_TOTAL_TAX       ,
+              INVLINE_BACK_ORDER_QTY       ,
+              INVLINE_ORDERED_QTY          ,
+              INVLINE_WARRANTY_CODE        )              
+           VALUES (
+              :WK_INVOICE_NO,
+              :WK_SO,
+              :WK_PIL_PICK_LABEL_NO,
+              :WK_PIL_PICK_ID,
+              :WK_PIL_PICK_TYPE,
+              :WK_PIL_LINE_TYPE,
+              :WK_PIL_QTY,       
+              :WK_PIL_SALE_PRICE,
+              :WK_PIL_DISCOUNT,
+              :WK_PIL_LINE_TOTAL,
+              :WK_PIL_TAX_RATE,
+              :WK_PIL_UNIT_COST,
+              :WK_PIL_TOTAL_COST,
+              :WK_PIL_LEGACY_LEDGER_CODE, 
+              :WK_DATE, 
+              :WK_USER, 
+              :WK_INVOICE_ID,
+              :WK_DATE,
+              :WK_USER, 
+              :WK_PIL_LINE_ID,
+              :WK_PIL_UNIT_SALE,
+              :WK_PIL_TAX_AMOUNT,
+              :WK_PIL_BACK_ORDER_QTY,
+              :WK_PIL_ORDERED_QTY,
+              :WK_PIL_WARRANTY_CODE );
+        END
+        ELSE
+        BEGIN
+           UPDATE PICK_INVOICE_LINE SET
+              INVLINE_INVOICE_NO           = :WK_INVOICE_NO,
+              INVLINE_PICK_ORDER           = :WK_SO,
+              INVLINE_PICK_LABEL_NO        = :WK_PIL_PICK_LABEL_NO,
+              INVLINE_PICK_ID              = :WK_PIL_PICK_ID,
+              INVLINE_PICK_TYPE            = :WK_PIL_PICK_TYPE,
+              INVLINE_LINE_TYPE            = :WK_PIL_LINE_TYPE,
+              INVLINE_QTY                  = :WK_PIL_QTY,       
+              INVLINE_SALE_PRICE           = :WK_PIL_SALE_PRICE,
+              INVLINE_DISCOUNT             = :WK_PIL_DISCOUNT,
+              INVLINE_LINE_TOTAL           = :WK_PIL_LINE_TOTAL,
+              INVLINE_TAX_RATE             = :WK_PIL_TAX_RATE,
+              INVLINE_UNIT_COST            = :WK_PIL_UNIT_COST,
+              INVLINE_TOTAL_COST           = :WK_PIL_TOTAL_COST,
+              INVLINE_LEGACY_LEDGER_CODE   = :WK_PIL_LEGACY_LEDGER_CODE, 
+              INVLINE_UPDATE_DATE          = :WK_DATE, 
+              INVLINE_UPDATED_BY           = :WK_USER, 
+              INVLINE_INVOICE_ID           = :WK_INVOICE_ID,
+              INVLINE_UNIT_SALE            = :WK_PIL_UNIT_SALE, 
+              INVLINE_LINE_TOTAL_TAX       = :WK_PIL_TAX_AMOUNT, 
+              INVLINE_BACK_ORDER_QTY       = :WK_PIL_BACK_ORDER_QTY, 
+              INVLINE_ORDERED_QTY          = :WK_PIL_ORDERED_QTY ,
+              INVLINE_WARRANTY_CODE        = :WK_PIL_WARRANTY_CODE 
+              WHERE INVLINE_LINE_ID = :WK_PIL_LINE_ID;
+        END
+        /* so update /insert the pick_invoice */
+        IF (WK_NEW_INVOICE_LINE = 'T') THEN
+        BEGIN
+           WK_ERROR_TEXT = 'Created ' || :WK_INVOICE_NO || '|Line ' || :WK_PIL_LINE_ID || '|Processed successfully' ;
+           WK_ERROR_TEXT = 'Processed successfully' ;
+        END
+        ELSE
+        BEGIN
+           WK_ERROR_TEXT = 'Updated ' || :WK_INVOICE_NO || '|Line ' || :WK_PIL_LINE_ID || '|Processed successfully' ;
+           WK_ERROR_TEXT = 'Processed successfully' ;
+        END
+     END
+
+     UPDATE TRANSACTIONS SET COMPLETE='T',ERROR_TEXT=:WK_ERROR_TEXT WHERE RECORD_ID = :WK_RECORD;
+
+   /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+  END
+ END
+END  ^
+

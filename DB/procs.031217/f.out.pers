@@ -1,0 +1,47 @@
+PERSON_ID                       (PERSON) VARCHAR(10) Not Null 
+PERSON_TYPE                     (CODE_TWO) CHAR(2) Nullable 
+ADDRESS_LINE1                   (ADDRESS_LINE) VARCHAR(50) Nullable 
+ADDRESS_LINE2                   (ADDRESS_LINE) VARCHAR(50) Nullable 
+CITY                            (CITY) VARCHAR(25) Nullable 
+STATE                           (STATE) VARCHAR(15) Nullable 
+POST_CODE                       (POST_CODE) VARCHAR(10) Nullable 
+COUNTRY                         (COUNTRY) VARCHAR(25) Nullable 
+MOBILE_NO                       (MOBILE_NO) VARCHAR(15) Nullable 
+EMAIL                           (EMAIL) VARCHAR(50) Nullable 
+CONTACT_FIRST_NAME              (CONTACT_FIRST_NAME) VARCHAR(25) Nullable 
+CONTACT_LAST_NAME               (CONTACT_LAST_NAME) VARCHAR(25) Nullable 
+CREATE_DATE                     (CREATE_DATE) TIMESTAMP Nullable 
+STATUS                          (STATUS) CHAR(2) Nullable 
+MAIL_ADDRESS1                   (ADDRESS_LINE) VARCHAR(50) Nullable 
+MAIL_ADDRESS2                   (ADDRESS_LINE) VARCHAR(50) Nullable 
+MAIL_CITY                       (MAIL_CITY) VARCHAR(25) Nullable 
+MAIL_STATE                      (MAIL_STATE) VARCHAR(15) Nullable 
+MAIL_POST_CODE                  (MAIL_POST_CODE) VARCHAR(10) Nullable 
+MAIL_COUNTRY                    (MAIL_COUNTRY) VARCHAR(25) Nullable 
+SECOND_CONTACT_FIRST_NAME       (SECOND_CONTACT_FIRST_NAME) VARCHAR(25) Nullable 
+SECOND_CONTACT_LAST_NAME        (SECOND_CONTACT_LAST_NAME) VARCHAR(25) Nullable 
+SECOND_MOBILE_NO                (SECOND_MOBILE_NO) VARCHAR(15) Nullable 
+SECOND_EMAIL                    (SECOND_EMAIL) VARCHAR(50) Nullable 
+LAST_NAME                       (LAST_NAME) VARCHAR(50) Nullable 
+SECOND_FAX_NO                   (SECOND_FAX_NO) VARCHAR(30) Nullable 
+SECOND_PHONE_NO                 (SECOND_PHONE_NO) VARCHAR(30) Nullable 
+FAX_NO                          (FAX_NO) VARCHAR(30) Nullable 
+PHONE_NO                        (PHONE_NO) VARCHAR(30) Nullable 
+TITLE                           VARCHAR(10) Nullable 
+MAIL_PHONE                      (PHONE_NO) VARCHAR(30) Nullable 
+CONTACT_ADDRESS1                (ADDRESS_LINE) VARCHAR(50) Nullable 
+CONTACT_ADDRESS2                (ADDRESS_LINE) VARCHAR(50) Nullable 
+CONTACT_CITY                    (CITY) VARCHAR(25) Nullable 
+CONTACT_STATE                   (STATE) VARCHAR(15) Nullable 
+CONTACT_POST_CODE               (POST_CODE) VARCHAR(10) Nullable 
+CONTACT_PHONE                   (PHONE_NO) VARCHAR(30) Nullable 
+CREATE_BY                       (PERSON) VARCHAR(10) Nullable 
+CONTACT_COUNTRY                 (COUNTRY) VARCHAR(25) Nullable 
+FIRST_NAME                      VARCHAR(255) Nullable 
+CONSTRAINT INTEG_27:
+  Primary key (PERSON_ID)
+
+Triggers on Table PERSON:
+INSERT_PERSON, Sequence: 10, Type: AFTER INSERT, Active
+UPDATE_PERSON, Sequence: 10, Type: AFTER UPDATE, Active
+DELETE_PERSON, Sequence: 0, Type: AFTER DELETE, Active

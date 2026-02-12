@@ -1,0 +1,4 @@
+alter table sys_screen add SS_VIEW_ON_OPENING VALUE_TF;
+
+update sys_screen set ss_view_on_opening = 'T';
+

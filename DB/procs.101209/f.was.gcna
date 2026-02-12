@@ -1,0 +1,259 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP TRIGGER RUN_TRANSACTION_GCNA ^
+COMMIT^
+
+CREATE TRIGGER RUN_TRANSACTION_GCNA FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 11 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_PERSON VARCHAR(10);
+DECLARE VARIABLE WK_TITLE VARCHAR(10);
+DECLARE VARIABLE WK_FIRST_NAME VARCHAR(255);
+DECLARE VARIABLE WK_SHORT_FIRST_NAME VARCHAR(50);
+DECLARE VARIABLE WK_LAST_NAME VARCHAR(50);
+DECLARE VARIABLE WK_LINE1 VARCHAR(100);
+DECLARE VARIABLE WK_LINE2 VARCHAR(50);
+DECLARE VARIABLE WK_LINE3 VARCHAR(50);
+DECLARE VARIABLE WK_LINE4 VARCHAR(50);
+DECLARE VARIABLE WK_4STATE_ID VARCHAR(255);
+DECLARE VARIABLE WK_FOUND INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GCNA') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the Order No
+            field 2 is the Retrieve Status
+            field 3 is the Salutation
+            field 4 is the First Name
+            field 5 is the Last Name
+            field 6 is the Address Line1
+            field 7 is the Address Line2
+            field 8 is the Address Line3
+            field 9 is the Address Line4
+            field 10 is the Australian Post 4 State Code
+         */
+         WK_STATUS = '';
+         WK_ORDER = '';
+         WK_TITLE = '';
+         WK_FIRST_NAME = '';
+         WK_SHORT_FIRST_NAME = '';
+         WK_LAST_NAME = '';
+         WK_LINE1 = '';
+         WK_LINE2 = '';
+         WK_LINE3 = '';
+         WK_LINE4 = '';
+         WK_4STATE_ID = '';
+         WK_PERSON = '';
+
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = '<ContactInstanceID') THEN
+            BEGIN
+               WK_ORDER = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<ContactInstanceNameAndAddressRetrieveStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<Salutation') THEN
+            BEGIN
+               WK_TITLE = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<FirstName') THEN
+            BEGIN
+               WK_FIRST_NAME = WK_WORK_DATA;
+               IF (STRLEN(WK_FIRST_NAME) < 51) THEN
+               BEGIN
+                  WK_SHORT_FIRST_NAME = WK_FIRST_NAME;
+               END
+               ELSE
+               BEGIN
+                  WK_SHORT_FIRST_NAME = V4SUBSTRING(WK_FIRST_NAME, 1, 50);
+               END
+            END
+            IF (WK_WORK_LABEL = '<LastName') THEN
+            BEGIN
+               WK_LAST_NAME = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<Line1') THEN
+            BEGIN
+               WK_LINE1 = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<Line2') THEN
+            BEGIN
+               WK_LINE2 = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<Line3') THEN
+            BEGIN
+               WK_LINE3 = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<Line4') THEN
+            BEGIN
+               WK_LINE4 = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<AustPost4StateID') THEN
+            BEGIN
+               WK_4STATE_ID = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         /* does order exist */
+         WK_FOUND = 0;
+         SELECT 1, PERSON_ID FROM PICK_ORDER
+         WHERE PICK_ORDER = :WK_ORDER
+         INTO :WK_FOUND, :WK_PERSON ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            WK_PERSON = 'UNKNOWN';
+            INSERT INTO PICK_ORDER(PICK_ORDER, 
+               PICK_STATUS, 
+               PERSON_ID, 
+               P_TITLE, 
+               P_FIRST_NAME, 
+               P_LAST_NAME, 
+               P_ADDRESS_LINE1, 
+               P_ADDRESS_LINE2, 
+               P_ADDRESS_LINE3, 
+               P_ADDRESS_LINE4, 
+               P_AUST_POST_4STATE_ID, 
+               CREATE_DATE, 
+               CREATED_BY, 
+               PICK_RETRIEVE_STATUS)
+            VALUES (:WK_ORDER, 
+               'UC', 
+               :WK_PERSON, 
+               :WK_TITLE, 
+               :WK_SHORT_FIRST_NAME, 
+               :WK_LAST_NAME, 
+               :WK_LINE1, 
+               :WK_LINE2, 
+               :WK_LINE3, 
+               :WK_LINE4, 
+               :WK_4STATE_ID, 
+               'NOW',
+               NEW.PERSON_ID, 
+               :WK_STATUS);
+         END
+         ELSE
+         BEGIN
+            IF (WK_PERSON IS NULL) THEN
+            BEGIN
+               WK_PERSON = 'UNKNOWN';
+               UPDATE PICK_ORDER
+               SET P_TITLE = :WK_TITLE, 
+                  PERSON_ID = :WK_PERSON, 
+                  P_FIRST_NAME = :WK_SHORT_FIRST_NAME, 
+                  P_LAST_NAME = :WK_LAST_NAME, 
+                  P_ADDRESS_LINE1 = :WK_LINE1, 
+                  P_ADDRESS_LINE2 = :WK_LINE2, 
+                  P_ADDRESS_LINE3 = :WK_LINE3, 
+                  P_ADDRESS_LINE4 = :WK_LINE4, 
+                  P_AUST_POST_4STATE_ID = :WK_4STATE_ID, 
+               PICK_RETRIEVE_STATUS = :WK_STATUS
+               WHERE PICK_ORDER = :WK_ORDER;
+            END
+            ELSE
+            BEGIN
+               UPDATE PICK_ORDER
+               SET P_TITLE = :WK_TITLE, 
+                  P_FIRST_NAME = :WK_SHORT_FIRST_NAME, 
+                  P_LAST_NAME = :WK_LAST_NAME, 
+                  P_ADDRESS_LINE1 = :WK_LINE1, 
+                  P_ADDRESS_LINE2 = :WK_LINE2, 
+                  P_ADDRESS_LINE3 = :WK_LINE3, 
+                  P_ADDRESS_LINE4 = :WK_LINE4, 
+                  P_AUST_POST_4STATE_ID = :WK_4STATE_ID, 
+               PICK_RETRIEVE_STATUS = :WK_STATUS
+               WHERE PICK_ORDER = :WK_ORDER;
+            END
+         END
+
+         /* does person exist */
+         WK_FOUND = 0;
+         /* dont add all these for mailroom
+         SELECT 1 FROM PERSON
+         WHERE PERSON_ID = :WK_PERSON
+         INTO :WK_FOUND ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO PERSON(PERSON_ID, 
+               TITLE, 
+               FIRST_NAME, 
+               LAST_NAME, 
+               ADDRESS_LINE1, 
+               ADDRESS_LINE2, 
+               ADDRESS_LINE3, 
+               ADDRESS_LINE4, 
+               AUST_POST_4STATE_ID, 
+               CREATE_DATE, 
+               CREATE_BY )
+            VALUES (:WK_PERSON,
+               :WK_TITLE, 
+               :WK_FIRST_NAME, 
+               :WK_LAST_NAME, 
+               :WK_LINE1, 
+               :WK_LINE2, 
+               :WK_LINE3, 
+               :WK_LINE4, 
+               :WK_4STATE_ID, 
+               'NOW',
+               NEW.PERSON_ID );
+         END
+         ELSE
+         BEGIN
+            UPDATE PERSON
+            SET TITLE = :WK_TITLE, 
+               FIRST_NAME = :WK_FIRST_NAME, 
+               LAST_NAME = :WK_LAST_NAME, 
+               ADDRESS_LINE1 = :WK_LINE1, 
+               ADDRESS_LINE2 = :WK_LINE2, 
+               ADDRESS_LINE3 = :WK_LINE3, 
+               ADDRESS_LINE4 = :WK_LINE4, 
+               AUST_POST_4STATE_ID = :WK_4STATE_ID 
+            WHERE PERSON_ID = :WK_PERSON;
+         END
+         */
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,4 @@
+
+alter table pick_order add  sub_total_amount_ssn_id    FLOAT DEFAULT 0.00;
+alter table pick_order add  sub_total_amount_prod_id   FLOAT DEFAULT 0.00;
+

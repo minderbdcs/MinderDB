@@ -1,0 +1,10 @@
+update person set company_id='ALL' where company_id is null;
+commit;
+alter table person drop constraint integ_27;
+alter table person alter company_id to old_company_id;
+alter table person add company_id company not null ;
+update person set company_id=old_company_id;
+commit;
+alter table person add constraint person_company_primary primary key(person_id, company_id);
+/* alter table person drop old_company_id */
+

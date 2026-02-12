@@ -1,0 +1,2 @@
+alter table prod_profile add PP_BRAND_NAME CODE;
+alter table prod_profile_temp add P_PP_BRAND_NAME CODE;

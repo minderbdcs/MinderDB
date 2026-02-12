@@ -1,3 +1,3 @@
 # MinderDB
 # Minder DB Modifications
-# test update
+# Apply procs.yymmdd folders

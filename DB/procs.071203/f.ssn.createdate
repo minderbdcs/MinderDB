@@ -1,0 +1,4 @@
+/* populate the null create dates for ssns */
+update ssn set create_date=(select create_date from issn where issn.ssn_id=ssn.ssn_id),created_by=(select user_id from issn where issn.ssn_id=ssn.ssn_id) where ssn.create_date is null; 
+update ssn set create_date=(select min(create_date) from issn where issn.original_ssn=ssn.ssn_id and issn.create_date is not null),created_by=(select min(user_id) from issn where issn.original_ssn=ssn.ssn_id and   issn.create_date is not null) where ssn.create_date is null; 
+;

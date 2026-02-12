@@ -1,0 +1,834 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER PROCEDURE PC_NIXX (RECORD_ID INTEGER,
+WH_ID CHAR(2) CHARACTER SET NONE,
+LOCN_ID VARCHAR(10) CHARACTER SET NONE,
+OBJECT VARCHAR(30) CHARACTER SET NONE,
+TRN_TYPE VARCHAR(4) CHARACTER SET NONE,
+TRN_CODE CHAR(1) CHARACTER SET NONE,
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(1024) CHARACTER SET NONE,
+QTY INTEGER,
+PERSON_ID VARCHAR(10) CHARACTER SET NONE,
+DEVICE_ID CHAR(2) CHARACTER SET NONE,
+INSTANCE_ID VARCHAR(10) CHARACTER SET NONE)
+AS 
+DECLARE VARIABLE strWH_ID CHAR(2); 
+  DECLARE VARIABLE strINSTANCE VARCHAR(10);
+  DECLARE VARIABLE LOCN_EXIST INTEGER; 
+  DECLARE VARIABLE LOCN_NAME VARCHAR(50);
+  DECLARE VARIABLE SSN_EXIST INTEGER;
+  DECLARE VARIABLE strAUDIT_DESC VARCHAR(50);
+  DECLARE VARIABLE RESULT INTEGER;
+  DECLARE VARIABLE strTYPE VARCHAR(40);
+  DECLARE VARIABLE WK_SSN VARCHAR(20);
+  DECLARE VARIABLE WK_CODE VARCHAR(75);
+  DECLARE VARIABLE WK_SN_ORIGINAL_QTY INTEGER;
+  DECLARE VARIABLE WK_SN_CREATED_BY   VARCHAR(10);
+  DECLARE VARIABLE WK_SN_UPDATED_BY   VARCHAR(10);
+  DECLARE VARIABLE WK_FOUND INTEGER;
+  
+BEGIN /* Main */
+    strWH_ID = '';
+    strINSTANCE = '';
+    LOCN_EXIST = 0;
+    /* LOCN_NAME = 'Created during audit ' || :TRN_DATE; */
+    LOCN_NAME = LOCN_ID;
+    SSN_EXIST = 0;
+    strAUDIT_DESC = ''; 
+    /* Check trasaction code */
+    IF (:TRN_CODE = 'P') THEN
+    BEGIN
+       /* Update transactions table */               
+       /* EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid code'); */
+       EXECUTE PROCEDURE PC_NIXX_P (:RECORD_ID ,
+   :WH_ID ,
+   :LOCN_ID ,
+   :OBJECT ,
+   :TRN_TYPE ,
+   :TRN_CODE ,
+   :TRN_DATE ,
+   :REFERENCE ,
+   :QTY ,
+   :PERSON_ID ,
+   :DEVICE_ID ,
+   :INSTANCE_ID );
+       EXIT;
+    END  
+               
+    /* Check if warehouse exists */
+    SELECT WH_ID, INSTANCE_ID 
+    FROM WAREHOUSE
+    WHERE WH_ID = :WH_ID
+    INTO :strWH_ID, :strINSTANCE;
+
+    /* Check warehouse*/
+    IF (strWH_ID = '') THEN
+    BEGIN
+       /* Update transactions table */               
+       EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid Warehouse');
+       EXIT;
+    END
+    ELSE
+    BEGIN /* WH */
+        /* Check instance */
+        IF (strINSTANCE <> :INSTANCE_ID) THEN  
+        BEGIN
+          /* Update transactions table */               
+          EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid InstanceID');
+          EXIT;
+        END
+        ELSE
+        BEGIN /* Location */
+           /* Check Location */                 
+    SELECT 1 
+    FROM LOCATION
+    WHERE WH_ID = :WH_ID
+    AND LOCN_ID = :LOCN_ID 
+           INTO :LOCN_EXIST; 
+           
+           /* Location not exists, then add new location */
+           IF (LOCN_EXIST = 0) THEN
+           BEGIN
+              /* Add new Location record */
+       INSERT INTO LOCATION (LOCN_ID, WH_ID, LOCN_NAME, LAST_AUDITED_DATE)
+              VALUES (:LOCN_ID, :WH_ID, :LOCN_NAME, :TRN_DATE);
+           END
+           BEGIN
+/* check original qty and created by */
+                 SELECT ORIGINAL_SSN
+                 FROM ISSN
+                 WHERE SSN_ID = :OBJECT
+                 INTO WK_SSN;
+                 IF (NOT WK_SSN IS NULL) THEN
+                 BEGIN
+                    WK_SN_ORIGINAL_QTY = 0;
+                    WK_SN_CREATED_BY = NULL;
+                    WK_SN_UPDATED_BY = NULL;
+                    SELECT ORIGINAL_QTY, CREATED_BY, LAST_UPDATE_BY
+                    FROM SSN
+                    WHERE SSN_ID = :WK_SSN
+                    INTO :WK_SN_ORIGINAL_QTY, :WK_SN_CREATED_BY, :WK_SN_UPDATED_BY;
+                    IF (WK_SN_ORIGINAL_QTY IS NULL) THEN
+                       UPDATE SSN
+                       SET ORIGINAL_QTY = CURRENT_QTY
+                       WHERE SSN_ID = :WK_SSN;
+                    IF (WK_SN_CREATED_BY   IS NULL) THEN
+                       UPDATE SSN
+                       SET CREATED_BY = :PERSON_ID  
+                       WHERE SSN_ID = :WK_SSN;
+                    IF (WK_SN_UPDATED_BY   IS NULL) THEN
+                       UPDATE SSN
+                       SET LAST_UPDATE_BY = :PERSON_ID  
+                       WHERE SSN_ID = :WK_SSN;
+                 END
+           END
+                      
+           IF (:TRN_TYPE <> 'NIUI') THEN
+           BEGIN
+              /* Check SSN */
+              SELECT 1
+              FROM SSN
+              WHERE SSN_ID = :OBJECT
+              INTO :SSN_EXIST;
+              
+              /* If SSN does not exists, then add new SSN */
+              IF (SSN_EXIST = 0) THEN
+              BEGIN
+                 /* Not an SSN - try an ISSN */
+                 /* Check SSN */
+                 SELECT 1, ORIGINAL_SSN
+                 FROM ISSN
+                 WHERE SSN_ID = :OBJECT
+                 INTO :SSN_EXIST, :WK_SSN;
+              
+                 /* If SSN does not exists, then add new SSN */
+                 IF (SSN_EXIST = 0) THEN
+                 BEGIN
+                    /* Add new SSN */
+                    INSERT INTO SSN (SSN_ID, WH_ID, LOCN_ID, ORIGINAL_QTY, CREATED_BY, CREATE_DATE, LAST_UPDATE_DATE, LAST_UPDATE_BY)
+                    VALUES (:OBJECT, :WH_ID, :LOCN_ID, 1, :PERSON_ID,:TRN_DATE, :TRN_DATE, :PERSON_ID);
+                    INSERT INTO ISSN (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID)
+                    VALUES (:OBJECT, :OBJECT, :WH_ID, :LOCN_ID);
+                 END
+                 ELSE
+                 BEGIN
+                    OBJECT = WK_SSN;
+                 END
+              END
+              
+              /* Update fields of SSN */
+              IF (:TRN_TYPE = 'NITP') THEN  
+              BEGIN
+          EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NITP', :REFERENCE);  /* Update Type */
+          EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+          strAUDIT_DESC = 'SSN Type was modified';
+       END
+       ELSE IF (:TRN_TYPE = 'NIOB') THEN
+       BEGIN
+          EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIOB', :REFERENCE); /* Update Generic */
+          WK_CODE = :OBJECT || '|' || :REFERENCE; 
+          EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :WK_CODE); 
+          strAUDIT_DESC = 'Generic description modified';
+       END
+       ELSE IF (:TRN_TYPE = 'NIBC') THEN
+       BEGIN
+          /* 03-03-15 change to only allow existing entries in brand table */
+          WK_FOUND = 0;
+          SELECT 1 FROM BRAND WHERE CODE = :REFERENCE INTO :WK_FOUND;
+          IF (WK_FOUND = 1) THEN
+          BEGIN
+             EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIBC', :REFERENCE); /* Update Brand */
+             /* EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); */
+                 strAUDIT_DESC = 'Brand description modified';
+          END
+          ELSE
+          BEGIN
+             /* Update transactions table */               
+             EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid Brand');
+             EXIT;
+          END
+       END
+       ELSE IF (:TRN_TYPE = 'NIMO') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIMO', :REFERENCE); /* Update Model */
+                 EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                 strAUDIT_DESC = 'Model description modified';
+              END
+              ELSE IF (:TRN_TYPE = 'NICC') THEN
+              BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NICC', :REFERENCE); /* Update Cost Center */
+                 EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                 strAUDIT_DESC = 'Cost Center modified';
+              END
+              ELSE IF (:TRN_TYPE = 'NILG') THEN
+              BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NILG', :REFERENCE); /* Update LegacyID */
+/*
+                 EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+*/
+                 strAUDIT_DESC = 'Legacy ID modified';
+              END
+              ELSE IF (:TRN_TYPE = 'PSRF') THEN
+              BEGIN
+          EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'PSRF', :REFERENCE); /* Update GRN */
+          strAUDIT_DESC = 'Product Serial Reference Number modified';
+       END
+       ELSE IF (:TRN_TYPE = 'NISN') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NISN', :REFERENCE); /* Update Serial Number */
+                 strAUDIT_DESC = 'Serial Number modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIO1') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIO1', :REFERENCE); /* Update Other1 */
+                 strAUDIT_DESC = 'Custom Field 1 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIO2') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIO2', :REFERENCE); /* Update Other2 */
+                 strAUDIT_DESC = 'Custom Field 2 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIO3') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIO3', :REFERENCE); /* Update Other3 */
+                 strAUDIT_DESC = 'Custom Field 3 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIO4') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIO4', :REFERENCE); /* Update Other4 */
+                 strAUDIT_DESC = 'Custom Field 4 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIO5') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIO5', :REFERENCE); /* Update Other5 */
+                 strAUDIT_DESC = 'Custom Field 5 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIO6') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIO6', :REFERENCE); /* Update Other6 */
+                 SELECT SSN_TYPE 
+                 FROM SSN 
+                 WHERE SSN_ID = :OBJECT
+                 INTO :strTYPE; 
+                 EXECUTE PROCEDURE ADD_GROUP_DATA('NIO6', :TRN_DATE, :REFERENCE, :strTYPE); 
+                 strAUDIT_DESC = 'Type Custom Field 1 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIO7') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIO7', :REFERENCE); /* Update Other7 */
+                 SELECT SSN_TYPE 
+                 FROM SSN 
+                 WHERE SSN_ID = :OBJECT
+                 INTO :strTYPE; 
+                 EXECUTE PROCEDURE ADD_GROUP_DATA('NIO7', :TRN_DATE, :REFERENCE, :strTYPE); 
+                 strAUDIT_DESC = 'Type Custom Field 2 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIO8') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIO8', :REFERENCE); /* Update Other8 */
+                 SELECT SSN_TYPE 
+                 FROM SSN 
+                 WHERE SSN_ID = :OBJECT
+                 INTO :strTYPE; 
+                 EXECUTE PROCEDURE ADD_GROUP_DATA('NIO8', :TRN_DATE, :REFERENCE, :strTYPE); 
+                 strAUDIT_DESC = 'Type Custom Field 3 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIO9') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIO9', :REFERENCE); /* Update Other9 */
+                 SELECT SSN_TYPE 
+                 FROM SSN 
+                 WHERE SSN_ID = :OBJECT
+                 INTO :strTYPE; 
+                 EXECUTE PROCEDURE ADD_GROUP_DATA('NIO9', :TRN_DATE, :REFERENCE, :strTYPE); 
+                 strAUDIT_DESC = 'Type Custom Field 4 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIOA') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIOA', :REFERENCE); /* Update Other10 */
+                 SELECT SSN_TYPE 
+                 FROM SSN 
+                 WHERE SSN_ID = :OBJECT
+                 INTO :strTYPE; 
+                 EXECUTE PROCEDURE ADD_GROUP_DATA('NIOA', :TRN_DATE, :REFERENCE, :strTYPE); 
+                 strAUDIT_DESC = 'Type Custom Field 5 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIOK') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIOK', :REFERENCE); /* Update Other19 */
+                 strAUDIT_DESC = 'Maintenance Support No modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIPC') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIPC', :REFERENCE); /* Update Product */
+                 strAUDIT_DESC = 'Product No modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIOL') THEN 
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIOL', :REFERENCE); /* Update Other20 */       
+                 strAUDIT_DESC = 'Other 20 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NI11') THEN 
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, :TRN_TYPE, :REFERENCE); /* Update Other11 */       
+                 EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                 strAUDIT_DESC = 'Other 11 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NI12') THEN 
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, :TRN_TYPE, :REFERENCE); /* Update Other12 */       
+                 EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                 strAUDIT_DESC = 'Other 12 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NI13') THEN 
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, :TRN_TYPE, :REFERENCE); /* Update Other13 */       
+                 EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                 strAUDIT_DESC = 'Other 13 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NI14') THEN 
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, :TRN_TYPE, :REFERENCE); /* Update Other14 */       
+                 EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                 strAUDIT_DESC = 'Other 14 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NI15') THEN 
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, :TRN_TYPE, :REFERENCE); /* Update Other15 */       
+                 strAUDIT_DESC = 'Other 15 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NI16') THEN 
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, :TRN_TYPE, :REFERENCE); /* Update Other16 */       
+                 strAUDIT_DESC = 'Other 16 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NI17') THEN 
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, :TRN_TYPE, :REFERENCE); /* Update Other17 */       
+                 strAUDIT_DESC = 'Other 17 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NI18') THEN 
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, :TRN_TYPE, :REFERENCE); /* Update Other18 */       
+                 strAUDIT_DESC = 'Other 18 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NI19') THEN 
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, :TRN_TYPE, :REFERENCE); /* Update Other19 */       
+                 EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                 strAUDIT_DESC = 'Other 19 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NI20') THEN 
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, :TRN_TYPE, :REFERENCE); /* Update Other20 */       
+                 EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                 strAUDIT_DESC = 'Other 20 modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIPP') THEN
+       BEGIN
+                 SELECT ORIGINAL_SSN
+                 FROM ISSN
+                 WHERE SSN_ID = :OBJECT
+                 INTO WK_SSN;
+                 IF (NOT WK_SSN IS NULL) THEN
+                 BEGIN
+                    UPDATE SSN
+                    SET PURCHASE_PRICE = (:QTY / 100)
+                    WHERE SSN_ID = :WK_SSN;
+                    strAUDIT_DESC = 'Purchase Price modified';
+                 END
+                 ELSE
+                 BEGIN
+                    strAUDIT_DESC = 'Purchase Price NOT modified';
+                 END
+              END
+       ELSE IF (:TRN_TYPE = 'NIST') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIST', :REFERENCE); /* Update Status Code */
+                 strAUDIT_DESC = 'Status modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NILX') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NILX', :REFERENCE); /* Update Label Location */
+                 strAUDIT_DESC = 'Label location modified';
+              END
+       ELSE IF (:TRN_TYPE = 'NIGC') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIGC', :REFERENCE); /* Group copy */                  
+                 strAUDIT_DESC = 'Copy fields from group ' || :REFERENCE;
+              END
+       ELSE IF (:TRN_TYPE = 'NISU') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NISU', :REFERENCE); /* Supplier */                  
+                 strAUDIT_DESC = 'Supplier modified ' || :REFERENCE;
+              END
+       ELSE IF (:TRN_TYPE = 'NIPD') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIPD', :REFERENCE); /* Update Assets Product */
+                  EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                  strAUDIT_DESC = 'Assets Product modified' || :REFERENCE;
+       END
+       ELSE IF (:TRN_TYPE = 'NID3') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NID3', :REFERENCE); /* Update SSN Sub Type */
+                  EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                  strAUDIT_DESC = 'Assets SSN Sub Type modified' || :REFERENCE;
+       END
+       ELSE IF (:TRN_TYPE = 'NICI') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NICI', :REFERENCE); /* Update SSN Company */
+                  strAUDIT_DESC = 'Assets Company modified' || :REFERENCE;
+       END
+       ELSE IF (:TRN_TYPE = 'NIHL') THEN
+       BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:OBJECT, 'NIHL', :REFERENCE); /* Update SSN Home Location */
+                  strAUDIT_DESC = 'Assets Home Location modified' || :REFERENCE;
+       END
+       
+       /* Update transactions table */               
+               EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully'); 
+               
+              /* Add transaction history */                                                                                     
+               EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID); 
+                           
+           END /* SSN */
+                                
+        END /* Location */
+    END /* WH */
+END ^
+
+CREATE OR ALTER PROCEDURE PC_NIXX_P (RECORD_ID INTEGER,
+WH_ID CHAR(2) CHARACTER SET NONE,
+LOCN_ID VARCHAR(10) CHARACTER SET NONE,
+OBJECT VARCHAR(30) CHARACTER SET NONE,
+TRN_TYPE VARCHAR(4) CHARACTER SET NONE,
+TRN_CODE CHAR(1) CHARACTER SET NONE,
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(1024) CHARACTER SET NONE,
+QTY INTEGER,
+PERSON_ID VARCHAR(10) CHARACTER SET NONE,
+DEVICE_ID CHAR(2) CHARACTER SET NONE,
+INSTANCE_ID VARCHAR(10) CHARACTER SET NONE)
+AS 
+  DECLARE VARIABLE strWH_ID CHAR(2); 
+  DECLARE VARIABLE strINSTANCE VARCHAR(10);
+  DECLARE VARIABLE LOCN_EXIST INTEGER; 
+  DECLARE VARIABLE LOCN_NAME VARCHAR(50);
+  DECLARE VARIABLE SSN_EXIST INTEGER;
+  DECLARE VARIABLE strAUDIT_DESC VARCHAR(50);
+  DECLARE VARIABLE strSSN_ID VARCHAR(20);
+  DECLARE VARIABLE strTYPE VARCHAR(40);
+  DECLARE VARIABLE WK_SSN VARCHAR(20);
+  DECLARE VARIABLE WK_CODE VARCHAR(75);
+  
+BEGIN /* Main */
+    strWH_ID = '';
+    strINSTANCE = '';
+    LOCN_EXIST = 0;
+    LOCN_NAME = 'Created during audit ' || :TRN_DATE;
+    SSN_EXIST = 0;
+    strAUDIT_DESC = ''; 
+
+    /* Check if warehouse exists */
+    SELECT WH_ID, INSTANCE_ID 
+    FROM WAREHOUSE
+    WHERE WH_ID = :WH_ID
+    INTO :strWH_ID, :strINSTANCE;
+
+    /* Check warehouse*/
+    IF (strWH_ID = '') THEN
+    BEGIN
+       /* Update transactions table */               
+       EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid Warehouse');
+       EXIT;
+    END
+    ELSE
+    BEGIN /* WH */
+        /* Check instance */
+        IF (strINSTANCE <> :INSTANCE_ID) THEN  
+        BEGIN
+          /* Update transactions table */               
+          EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid InstanceID');
+          EXIT;
+        END
+        ELSE
+        BEGIN /* Location */
+           /* Check Location */                 
+           SELECT 1 
+           FROM LOCATION
+           WHERE WH_ID = :WH_ID
+           AND LOCN_ID = :LOCN_ID 
+           INTO :LOCN_EXIST; 
+           
+           /* Location not exists, then add new location */
+           IF (LOCN_EXIST = 0) THEN
+           BEGIN
+              /* Add new Location record */
+       INSERT INTO LOCATION (LOCN_ID, WH_ID, LOCN_NAME, LAST_AUDITED_DATE)
+              VALUES (:LOCN_ID, :WH_ID, :LOCN_NAME, :TRN_DATE);
+           END
+                      
+           IF (:TRN_TYPE <> 'NIUI') THEN
+           BEGIN
+              /* Check SSN */
+              SELECT COUNT(*)
+              FROM SSN
+              WHERE PROD_ID = :OBJECT
+  AND WH_ID = :WH_ID 
+  AND LOCN_ID = :LOCN_ID
+              INTO :SSN_EXIST;
+              
+              /* If SSN does not exists, then can create it */
+              IF (SSN_EXIST = 0) THEN
+              BEGIN
+                 /* new SSN */ 
+           EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Product Not In Location - Use Asset Audit to Create');
+           EXIT;
+              END
+              
+              /* Update fields of SSN */
+
+        FOR SELECT SSN_ID
+         FROM SSN
+              WHERE PROD_ID = :OBJECT
+  AND WH_ID = :WH_ID 
+  AND LOCN_ID = :LOCN_ID
+         INTO :strSSN_ID
+        DO
+         BEGIN
+  IF (:TRN_TYPE = 'NITP') THEN  
+         BEGIN
+           EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NITP', :REFERENCE);  /* Update Type */
+           EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+           strAUDIT_DESC = 'SSN Type was modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIOB') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIOB', :REFERENCE); /* Update Generic */
+                  WK_CODE = :strSSN_ID || '|' || :REFERENCE; 
+                  EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :WK_CODE); 
+                  strAUDIT_DESC = 'Generic description modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIBC') THEN
+         BEGIN
+           EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIBC', :REFERENCE); /* Update Brand */
+           EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                  strAUDIT_DESC = 'Brand description modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIMO') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIMO', :REFERENCE); /* Update Model */
+                  EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                  strAUDIT_DESC = 'Model description modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NICC') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NICC', :REFERENCE); /* Update Cost Center */
+                  EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                  strAUDIT_DESC = 'Cost Center modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NILG') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NILG', :REFERENCE); /* Update LegacyID */
+                  EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                  strAUDIT_DESC = 'Legacy ID modified';
+         END
+         ELSE IF (:TRN_TYPE = 'PSRF') THEN
+         BEGIN
+           EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'PSRF', :REFERENCE); /* Update GRN */
+           strAUDIT_DESC = 'Product Serial Reference Number modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NISN') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NISN', :REFERENCE); /* Update Serial Number */
+                  strAUDIT_DESC = 'Serial Number modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIO1') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIO1', :REFERENCE); /* Update Other1 */
+                  strAUDIT_DESC = 'Custom Field 1 modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIO2') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIO2', :REFERENCE); /* Update Other2 */
+                  strAUDIT_DESC = 'Custom Field 2 modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIO3') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIO3', :REFERENCE); /* Update Other3 */
+                  strAUDIT_DESC = 'Custom Field 3 modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIO4') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIO4', :REFERENCE); /* Update Other4 */
+                  strAUDIT_DESC = 'Custom Field 4 modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIO5') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIO5', :REFERENCE); /* Update Other5 */
+                  strAUDIT_DESC = 'Custom Field 5 modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIO6') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIO6', :REFERENCE); /* Update Other6 */
+                 SELECT SSN_TYPE 
+                 FROM SSN 
+                 WHERE SSN_ID = :OBJECT
+                 INTO :strTYPE; 
+                 EXECUTE PROCEDURE ADD_GROUP_DATA('NIO6', :TRN_DATE, :REFERENCE, :strTYPE); 
+                  strAUDIT_DESC = 'Type Custom Field 1 modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIO7') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIO7', :REFERENCE); /* Update Other7 */
+                 SELECT SSN_TYPE 
+                 FROM SSN 
+                 WHERE SSN_ID = :OBJECT
+                 INTO :strTYPE; 
+                 EXECUTE PROCEDURE ADD_GROUP_DATA('NIO7', :TRN_DATE, :REFERENCE, :strTYPE); 
+                  strAUDIT_DESC = 'Type Custom Field 2 modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIO8') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIO8', :REFERENCE); /* Update Other8 */
+                 SELECT SSN_TYPE 
+                 FROM SSN 
+                 WHERE SSN_ID = :OBJECT
+                 INTO :strTYPE; 
+                 EXECUTE PROCEDURE ADD_GROUP_DATA('NIO8', :TRN_DATE, :REFERENCE, :strTYPE); 
+                  strAUDIT_DESC = 'Type Custom Field 3 modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIO9') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIO9', :REFERENCE); /* Update Other9 */
+                 SELECT SSN_TYPE 
+                 FROM SSN 
+                 WHERE SSN_ID = :OBJECT
+                 INTO :strTYPE; 
+                 EXECUTE PROCEDURE ADD_GROUP_DATA('NIO9', :TRN_DATE, :REFERENCE, :strTYPE); 
+                  strAUDIT_DESC = 'Type Custom Field 4 modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIOA') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIOA', :REFERENCE); /* Update Other10 */
+                 SELECT SSN_TYPE 
+                 FROM SSN 
+                 WHERE SSN_ID = :OBJECT
+                 INTO :strTYPE; 
+                 EXECUTE PROCEDURE ADD_GROUP_DATA('NIOA', :TRN_DATE, :REFERENCE, :strTYPE); 
+                  strAUDIT_DESC = 'Type Custom Field 5 modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIOK') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIOK', :REFERENCE); /* Update Other19 */
+                  strAUDIT_DESC = 'Maintenance Support No modified';
+         END
+
+         ELSE IF (:TRN_TYPE = 'NI11') THEN 
+         BEGIN
+                   EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, :TRN_TYPE, :REFERENCE); /* Update Other11 */       
+                   EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                   strAUDIT_DESC = 'Other 11 modified';
+                END
+         ELSE IF (:TRN_TYPE = 'NI12') THEN 
+         BEGIN
+                   EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, :TRN_TYPE, :REFERENCE); /* Update Other12 */       
+                   EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                   strAUDIT_DESC = 'Other 12 modified';
+                END
+         ELSE IF (:TRN_TYPE = 'NI13') THEN 
+         BEGIN
+                   EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, :TRN_TYPE, :REFERENCE); /* Update Other13 */       
+                   EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                   strAUDIT_DESC = 'Other 13 modified';
+                END
+         ELSE IF (:TRN_TYPE = 'NI14') THEN 
+         BEGIN
+                   EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, :TRN_TYPE, :REFERENCE); /* Update Other14 */       
+                   EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                   strAUDIT_DESC = 'Other 14 modified';
+                END
+         ELSE IF (:TRN_TYPE = 'NI15') THEN 
+         BEGIN
+                   EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, :TRN_TYPE, :REFERENCE); /* Update Other15 */       
+                   strAUDIT_DESC = 'Other 15 modified';
+                END
+         ELSE IF (:TRN_TYPE = 'NI16') THEN 
+         BEGIN
+                   EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, :TRN_TYPE, :REFERENCE); /* Update Other16 */       
+                   strAUDIT_DESC = 'Other 16 modified';
+                END
+         ELSE IF (:TRN_TYPE = 'NI17') THEN 
+         BEGIN
+                   EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, :TRN_TYPE, :REFERENCE); /* Update Other17 */       
+                   strAUDIT_DESC = 'Other 17 modified';
+                END
+         ELSE IF (:TRN_TYPE = 'NI18') THEN 
+         BEGIN
+                   EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, :TRN_TYPE, :REFERENCE); /* Update Other18 */       
+                   strAUDIT_DESC = 'Other 18 modified';
+                END
+         ELSE IF (:TRN_TYPE = 'NI19') THEN 
+         BEGIN
+                   EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, :TRN_TYPE, :REFERENCE); /* Update Other19 */       
+                   EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                   strAUDIT_DESC = 'Other 19 modified';
+                END
+         ELSE IF (:TRN_TYPE = 'NI20') THEN 
+         BEGIN
+                   EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, :TRN_TYPE, :REFERENCE); /* Update Other20 */       
+                   EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                   strAUDIT_DESC = 'Other 20 modified';
+                END
+         ELSE IF (:TRN_TYPE = 'NIPP') THEN
+         BEGIN
+                 SELECT ORIGINAL_SSN
+                 FROM ISSN
+                 WHERE SSN_ID = :strSSN_ID
+                 INTO WK_SSN;
+                 IF (NOT WK_SSN IS NULL) THEN
+                 BEGIN
+                    UPDATE SSN
+                    SET PURCHASE_PRICE = (:QTY / 100)
+                    WHERE SSN_ID = :WK_SSN;
+                    strAUDIT_DESC = 'Purchase Price modified';
+                 END
+                 ELSE
+                 BEGIN
+                    strAUDIT_DESC = 'Purchase Price NOT modified';
+                 END
+              END
+         ELSE IF (:TRN_TYPE = 'NIPC') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIPC', :REFERENCE); /* Update Product */
+                  strAUDIT_DESC = 'Product No modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIOL') THEN 
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIOL', :REFERENCE); /* Update Other20 */       
+                  strAUDIT_DESC = 'Other 20 modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIST') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIST', :REFERENCE); /* Update Status Code */
+                  strAUDIT_DESC = 'Status modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NILX') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NILX', :REFERENCE); /* Update Label Location */
+                  strAUDIT_DESC = 'Label location modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIGC') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIGC', :REFERENCE); /* Group copy */                  
+                  strAUDIT_DESC = 'Copy fields from group ' || :REFERENCE;
+         END
+         ELSE IF (:TRN_TYPE = 'NISU') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NISU', :REFERENCE); /* Supplier */                  
+                  EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                  strAUDIT_DESC = 'Supplier modified ' || :REFERENCE;
+         END
+         ELSE IF (:TRN_TYPE = 'NIPD') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NIPD', :REFERENCE); /* Update Assets Product */
+                  EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :REFERENCE); 
+                  strAUDIT_DESC = 'Assets Product modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NID3') THEN
+         BEGIN
+                  EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID, 'NID3', :REFERENCE); /* Update Assets Sub Type */
+                  WK_CODE = :strSSN_ID || '|' || :REFERENCE; 
+                  EXECUTE PROCEDURE ADD_MASTER_DATA(:TRN_TYPE, :TRN_DATE, :WK_CODE); 
+                  strAUDIT_DESC = 'Assets Sub Type modified';
+         END
+         ELSE IF (:TRN_TYPE = 'NIHL') THEN
+         BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID , 'NIHL', :REFERENCE); /* Update SSN Home Location */
+                  strAUDIT_DESC = 'Assets Home Location modified' ;
+         END
+         ELSE IF (:TRN_TYPE = 'NIPO') THEN
+         BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID , 'NIPO', :REFERENCE); /* Update SSN PO Order */
+                  strAUDIT_DESC = 'Assets Purchase Order modified' ;
+         END
+         ELSE IF (:TRN_TYPE = 'NILB') THEN
+         BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID , 'NILB', :REFERENCE); /* Update SSN Lot Batch No */
+                  strAUDIT_DESC = 'Assets Lot Batch no modified' ;
+         END
+         ELSE IF (:TRN_TYPE = 'NIBB') THEN
+         BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID , 'NIBB', :REFERENCE); /* Update SSN Best Before Date */
+                  strAUDIT_DESC = 'Assets Best Before modified' ;
+         END
+         ELSE IF (:TRN_TYPE = 'NIUD') THEN
+         BEGIN
+                 EXECUTE PROCEDURE UPDATE_SSN(:strSSN_ID , 'NIUD', :REFERENCE); /* Update SSN Use by Date */
+                  strAUDIT_DESC = 'Assets Use by Date modified' ;
+         END
+         /* Add transaction history */                                                                                     
+         EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :strSSN_ID, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                              :strAUDIT_DESC, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID); 
+         END /* for */
+       
+       /* Update transactions table */               
+              EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully'); 
+               
+                           
+           END /* SSN */
+                                
+        END /* Location */
+    END /* WH */
+  SUSPEND;
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

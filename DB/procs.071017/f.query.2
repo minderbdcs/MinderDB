@@ -1,0 +1,9 @@
+/*
+insert into query_layout(code,description,sequence,label) values('mssn',
+"mer_day(grn.grn_date) || \'-\' || mer_month(grn.grn_date) || \'-\' || mer_year(grn.grn_date)", 5,'Received');
+*/
+delete from query_layout where code='mssn' and sequence=5;
+
+insert into query_layout(code,description,sequence,label) values('mssn',
+'mer_day(grn.grn_date) || ~-~ || mer_month(grn.grn_date) || ~-~ || mer_year(grn.grn_date)', 5,'Received');
+

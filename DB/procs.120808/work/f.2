@@ -1,0 +1,177 @@
+table pick_order
+PICK_ORDER                      (PICK_ORDER) VARCHAR(15) Not Null 
+PICK_ORDER_TYPE                 (CODE_TWO) CHAR(2) Nullable 
+PERSON_ID                       (PERSON) VARCHAR(10) Nullable 
+CONTACT_NAME                    (CONTACT_NAME) VARCHAR(50) Nullable 
+CUSTOMER_PO_WO                  (CUSTOMER_PO_WO) VARCHAR(20) Nullable 
+COST_CENTER                     (COST_CENTER) VARCHAR(40) Nullable 
+COMPANY_ID                      (COMPANY) VARCHAR(20) Nullable 
+DIVISION_ID                     (DIVISION) VARCHAR(20) Nullable 
+PICK_PRIORITY                   (PICK_PRIORITY) SMALLINT Nullable 
+DELIVERY_RUN_NO                 (DELIVERY_RUN_NO) VARCHAR(10) Nullable 
+PICK_DUE_DATE                   (PICK_DUE_DATE) TIMESTAMP Nullable 
+SPECIAL_INSTRUCTIONS1           (SPECIAL_INSTRUCTIONS1) VARCHAR(8192) Nullable 
+SPECIAL_INSTRUCTIONS2           (SPECIAL_INSTRUCTIONS2) VARCHAR(255) Nullable 
+INV_WITH_GOODS                  (INV_WITH_GOODS) CHAR(1) Nullable 
+SHIP_VIA                        (SHIP_VIA) VARCHAR(10) Nullable 
+DESPATCH_LOCATION               (DESPATCH_LOCATION) VARCHAR(10) Nullable 
+CREATE_DATE                     (CREATE_DATE) TIMESTAMP Nullable 
+CREATED_BY                      (USER_ID) VARCHAR(10) Nullable 
+PICK_STARTED                    (PICK_STARTED) TIMESTAMP Nullable 
+PICK_STATUS                     (STATUS) CHAR(2) Nullable 
+PARTIAL_PICK_ALLOWED            (PARTIAL_PICK_ALLOWED) CHAR(1) Nullable 
+SHIP_SERVICE                    (SHIP_SERVICE) VARCHAR(10) Nullable 
+P_PERSON_TYPE                   (CODE_TWO) CHAR(2) Nullable 
+P_FIRST_NAME                    (FIRST_NAME) VARCHAR(50) Nullable 
+P_LAST_NAME                     (LAST_NAME) VARCHAR(50) Nullable 
+P_ADDRESS_LINE2                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+P_CITY                          (CITY) VARCHAR(25) Nullable 
+P_STATE                         (STATE) VARCHAR(15) Nullable 
+P_POST_CODE                     (POST_CODE) VARCHAR(10) Nullable 
+P_COUNTRY                       (COUNTRY) VARCHAR(25) Nullable 
+P_PHONE                         (PHONE_NO) VARCHAR(30) Nullable 
+TERMS                           VARCHAR(20) Nullable 
+PAYMENT_METHOD                  VARCHAR(20) Nullable 
+P_PERSON_ID                     (PERSON) VARCHAR(10) Nullable 
+P_SAME_AS_INVOICE_TO            CHAR(1) Nullable 
+APPROVED_DATE                   TIMESTAMP Nullable 
+APPROVED_BY                     (PERSON) VARCHAR(10) Nullable 
+LAST_LINE_NO                    INTEGER Nullable 
+IMPORTED                        CHAR(1) Nullable 
+IMPORT_ERRORS                   INTEGER Nullable DEFAULT 0
+APPROVED_DESP_DATE              TIMESTAMP Nullable 
+APPROVED_DESP_BY                (PERSON) VARCHAR(10) Nullable 
+DEFAULT_SALE_PRICE              (PURCHASE_PRICE) FLOAT Nullable 
+WIP_ORDERING                    (DESCRIPTION) VARCHAR(50) Nullable 
+PERMANENT_TRANSFER              (CODE_ONE) CHAR(1) Nullable 
+RETURN_DATE                     (DATETIME) TIMESTAMP Nullable 
+PRINTED_DATE                    TIMESTAMP Nullable 
+PRINTED_STATUS                  (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+PICK_RETRIEVE_STATUS            (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+P_ADDRESS_LINE1                 VARCHAR(100) Nullable 
+P_TITLE                         VARCHAR(10) Nullable 
+P_ADDRESS_LINE3                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+P_ADDRESS_LINE4                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+P_AUST_POST_4STATE_ID           VARCHAR(255) Nullable 
+SUPPLIER_LIST                   (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+SPECIAL_INSTRUCTIONS            (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+WH_ID                           (WH_ID) CHAR(2) Nullable 
+UPDATE_ID                       VARCHAR(10) Nullable 
+ASSEMBLY_STARTED                TIMESTAMP Nullable 
+LAST_UPDATE_DATE                (LAST_UPDATE_DATE) TIMESTAMP Nullable 
+ORDER_CANCELLED                 TIMESTAMP Nullable 
+P_ADDRESS_LINE5                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+OTHER1                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER2                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER3                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER4                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER5                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER6                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER7                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER8                          (OTHER_CHAR) VARCHAR(50) Nullable 
+OTHER9                          (OTHER_CHAR) VARCHAR(50) Nullable 
+PALLET_BASE                     (PRODUCT) VARCHAR(30) Nullable 
+OVER_SIZED                      (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+LABEL_PRINTED_DATE              (LABEL_DATE) TIMESTAMP Nullable 
+REMARKS1                        (DESCR) VARCHAR(75) Nullable 
+REMARKS2                        (DESCR) VARCHAR(75) Nullable 
+REMARKS3                        (DESCR) VARCHAR(75) Nullable 
+REMARKS4                        (DESCR) VARCHAR(75) Nullable 
+REMARKS5                        (DESCR) VARCHAR(75) Nullable 
+REMARKS6                        (DESCR) VARCHAR(75) Nullable 
+FOOTER1                         (DESCR) VARCHAR(75) Nullable 
+FOOTER2                         (DESCR) VARCHAR(75) Nullable 
+FOOTER3                         (DESCR) VARCHAR(75) Nullable 
+FOOTER4                         (DESCR) VARCHAR(75) Nullable 
+FOOTER5                         (DESCR) VARCHAR(75) Nullable 
+OVER_SIZED_REASON               (CODE) VARCHAR(40) Nullable 
+ADDRESS_LABEL_DATE              TIMESTAMP Nullable 
+PICK_ORDER_STARTED              TIMESTAMP Nullable 
+EXPORT_CATEGORY                 CHAR(1) Nullable 
+D_FIRST_NAME                    (FIRST_NAME) VARCHAR(50) Nullable 
+D_LAST_NAME                     (LAST_NAME) VARCHAR(50) Nullable 
+D_CITY                          (CITY) VARCHAR(25) Nullable 
+D_STATE                         (STATE) VARCHAR(15) Nullable 
+D_POST_CODE                     (POST_CODE) VARCHAR(10) Nullable 
+D_COUNTRY                       (LEGACY_COUNTRY) VARCHAR(35) Nullable 
+D_PHONE                         (PHONE_NO) VARCHAR(30) Nullable 
+D_ADDRESS_LINE1                 VARCHAR(100) Nullable 
+D_ADDRESS_LINE2                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+D_ADDRESS_LINE3                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+D_ADDRESS_LINE4                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+D_ADDRESS_LINE5                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+D_TITLE                         VARCHAR(10) Nullable 
+SUPPLIER_ID                     (PERSON) VARCHAR(10) Nullable 
+S_PERSON_ID                     (PERSON) VARCHAR(10) Nullable 
+S_PERSON_TYPE                   (CODE_TWO) CHAR(2) Nullable 
+S_FIRST_NAME                    (FIRST_NAME) VARCHAR(50) Nullable 
+S_LAST_NAME                     (LAST_NAME) VARCHAR(50) Nullable 
+S_CITY                          (CITY) VARCHAR(25) Nullable 
+S_STATE                         (STATE) VARCHAR(15) Nullable 
+S_POST_CODE                     (POST_CODE) VARCHAR(10) Nullable 
+S_COUNTRY                       (COUNTRY) VARCHAR(25) Nullable 
+S_PHONE                         (PHONE_NO) VARCHAR(30) Nullable 
+S_ADDRESS_LINE1                 VARCHAR(100) Nullable 
+S_ADDRESS_LINE2                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+S_ADDRESS_LINE3                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+S_ADDRESS_LINE4                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+S_ADDRESS_LINE5                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+S_TITLE                         VARCHAR(10) Nullable 
+S_SAME_AS_SOLD_FROM             CHAR(1) Nullable 
+D_PERSON_ID                     (PERSON) VARCHAR(10) Nullable 
+SO_LEGACY_CONSIGNMENT           (OTHER_CHAR) VARCHAR(50) Nullable 
+SO_LEGACY_PROJECT               VARCHAR(50) Nullable 
+SO_LEGACY_INTERNAL_ID           VARCHAR(20) Nullable 
+SO_LEGACY_LAST_MODIFIED         (LAST_UPDATE_DATE) TIMESTAMP Nullable 
+SO_LEGACY_PICK_WH_ID            CHAR(2) Nullable 
+SO_LEGACY_PICK_WH_NAME          VARCHAR(50) Nullable 
+SO_LEGACY_MEMO                  VARCHAR(1024) Nullable 
+SO_LEGACY_STATUS_ID             VARCHAR(2) Nullable 
+SO_LEGACY_STATUS                VARCHAR(50) Nullable 
+SHIP_VIA_NAME                   VARCHAR(50) Nullable 
+SO_LEGACY_CREATE_DATE           (LAST_UPDATE_DATE) TIMESTAMP Nullable 
+PO_MATERIAL_SAFETY_DATA         (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+EARLIEST_DATE                   (DATETIME) TIMESTAMP Nullable 
+D_WH_ID                         (WH_ID) CHAR(2) Nullable 
+LEGACY_LEDGER_ADMIN_FEE_CODE    (CODE) VARCHAR(40) Nullable 
+LEGACY_LEDGER_FREIGHT_CODE      (CODE) VARCHAR(40) Nullable 
+LEGACY_LEDGER_DEPOSIT_CODE      (CODE) VARCHAR(40) Nullable 
+P_ADDR_RECORD_ID                (RECORD_ID) INTEGER Nullable 
+D_ADDR_RECORD_ID                (RECORD_ID) INTEGER Nullable 
+INVOICE_COUNT                   INTEGER Nullable 
+SALE_AREA_CODE                  (CODE_TWO) CHAR(2) Nullable 
+VOLUME_UOM                      (UOM) VARCHAR(10) Nullable 
+DESPATCH_LOCATION_GROUP         (LOCN_ID) VARCHAR(10) Nullable 
+SHIPPING_METHOD                 (CARRIER_ACCOUNT_NO) VARCHAR(10) Nullable 
+SUB_TOTAL_AMOUNT_SSN_ID         FLOAT Nullable DEFAULT 0.00
+SUB_TOTAL_AMOUNT_PROD_ID        FLOAT Nullable DEFAULT 0.00
+LEGACY_LEDGER_SALE_CODE         (CODE) VARCHAR(40) Nullable 
+LEGACY_LEDGER_SALE_SSN_ID_CODE  (CODE) VARCHAR(40) Nullable 
+SUB_TOTAL_AMOUNT                FLOAT Nullable default 0.00
+FREIGHT                         FLOAT Nullable default 0.00
+AMOUNT_PAID                     FLOAT Nullable default 0.00
+TAX_RATE                        FLOAT Nullable 
+ADMIN_FEE_RATE                  FLOAT Nullable 
+ADMIN_FEE_AMOUNT                FLOAT Nullable default 0.00
+TAX_AMOUNT                      FLOAT Nullable default 0.00
+DUE_AMOUNT                      FLOAT Nullable default 0.00
+SUM_STD_AMOUNT                  FLOAT Nullable default 0.00
+SUM_SALE_AMOUNT                 FLOAT Nullable default 0.00
+FREIGHT_TAX_AMOUNT              FLOAT Nullable default 0.00
+NET_WEIGHT                      FLOAT Nullable default 0
+OTHER_NUM1                      FLOAT Nullable default 0
+OTHER_NUM2                      FLOAT Nullable default 0
+VOLUME                          FLOAT Nullable default 0
+SUB_TOTAL_TAX                   FLOAT Nullable default 0.00
+NET_TOTAL_AMOUNT                FLOAT Nullable default 0.00
+SUM_TOTAL_AMOUNT                FLOAT Nullable default 0.00
+FEES_AMOUNTS                    FLOAT Nullable default 0.00
+FEES_AMOUNTS_TAX_AMOUNT         FLOAT Nullable default 0.00
+ADMIN_FEE_PERCENT_AMOUNT        FLOAT Nullable default 0.00
+ADMIN_FEE_TAX_AMOUNT            FLOAT Nullable default 0.00
+LAST_INVOICE_DATE               (LAST_UPDATE_DATE) TIMESTAMP Nullable 
+LAST_INVOICE_NO                 (INVOICE_NO) VARCHAR(10) Nullable 
+FREIGHT_EVERY_INVOICE           (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+FREIGHT_LAST_UPDATE_DATE        (LAST_UPDATE_DATE) TIMESTAMP Nullable 
+FREIGHT_LAST_UPDATED_BY         (USER_ID) VARCHAR(10) Nullable 
+PARTIAL_DESPATCH_ALLOWED        (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'

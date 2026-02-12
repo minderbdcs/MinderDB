@@ -1,0 +1,5 @@
+insert into options(group_code,code,description) values('GRNDPltOwn','N ','NONE');
+insert into options(group_code,code,description) values('GRNDPltOwn','C ','CHEP');
+insert into options(group_code,code,description) values('GRNDPltOwn','O ','OWN');
+insert into options(group_code,code,description) values('GRNDPltOwn','U ','UNKNOWN');
+

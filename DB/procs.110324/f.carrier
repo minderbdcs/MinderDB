@@ -1,0 +1,3 @@
+alter table carrier_service add service_transit_cover_reqd value_tf;
+alter table carrier_service add service_transit_cover_amount double precision;
+

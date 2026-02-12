@@ -1,0 +1,1 @@
+alter table sys_menu add SM_SHORTCUT          code_one;

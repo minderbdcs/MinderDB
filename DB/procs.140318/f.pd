@@ -1,0 +1,6 @@
+drop trigger add_pick_from_temp3;
+drop trigger add_pick_from_temp5;
+
+drop trigger run_transaction_dsot;
+drop trigger run_transaction_dsus;
+

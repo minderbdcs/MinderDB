@@ -1,0 +1,4 @@
+alter table company add invoice_TI_report_id record_id;
+alter table company add invoice_PS_report_id record_id;
+alter table company add invoice_PI_report_id record_id;
+

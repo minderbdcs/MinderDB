@@ -1,0 +1,18 @@
+done
+alter table pick_invoice add invoice_1st_despatch_id despatch_id;
+alter table pick_invoice add invoice_1st_AWB_CONSIGNMENT_NO AWB_CONSIGNMENT_NO;
+
+alter table pick_order add last_invoice_date timestamp;
+alter table pick_order add last_invoice_no invoice_no ;
+alter table pick_order add freight_every_invoice values_tf;
+==================================================================================
+populate new fields
+
+alter table pick_invoice_line add INVLINE_BACK_ORDER_QTY  QTY;
+alter table pick_invoice_line add INVLINE_ORDERED_QTY  QTY;
+alter table pick_invoice_line add INVLINE_LINE_TOTAL_TAX       DOUBLE PRECISION  ;
+alter table pick_invoice_line add INVLINE_WARRANTY_CODE       WARRANTY_TERM     ;
+
+alter table pick_order add freight_last_update_date timestamp;
+alter table pick_order add freight_last_updated_by person;
+

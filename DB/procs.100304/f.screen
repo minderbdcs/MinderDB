@@ -1,0 +1,2 @@
+alter table sys_screen_var add dropdown_default code_255;
+

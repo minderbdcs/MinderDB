@@ -1,0 +1,14 @@
+/*
+have to add all missing warehouses
+*/
+
+insert into warehouse (wh_id, description) 
+select location.wh_id, location.wh_id 
+from location 
+     left outer join warehouse 
+          on location.wh_id=warehouse.wh_id 
+where warehouse.wh_id is null 
+group by location.wh_id;
+
+commit;
+alter table location add  foreign key (wh_id) references warehouse(wh_id);

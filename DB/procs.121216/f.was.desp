@@ -1,0 +1,46 @@
+
+CREATE DOMAIN DEPOT_AMOUNT AS DOUBLE PRECISION;
+/*
+add to postcode_depot carriers fields .
+*/
+
+alter table postcode_depot add  carrier_01_col_01  code;
+alter table postcode_depot add  carrier_01_col_02  code;
+alter table postcode_depot add  carrier_01_col_03  code;
+alter table postcode_depot add  carrier_01_col_04  depot_amount;
+alter table postcode_depot add  carrier_02_col_01  code;
+alter table postcode_depot add  carrier_02_col_02  code;
+alter table postcode_depot add  carrier_02_col_03  code;
+alter table postcode_depot add  carrier_02_col_04  depot_amount;
+alter table postcode_depot add  carrier_03_col_01  code;
+alter table postcode_depot add  carrier_03_col_02  code;
+alter table postcode_depot add  carrier_03_col_03  code;
+alter table postcode_depot add  carrier_03_col_04  depot_amount;
+alter table postcode_depot add  carrier_04_col_01  code;
+alter table postcode_depot add  carrier_04_col_02  code;
+alter table postcode_depot add  carrier_04_col_03  code;
+alter table postcode_depot add  carrier_04_col_04  depot_amount;
+alter table postcode_depot add  carrier_05_col_01  code;
+alter table postcode_depot add  carrier_05_col_02  code;
+alter table postcode_depot add  carrier_05_col_03  code;
+alter table postcode_depot add  carrier_05_col_04  depot_amount;
+alter table postcode_depot add  carrier_06_col_01  code;
+alter table postcode_depot add  carrier_06_col_02  code;
+alter table postcode_depot add  carrier_06_col_03  code;
+alter table postcode_depot add  carrier_06_col_04  depot_amount;
+alter table postcode_depot add  carrier_07_col_01  code;
+alter table postcode_depot add  carrier_07_col_02  code;
+alter table postcode_depot add  carrier_07_col_03  code;
+alter table postcode_depot add  carrier_07_col_04  depot_amount;
+alter table postcode_depot add  carrier_08_col_01  code;
+alter table postcode_depot add  carrier_08_col_02  code;
+alter table postcode_depot add  carrier_08_col_03  code;
+alter table postcode_depot add  carrier_08_col_04  depot_amount;
+alter table postcode_depot add  carrier_09_col_01  code;
+alter table postcode_depot add  carrier_09_col_02  code;
+alter table postcode_depot add  carrier_09_col_03  code;
+alter table postcode_depot add  carrier_09_col_04  depot_amount;
+alter table postcode_depot add  carrier_10_col_01  code;
+alter table postcode_depot add  carrier_10_col_02  code;
+alter table postcode_depot add  carrier_10_col_03  code;
+alter table postcode_depot add  carrier_10_col_04  depot_amount;

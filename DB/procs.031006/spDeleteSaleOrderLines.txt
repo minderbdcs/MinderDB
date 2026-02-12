@@ -1,0 +1,35 @@
+/*
+CREATE PROCEDURE DELETE_SALE_ORDER_LINES (
+*/
+ALTER PROCEDURE DELETE_SALE_ORDER_LINES (
+  PICK_ORDER VARCHAR(10)
+)  AS      
+
+DECLARE VARIABLE sSSN VARCHAR(20);
+DECLARE VARIABLE sStatusSSN CHAR(2);
+
+BEGIN
+     
+      FOR 
+         SELECT SSN_ID 
+         FROM PICK_ITEM
+         WHERE PICK_ORDER = :PICK_ORDER               
+         INTO :sSSN
+      DO
+      BEGIN                     
+         IF (LEN(:sSSN) <> 0) THEN
+         BEGIN
+           SELECT STATUS_SSN
+           FROM SSN         
+           WHERE SSN_ID = :sSSN         
+           INTO :sStatusSSN;
+         
+           IF (:sStatusSSN <> 'PA' and :sStatusSSN <> 'ST' and :sStatusSSN <> 'TS') THEN
+           BEGIN                   
+             DELETE FROM PICK_ITEM
+             WHERE SSN_ID = :sSSN;
+           END
+         END
+      END  
+               
+END^

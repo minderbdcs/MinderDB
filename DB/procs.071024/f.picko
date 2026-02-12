@@ -1,0 +1,2 @@
+alter table pick_order add s_same_as_sold_from char(1);
+

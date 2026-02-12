@@ -1,0 +1,15 @@
+insert into sys_label_var (slv_name,slv_sequence,sl_name,last_update_date,last_update_by) values('%PICK_ITEM.PS_CUSTOMER_EDI_NO%','0','SSCC_100X150_ZPL','NOW','frankl');
+insert into sys_label_var (slv_name,slv_expression,slv_sequence,sl_name,last_update_date,last_update_by) values('%Print_Title_FOR%',"assignIf(%PICK_ITEM.PS_CUSTOMER_EDI_NO%=='9315999902008T','TO:','FOR:')",'2','SSCC_100X150_ZPL','NOW','frankl');
+insert into sys_label_var (slv_name,slv_expression,slv_sequence,sl_name,last_update_date,last_update_by) values('%Print_Title_TO%',"assignIf(%PICK_ITEM.PS_CUSTOMER_EDI_NO%=='9315999902008T','','TO:')",'2','SSCC_100X150_ZPL','NOW','frankl');
+/* ^A0N,34,37^FDTO:^FS */
+/* update sys_label set sl_line = '^A0N,34,37^FDTO:^FS' where record_id=2803; */
+update sys_label set sl_line = '^A0N,34,37^FD%Print_Title_TO%^FS' where record_id=2803;
+/* ^A0N,34,47^FDFOR:^FS */
+/* update sys_label set sl_line = '^A0N,34,47^FDFOR:^FS' where record_id=2805; */
+update sys_label set sl_line = '^A0N,34,47^FD%Print_Title_FOR%^FS' where record_id=2805;
+/***************************************************************/
+/* now the supplier name */
+insert into sys_label_var (slv_name,slv_expression,slv_sequence,sl_name,last_update_date,last_update_by) values('%Sent_From_First_Name%',"assignIf(%PICK_ITEM.PS_CUSTOMER_EDI_NO%=='9315999902008T','Dick Smith C/O TIFS','%PICK_ADDRESS_SF.PIA_FIRST_NAME%')",'2','SSCC_100X150_ZPL','NOW','frankl');
+/* ^A0N,34,47^FD%PICK_ADDRESS_SF.PIA_FIRST_NAME%^FS */
+/* update sys_label set sl_line = '^A0N,34,47^FD%PICK_ADDRESS_SF.PIA_FIRST_NAME%^FS' where record_id=2815; */
+update sys_label set sl_line = '^A0N,34,47^FD%Sent_From_First_Name%^FS' where record_id=2815;

@@ -1,0 +1,1 @@
+insert into pick_mode (pick_mode_no, pick_order_type, description, procedure_name ) values ('P1','SO','1. All Waiting Orders','PICK_MODE_P1');

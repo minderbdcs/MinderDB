@@ -1,0 +1,3 @@
+alter table prod_profile alter order_weight type weight_decimal3;
+alter table prod_profile_temp alter p_order_weight type weight_decimal3;
+

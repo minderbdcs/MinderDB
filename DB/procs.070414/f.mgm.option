@@ -1,0 +1,13 @@
+insert into options(group_code,code,description) values('DevTran','CE|1','PKOZ|O');
+insert into options(group_code,code,description) values('DevTran','CE|2','PLPK|O');
+insert into options(group_code,code,description) values('DevTran','RS|1','PLAO|O');
+insert into options(group_code,code,description) values('DevTran','RL|1','PLAO|O');
+insert into options(group_code,code,description) values('DevTran','R2|1','DSRA|O');
+insert into options(group_code,code,description) values('DevTran','R3|1','DSRA|O');
+insert into options(group_code,code,description) values('DevTran','CG|1','DSOT|S');
+insert into options(group_code,code,description) values('DevTran','CG|2','DSDX|L');
+insert into options(group_code,code,description) values('DevTran','CF|1','DSOT|S');
+insert into options(group_code,code,description) values('DevTran','CF|2','DSDX|L');
+insert into options(group_code,code,description) values('DevTran','CI|1','DSOT|S');
+insert into options(group_code,code,description) values('DevTran','CI|2','DSDX|L');
+

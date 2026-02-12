@@ -1,0 +1,5 @@
+ALTER TABLE CARRIER ADD DISPLAY_BUTTON VALUE_TF;
+ALTER TABLE CARRIER ADD CARRIER_LOGO COMPANY_LOGO;
+
+update carrier set display_button = 'F';
+update carrier set display_button='T' where carrier_id in ('STARTRACK','OTHER');

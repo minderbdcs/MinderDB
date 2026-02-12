@@ -1,0 +1,13 @@
+delete from transactions;
+delete from transactions4;
+delete from web_requests;
+delete from transactions_archive;
+delete from transactions4_archive;
+delete from web_requests_archive;
+delete from log;
+delete from pick_order where pick_order starting '2';
+delete from pick_item where pick_order starting '2';
+delete from pick_item_line_no where pick_order starting '2';
+delete from pick_order where pick_order = '';
+delete from pick_item where pick_order = '';
+delete from pick_item_line_no where pick_order = '';

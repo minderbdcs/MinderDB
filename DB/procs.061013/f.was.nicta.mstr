@@ -1,0 +1,40 @@
+/*
+delete from ssn_sub_type where ssn_sub_type.code in (
+ select a3.code from ssn_sub_type a3 left outer join ssn_type a1 on a1.code=a3.ssn_type where a1.code is null)
+ and ssn_sub_type.generic in ( select a3.generic from ssn_sub_type a3 left outer join ssn_type a1 on a1.code=a3.ssn_type where a1.code is null)
+ and ssn_sub_type.ssn_type in ( select a3.ssn_type from ssn_sub_type a3 left outer join ssn_type a1 on a1.code=a3.ssn_type where a1.code is null);
+commit;
+*/
+/*
+delete from ssn_sub_type where ssn_sub_type.code in (
+ select a3.code from ssn_sub_type a3 left outer join ssn_type a1 on a1.code=a3.ssn_type where a1.code is null)
+ and ssn_sub_type.generic in ( select a3.generic from ssn_sub_type a3 left outer join ssn_type a1 on a1.code=a3.ssn_type where a1.code is null)
+ and ssn_sub_type.ssn_type in ( select a3.ssn_type from ssn_sub_type a3 left outer join ssn_type a1 on a1.code=a3.ssn_type where a1.code is null);
+commit;
+*/
+/*
+select code,ssn_type from generic where ssn_type='IT EQUIPMENT';
+insert into generic(code,description,ssn_type) values('COMPUTER','Computer','IT EQUIPMENT');
+commit;
+insert into generic(code,description,ssn_type) values('MECHANICAL SERVICES','Mechanical Services','BLDG FABRIC/SERVICES');
+insert into generic(code,description,ssn_type) values('ELECTRICAL SERVICES','Electrical Services','BLDG FABRIC/SERVICES');
+insert into generic(code,description,ssn_type) values('BUILDING FABRIC','Building Fabric','BLDG FABRIC/SERVICES');
+insert into generic(code,description,ssn_type) values('HYDRAULIC SERVICES','Hydraulic Services','BLDG FABRIC/SERVICES');
+insert into generic(code,description,ssn_type) values('FIRE PROTECTION SERVICES','Fire Protection Services','BLDG FABRIC/SERVICES');
+delete from ssn where ssn_id='';
+delete from issn where ssn_id='';
+*/
+commit;
+/*
+select a4.ssn_type,a4.generic,a4.ssn_sub_type from ssn a4 left outer join ssn_sub_type a3 on a3.code=a4.ssn_sub_type and a3.generic=a4.generic and a3.ssn_type=a4.ssn_type  where a3.code is null;
+commit;
+select a4.ssn_type,a4.generic from ssn a4 left outer join generic a3 on a3.code=a4.generic and a3.ssn_type=a4.ssn_type  where a3.code is null group by a4.ssn_type,a4.generic;
+update ssn set generic='NETWORK EQUIPMENT' where ssn_type='RESEARCH EQUIPMENT' and generic='NETWRKEQ';
+insert into generic (code,description,ssn_type) values('AUDIO VISUAL AND SENSORY EQUIPMENT','Audio Visual and Sensory Equipment','RESEARCH EQUIPMENT');
+commit;
+select a4.ssn_id,a4.ssn_type,a4.generic,a4.ssn_sub_type from ssn a4 left outer join ssn_type a3 on a3.code=a4.ssn_type  where a3.code is null;
+*/
+select ssn_id,generic from ssn where generic='AVEQUIP';
+insert into generic(code,description,ssn_type) values('SECURITY EQUIPMENT','Security Equipment','BLDG FABRIC/SERVICES');
+commit;
+commit;

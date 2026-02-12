@@ -1,0 +1,13 @@
+alter table depreciation add save_method code;
+commit;
+update depreciation set save_method=close_method;
+commit;
+alter table depreciation drop close_method;
+commit;
+alter table depreciation add close_method method_code10;
+commit;
+update depreciation set close_method=save_method;
+commit;
+ALTER TABLE DEPRECIATION DROP SAVE_METHOD;
+
+

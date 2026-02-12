@@ -1,0 +1,2 @@
+alter table pick_order add exported_despatch_post_date last_update_date ;
+alter table pick_order_dx add exported_despatch_post_date last_update_date ;

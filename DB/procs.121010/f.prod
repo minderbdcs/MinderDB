@@ -1,0 +1,1 @@
+alter table prod_profile add stock_on_hand qty;

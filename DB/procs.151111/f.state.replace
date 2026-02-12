@@ -1,0 +1,19 @@
+update or insert into options(group_code,code,description) values('STATE_CODE','Victoria','VIC');
+update or insert into options(group_code,code,description) values('STATE_CODE','Western Austral','WA');
+update or insert into options(group_code,code,description) values('STATE_CODE','Queensland','QLD');
+update or insert into options(group_code,code,description) values('STATE_CODE','South Australia','SA');
+update or insert into options(group_code,code,description) values('STATE_CODE','New South Wales','NSW');
+update or insert into options(group_code,code,description) values('STATE_CODE','W.A.','WA');
+update or insert into options(group_code,code,description) values('STATE_CODE','S.A.','SA');
+/* */
+update or insert into options(group_code,code,description) values('STATE_CODE','sa','SA');
+update or insert into options(group_code,code,description) values('STATE_CODE','wa','WA');
+update or insert into options(group_code,code,description) values('STATE_CODE','qld','QLD');
+update or insert into options(group_code,code,description) values('STATE_CODE','nsw','NSW');
+update or insert into options(group_code,code,description) values('STATE_CODE','vic','VIC');
+update or insert into options(group_code,code,description) values('STATE_CODE','Vic','VIC');
+update or insert into options(group_code,code,description) values('STATE_CODE','Northern Territ','NT');
+update or insert into options(group_code,code,description) values('STATE_CODE','Tasmania','TAS');
+update or insert into options(group_code,code,description) values('STATE_CODE','qLD','QLD');
+update or insert into options(group_code,code,description) values('STATE_CODE','Qld','QLD');
+

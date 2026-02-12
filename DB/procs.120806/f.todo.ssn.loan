@@ -1,0 +1,23 @@
+/*
+TABLE = SSN_LOAN 
+Which has the following fields (again can we prefix all field names with SSN_?):
+We need more field to enable graphical display of Booked Loan Dates.
+Note the SSN_STATUS Table holds the current Loan Status
+
+Note RECORD_ID is the unique key for multiple records with same SSN_ID
+
+*RECORD_ID			- enables multiple Loan Bookings
+SSN_ID
+SSN_LOAN_ORDER_NO  PICK_ORDER  - i.e. Transfer Order No.
+LOAN_PERIOD_NO		-> SSN_LOAN_PERIOD_NO
+LOAN_PERIOD			-> SSN_LOAN_PERIOD
+SSN_LOAN_START_DATE 	- new field – Planned Issue date – not actual
+SSN_LOAN_START_ACT_DATE 	- new field – actual  issued date
+SSN_LOAN_RETURN_DATE 	- new field – Expected Return date – not actual
+SSN_LOAN_RETURN_ACT_DATE 	- new field – Actual  Returned date 
+SSN_LOAN_COMPLETED  VALUE_TF – Used to flag loan issue and then when returned => ‘T’ or if forced because loan terminated due to being lost and ready for archiving.
+LOAN_COST_BASE		-> SSN_LOAN_COST_BASE
+SSN_LOAN_LAST_UPDTD_BY
+SSN_LOAN_LAST_UPDTD_DATE
+SSN_LOAN_LAST_UPDTD_DEVICE  /* length = 26 characters */
+*/

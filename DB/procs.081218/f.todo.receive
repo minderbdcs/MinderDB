@@ -1,0 +1,22 @@
+how to stop more than 1 person doing receive on an order
+
+have in control field po_receive_one_user_per_order
+
+in purchase_order have user_owner
+
+if value in control is 'T'
+	if null then can do GRND
+	else
+	{
+		if = my user then can do GRND
+		else cannot do this
+	}
+else
+	can do GRND
+can implement this in the GRND
+
+when user clicks complete
+	update all orders the user owns to null
+now since this is only for po's - can do this where we do the update of purchase_line_detail to 'DL'
+
+

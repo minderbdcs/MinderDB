@@ -1,0 +1,12 @@
+alter table sys_screen_tab alter wh_id to orig_wh_id;
+alter table sys_screen_tab alter company_id to orig_company_id;
+commit;
+alter table sys_screen_tab add wh_id wh_id;
+alter table sys_screen_tab add company_id company;
+commit;
+update sys_screen_tab set wh_id=orig_wh_id,company_id=orig_company_id;
+commit;
+alter table sys_screen_tab drop orig_wh_id;
+alter table sys_screen_tab drop orig_company_id;
+
+alter table sys_screen_tab add ssv_name descr;

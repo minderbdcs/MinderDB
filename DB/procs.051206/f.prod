@@ -1,0 +1,1 @@
+alter table prod_profile add uom_size varchar(10);

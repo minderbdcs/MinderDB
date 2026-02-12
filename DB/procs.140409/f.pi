@@ -1,0 +1,7 @@
+alter table pick_item_address add PIA_EDI_IN_HOUSE_NO    EDI_NO;
+
+alter table pick_order_item_temp add A_PIA_EDI_IN_HOUSE_NO   EDI_NO;
+alter table pick_order_item_temp add P_EDI_IN_HOUSE_NO   EDI_NO;
+alter table pick_order_item_temp add H_D_EDI_IN_HOUSE_NO   EDI_NO;
+alter table pick_order_item_temp add H_S_EDI_IN_HOUSE_NO   EDI_NO;
+

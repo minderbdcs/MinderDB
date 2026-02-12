@@ -1,0 +1,217 @@
+
+DROP TRIGGER RUN_TRANSACTION_PKOL^
+COMMIT^
+
+CREATE TRIGGER RUN_TRANSACTION_PKOL FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 51 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_LABEL_NO VARCHAR(10);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_OBJECT VARCHAR(30);
+DECLARE VARIABLE WK_REASON VARCHAR(40);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_PID_FOUND INTEGER;
+DECLARE VARIABLE WK_PID_QTY INTEGER;
+DECLARE VARIABLE WK_PI_STATUS CHAR(2);
+DECLARE VARIABLE WK_DETAIL_ID INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PI_PICKED_QTY INTEGER;
+DECLARE VARIABLE WK_PI_ORDER_QTY INTEGER;
+DECLARE VARIABLE WK_IS_QTY INTEGER;
+DECLARE VARIABLE iSSN_LENGTH INTEGER;
+DECLARE VARIABLE iSSN_ID INTEGER;
+DECLARE VARIABLE I_SSN_ID VARCHAR(20);
+DECLARE VARIABLE I_LEN_SSN_ID INTEGER;
+DECLARE VARIABLE LEN_SSN_ID INTEGER;
+DECLARE VARIABLE WK_OLD_SSN_ID VARCHAR(30);
+DECLARE VARIABLE P_SSN_ID INTEGER;
+DECLARE VARIABLE WK_PID_SSN VARCHAR(20);
+DECLARE VARIABLE WK_DEVICE_WH CHAR(2);
+DECLARE VARIABLE WK_PI_PICKED_QTY_NULL INTEGER;
+
+DECLARE VARIABLE WK_PI_SSN VARCHAR(20);
+DECLARE VARIABLE WK_PI_WH CHAR(2);
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKOL') THEN
+  BEGIN
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_LABEL_NO = NEW.SUB_LOCN_ID;
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_OBJECT = NEW.OBJECT;
+     WK_REASON = ALLTRIM(NEW.REFERENCE);
+     WK_QTY = NEW.QTY;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+
+/*
+     get issn for object
+     if qty < current_qty
+         split issn and use new qty item
+     update issn used status and location to device id
+
+     get pick_item_detail for label and ssn
+     add/update pick_item_detail
+     update pick_item status =PG and qty picked
+            if qty_picked = order_qty or reference not ''
+            then status = PL
+*/
+     WK_PI_PICKED_QTY = 0;
+     WK_PI_ORDER_QTY = 0;
+
+     SELECT PICKED_QTY, PICK_ORDER_QTY 
+            FROM PICK_ITEM
+            WHERE PICK_LABEL_NO = :WK_LABEL_NO
+            INTO :WK_PI_PICKED_QTY, :WK_PI_ORDER_QTY;
+     WK_PI_PICKED_QTY_NULL = 0;
+     SELECT 1
+            FROM PICK_ITEM
+            WHERE PICK_LABEL_NO = :WK_LABEL_NO
+              AND PICKED_QTY IS NULL
+            INTO :WK_PI_PICKED_QTY_NULL;
+     IF (WK_PI_PICKED_QTY_NULL = 1) THEN
+     BEGIN
+        WK_PI_PICKED_QTY = 0;
+     END
+     WK_PI_STATUS = 'PG';
+     IF (WK_REASON <> '') THEN
+     BEGIN
+        WK_PI_STATUS = 'PL';
+     END
+     WK_PI_PICKED_QTY = WK_PI_PICKED_QTY + WK_QTY;
+     IF (WK_PI_PICKED_QTY >= WK_PI_ORDER_QTY) THEN
+     BEGIN
+        WK_PI_STATUS = 'PL';
+     END
+     SELECT CURRENT_QTY
+            FROM ISSN
+            WHERE SSN_ID = :WK_OBJECT
+            INTO :WK_IS_QTY ;
+     IF (WK_QTY < WK_IS_QTY) THEN
+     BEGIN
+        /*  SPlit it */
+        /* Get length for Barcode */   
+        EXECUTE PROCEDURE GET_BARCODE_LENGTH RETURNING_VALUES iSSN_LENGTH;
+        iSSN_ID = GEN_ID(ISSN_SSN_ID, 1);
+        P_SSN_ID = iSSN_ID - 1;
+        LEN_SSN_ID = STRLEN(P_SSN_ID);
+        I_SSN_ID = '';
+        I_LEN_SSN_ID = STRLEN(P_SSN_ID);
+           
+        /* Padding leading with 0 */
+        WHILE (I_LEN_SSN_ID < :iSSN_LENGTH) DO
+        BEGIN
+           I_SSN_ID = I_SSN_ID || '0';
+           I_LEN_SSN_ID = I_LEN_SSN_ID + 1;
+        END
+        I_SSN_ID = I_SSN_ID || P_SSN_ID;
+           
+        EXECUTE PROCEDURE PC_TRSS 
+        :WK_RECORD ,
+        :WK_WH_ID,
+        :WK_LOCN_ID,
+        :WK_OBJECT,
+        'TRSS',
+        'A',
+        :WK_DATE,
+        :I_SSN_ID,
+        :WK_QTY,
+        :WK_USER,
+        :WK_DEVICE;
+        WK_OLD_SSN_ID = WK_OBJECT;
+        WK_OBJECT = I_SSN_ID;
+     END
+
+     /* use wh_id of device */
+     WK_DEVICE_WH = WK_WH_ID;
+     SELECT WH_ID FROM LOCATION WHERE LOCN_ID = :WK_DEVICE
+     INTO :WK_DEVICE_WH;
+
+     UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS,
+         PREV_PREV_WH_ID = PREV_WH_ID,
+         PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+         PREV_WH_ID = WH_ID,
+         PREV_LOCN_ID = LOCN_ID,
+         WH_ID = :WK_DEVICE_WH,
+         LOCN_ID = :WK_DEVICE
+      WHERE SSN_ID = :WK_OBJECT;
+
+     IF (WK_PI_STATUS = 'PL') THEN
+     BEGIN
+        UPDATE PICK_ITEM_DETAIL 
+        SET  PICK_DETAIL_STATUS = :WK_PI_STATUS
+        WHERE PICK_LABEL_NO = :WK_LABEL_NO 
+        AND PICK_DETAIL_STATUS = 'PG';
+        FOR SELECT SSN_ID FROM PICK_ITEM_DETAIL
+            WHERE PICK_LABEL_NO = :WK_LABEL_NO 
+            INTO :WK_PID_SSN
+        DO
+        BEGIN
+           UPDATE ISSN 
+           SET  ISSN_STATUS = :WK_PI_STATUS
+           WHERE SSN_ID = :WK_PI_SSN 
+           AND ISSN_STATUS = 'PG';
+        END
+     END
+
+     WK_PID_FOUND = 0;
+     SELECT 1, QTY_PICKED, PICK_DETAIL_ID 
+            FROM PICK_ITEM_DETAIL
+            WHERE PICK_LABEL_NO = :WK_LABEL_NO
+            AND SSN_ID = :WK_OBJECT
+            INTO :WK_PID_FOUND, :WK_PID_QTY, :WK_DETAIL_ID;
+     IF (WK_PID_FOUND = 0) THEN
+     BEGIN
+        /* no detail record */
+        INSERT INTO PICK_ITEM_DETAIL 
+            (PICK_LABEL_NO, 
+             SSN_ID, 
+             PICK_DETAIL_STATUS, 
+             QTY_PICKED,
+             USER_ID, 
+             DEVICE_ID, 
+             CREATE_DATE)
+        VALUES (:WK_LABEL_NO, 
+             :WK_OBJECT,
+             :WK_PI_STATUS,
+             :WK_QTY,
+             :WK_USER,
+             :WK_DEVICE,
+             :WK_DATE);
+     END
+     ELSE
+     BEGIN
+        UPDATE PICK_ITEM_DETAIL 
+        SET  PICK_DETAIL_STATUS =
+             :WK_PI_STATUS,
+             QTY_PICKED =
+             :WK_QTY ,
+             USER_ID =
+             :WK_USER,
+             DEVICE_ID =
+             :WK_DEVICE
+        WHERE PICK_DETAIL_ID = :WK_DETAIL_ID;
+     END
+
+     UPDATE PICK_ITEM
+     SET  PICK_LINE_STATUS =
+             :WK_PI_STATUS,
+             PICKED_QTY = :WK_PI_PICKED_QTY,
+             REASON = :WK_REASON
+     WHERE PICK_LABEL_NO = :WK_LABEL_NO;
+
+   EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+  END
+ END
+END ^
+ 

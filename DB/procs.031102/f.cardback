@@ -1,0 +1,5 @@
+CREATE TABLE CARDTEXT (CODE CODE NOT NULL,
+DESCRIPTION VARCHAR(1024),
+PRIMARY KEY(CODE));
+INSERT INTO CARDTEXT(CODE,DESCRIPTION) VALUES('STDBACK',
+'"2","","","","","","","","","","","EMERGENCY CONTROLLER","1800 851 050","For all Safety & Environmental Emergencies","------------------------------------","For all Community complaints and concerns please call:","COMMUNITY HOTLINE: 1800 100 707 (24/7)","This card must be carried at all times and must be produced on request.","------------------------------------","This card has been issued by ALJV for the WESTLINK M7 Project and should not be relied upon by any other party as proof of identification or competency.","","B&DCS v1.0"');

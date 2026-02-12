@@ -1,0 +1,48 @@
+alter table pick_despatch add pick_label_no despatch_id;
+alter table pick_despatch add despatched_qty qty;
+alter table pick_despatch add despatched_weight_calc weight;
+alter table pick_despatch add despatched_weight_actual weight;
+alter table pick_despatch add despatch_carrier despatch_carrier;
+alter table pick_despatch add carrier_account_no varchar(12);
+alter table pick_despatch add despatched_carton_qty qty;
+alter table pick_despatch add despatched_vol despatched_vol;
+alter table pick_despatch add despatched_pallet_qty qty;
+alter table pick_despatch add pallet_owner pallet_owner;
+alter table pick_despatch add despatch_post_code despatch_post_code;
+alter table pick_despatch add address_label_date timestamp;
+alter table pick_despatch add despatch_finish despatch_finish;
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP TRIGGER ADD_PICK_DESPATCH_TIME^
+COMMIT^
+
+CREATE TRIGGER ADD_PICK_DESPATCH_TIME FOR PICK_DESPATCH 
+ACTIVE BEFORE INSERT POSITION 20 
+AS
+BEGIN
+   NEW.LAST_UPDATE_DATE = 'NOW';
+   NEW.PICK_LABEL_NO = NEW.DESPATCH_ID;
+   NEW.DESPATCHED_WEIGHT_CALC = NEW.PICKD_WT_CALC;
+   NEW.DESPATCHED_WEIGHT_ACTUAL = NEW.PICKD_WT_ACTUAL;
+   NEW.DESPATCH_CARRIER = NEW.PICKD_CARRIER_ID;
+   IF (NEW.PICKD_CHARGE_TO = 'R') THEN
+   BEGIN
+      NEW.CARRIER_ACCOUNT_NO = NEW.RECEIVER_ACCOUNT;
+   END
+   ELSE
+   BEGIN
+      NEW.CARRIER_ACCOUNT_NO = NEW.SENDER_ACCOUNT;
+   END
+   NEW.DESPATCHED_CARTON_QTY = NEW.PICKD_CARTON_QTY;
+   NEW.DESPATCHED_PALLET_QTY = NEW.PICKD_PALLET_QTY;
+   NEW.DESPATCHED_VOL = NEW.PICKD_VOL_ACTUAL;
+   NEW.DESPATCH_POST_CODE = NEW.PICKD_POST_CODE;
+   NEW.DESPATCH_FINISH = NEW.PICKD_EXIT;
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

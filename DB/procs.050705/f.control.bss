@@ -1,0 +1,2 @@
+update control set default_receive_weights='T';
+

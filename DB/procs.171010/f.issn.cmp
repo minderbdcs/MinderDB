@@ -1,0 +1,8 @@
+update issn set company_id=null where company_id='';
+commit;
+
+
+insert into company(company_id,name) select issn.company_id,issn.company_id from  issn  where issn.company_id not in (select company2.company_id from company company2) group by issn.company_id;
+
+commit;
+alter table issn add  CONSTRAINT ISSN_FK_COMPANY foreign key (COMPANY_ID) references COMPANY(COMPANY_ID);

@@ -1,0 +1,3 @@
+alter table carrier add pallet_label_prn_type code;
+alter table carrier add satchel_label_prn_type code;
+alter table carrier add carton_label_prn_type code;

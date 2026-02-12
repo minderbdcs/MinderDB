@@ -1,0 +1,4 @@
+alter table control add receive_direct_delivery value_tf;
+update control set receive_direct_delivery ='F';
+
+

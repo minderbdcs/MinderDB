@@ -1,0 +1,2 @@
+delete from pick_mode where pick_mode_no='PA';
+

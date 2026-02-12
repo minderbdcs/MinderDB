@@ -1,0 +1,54 @@
+        SELECT PACK_SSCC.PS_SSCC, 
+ps_sscc_status,
+ps_out_despatch_id,
+ps_edi_asn,
+                   PACK_SSCC.PS_ASN_VENDOR_NO, 
+                   PACK_SSCC.PS_CUSTOMER_EDI_NO, 
+         /*        PACK_SSCC.PS_AWB_CONSIGNMENT_NO,  */    
+                   PACK_SSCC.PS_OUT_AWB_CONSIGNMENT_NO,        
+                   PACK_SSCC.PS_DESPATCHED_DATE,
+                   PACK_SSCC.PS_SCHED_DEL_DATE,
+                   PACK_SSCC.PS_DEL_TO_DC_NO,
+                   PACK_SSCC.PS_PICK_ORDER,
+                   PACK_SSCC.PS_PICK_ORDER_DATE,
+                   PACK_SSCC.PS_DEL_TO_STORE_NO,
+                   PACK_SSCC.PS_PRODUCT_CODE,
+                   PACK_SSCC.PS_PRODUCT_GTIN,
+                   PACK_SSCC.PS_QTY_SHIPPED,
+                   PACK_SSCC.PS_BATCH_NO,
+                   PACK_SSCC.PS_SCHED_DEL_TIME,
+         /*        PACK_SSCC.PS_CARRIER_ID, */
+                   PACK_SSCC.PS_OUT_CARRIER_ID,   
+                   PACK_SSCC.PS_SSCC_WEIGHT,
+                   PACK_SSCC.PS_SSCC_CUBIC,
+                   PACK_SSCC.PS_TOTAL_OUTERS,
+                   PACK_SSCC.PS_OUTER_BARCODE,
+                   PACK_SSCC.PS_QTY_ORDERED,
+                   PACK_SSCC.PS_USE_BY_DATE,
+                   PACK_SSCC.PS_ORDERED_BY_UOM_GTIN,
+                   PACK_SSCC.PS_PICK_LABEL_NO,
+                   PACK_SSCC.PS_LEGACY_PICK_ORDER,
+                   PACK_SSCC.PS_OUT_SSCC,
+                   PICK_ORDER.CREATE_DATE,
+                   CARRIER.CARRIER_PARENT_ID ,
+                   /* (SELECT SUM(PICK_ITEM_DETAIL.QTY_PICKED) FROM PICK_ITEM_DETAIL WHERE PICK_ITEM_DETAIL.DESPATCH_ID = PACK_SSCC.PS_OUT_DESPATCH_ID AND PICK_ITEM_DETAIL.PICK_LABEL_NO = PACK_SSCC.PS_PICK_LABEL_NO AND PICK_ITEM_DETAIL.PICK_DETAIL_STATUS NOT IN ('XX', 'AS') ), */
+                   1,
+                   PROD_PROFILE.NET_WEIGHT ,
+                   /* (coalesce(PROD_PROFILE.DIMENSION_X,0) *  coalesce(PROD_PROFILE.DIMENSION_Y,0) * coalesce(PROD_PROFILE.DIMENSION_Z,0)) */
+                   PROD_PROFILE.DIMENSION_X,  PROD_PROFILE.DIMENSION_Y,PROD_PROFILE.DIMENSION_Z 
+            FROM PACK_SSCC
+            JOIN PICK_ORDER ON PICK_ORDER.PICK_ORDER = PACK_SSCC.PS_PICK_ORDER 
+            JOIN CARRIER ON CARRIER.CARRIER_ID = PACK_SSCC.PS_OUT_CARRIER_ID
+            JOIN PICK_ITEM  ON PICK_ITEM.PICK_LABEL_NO = PACK_SSCC.PS_PICK_LABEL_NO
+            /* LEFT OUTER JOIN PROD_PROFILE ON PACK_SSCC.PS_PRODUCT_GTIN = PROD_PROFILE.PROD_ID AND PICK_ORDER.COMPANY_ID = PROD_PROFILE.COMPANY_ID */
+            LEFT OUTER JOIN PROD_PROFILE ON PICK_ITEM.PROD_ID = PROD_PROFILE.PROD_ID AND PICK_ORDER.COMPANY_ID = PROD_PROFILE.COMPANY_ID
+       /*     WHERE PS_DESPATCH_ID = :WK_PD_ID */
+       /*     AND PACK_SSCC.PS_SSCC_STATUS IN ('GO','DC','DX','CL','DN','NF') */
+/*
+            WHERE PS_OUT_DESPATCH_ID = :WK_PD_ID
+              AND PS_EDI_ASN IS NULL
+*/
+           where  PACK_SSCC.PS_SSCC_STATUS IN ('DC','DX','CL','DN','NF')
+              AND  (COALESCE(PS_QTY_SHIPPED,0) > 0) 
+and ps_pick_order='139-11452-D'
+;

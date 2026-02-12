@@ -1,0 +1,170 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+ 
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_PKUP FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 127 
+AS
+/* update a picks pick_line_priority */
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_LABEL VARCHAR(10);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+/* DECLARE VARIABLE WK_ORDER VARCHAR(15); */
+DECLARE VARIABLE WK_ORDER PICK_ORDER;
+DECLARE VARIABLE WK_DO_ONE_ONLY DESCRIPTION;
+DECLARE VARIABLE WK_WORK_PROD PRODUCT;
+DECLARE VARIABLE WK_WORK_ORDER PICK_ORDER;
+DECLARE VARIABLE WK_WORK_COMPANY COMPANY;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKUP') THEN
+  BEGIN
+     WK_USER = NEW.PERSON_ID;
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     IF (NEW.TRN_CODE = 'L') THEN
+     BEGIN
+        /* update a picks pick_line_priority */
+        WK_LABEL = NEW.OBJECT;
+        UPDATE PICK_ITEM
+           SET PICK_LINE_PRIORITY = PICK_LINE_PRIORITY + NEW.QTY
+           WHERE PICK_LABEL_NO = :WK_LABEL
+           AND PICK_LINE_PRIORITY IS NOT NULL;
+        UPDATE PICK_ITEM
+           SET PICK_LINE_PRIORITY = NEW.QTY
+           WHERE PICK_LABEL_NO = :WK_LABEL
+           AND PICK_LINE_PRIORITY IS NULL;
+        EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+     END
+     ELSE
+     BEGIN
+        IF (NEW.TRN_CODE = 'P') THEN
+        BEGIN
+           /* update a picks pick_line_priority */
+           WK_PROD = NEW.OBJECT;
+/*
+           UPDATE PICK_ITEM
+              SET PICK_LINE_PRIORITY = PICK_LINE_PRIORITY + NEW.QTY
+              WHERE DEVICE_ID = :WK_DEVICE
+              AND PROD_ID = :WK_PROD
+              AND PICK_LINE_PRIORITY IS NOT NULL;
+*/
+/* what about status limits for updates - so only updates picking statuses */
+           FOR SELECT PROD_ID , PICK_ORDER, COMPANY_ID
+              FROM PICK_ITEM
+              WHERE DEVICE_ID = :WK_DEVICE
+              AND PROD_ID <> :WK_PROD
+              AND (PICK_LINE_PRIORITY IS NOT NULL)
+              AND PICK_LINE_STATUS IN ('AL', 'PG', 'PL', 'Al', 'Pg', 'Pl')
+              GROUP BY PROD_ID, PICK_ORDER, COMPANY_ID
+              INTO :WK_WORK_PROD , :WK_WORK_ORDER, :WK_WORK_COMPANY
+           DO
+           BEGIN
+              INSERT INTO TRANSACTIONS_ARCHIVE
+              (WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE, REFERENCE,
+              QTY, ERROR_TEXT, INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+              PERSON_ID, DEVICE_ID, RECORD_ID, PROD_ID, COMPANY_ID, ORDER_NO)
+              VALUES ( NEW.WH_ID, NEW.LOCN_ID, NEW.OBJECT, 'PKUP', 'i', NEW.TRN_DATE, 'null pick_line_priority',
+              0, '', NEW.INSTANCE_ID, NEW.EXPORTED, NEW.SUB_LOCN_ID, NEW.INPUT_SOURCE,
+              NEW.PERSON_ID, NEW.DEVICE_ID, NEW.RECORD_ID ,:WK_WORK_PROD, :WK_WORK_COMPANY, :WK_WORK_ORDER );
+           END
+           UPDATE PICK_ITEM
+              SET PICK_LINE_PRIORITY = NULL
+              WHERE DEVICE_ID = :WK_DEVICE
+              AND PROD_ID <> :WK_PROD
+              AND (PICK_LINE_PRIORITY IS NOT NULL)
+              AND PICK_LINE_STATUS IN ('AL', 'PG', 'PL', 'Al', 'Pg', 'Pl');
+           FOR SELECT PROD_ID , PICK_ORDER, COMPANY_ID
+              FROM PICK_ITEM
+              WHERE DEVICE_ID = :WK_DEVICE
+              AND PROD_ID = :WK_PROD
+              AND (PICK_LINE_PRIORITY IS NULL)
+              AND PICK_LINE_STATUS IN ('AL', 'PG', 'PL', 'Al', 'Pg', 'Pl')
+              GROUP BY PROD_ID, PICK_ORDER, COMPANY_ID
+              INTO :WK_WORK_PROD , :WK_WORK_ORDER, :WK_WORK_COMPANY
+           DO
+           BEGIN
+              INSERT INTO TRANSACTIONS_ARCHIVE
+              (WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE, REFERENCE,
+              QTY, ERROR_TEXT, INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+              PERSON_ID, DEVICE_ID, RECORD_ID, PROD_ID, COMPANY_ID, ORDER_NO)
+              VALUES ( NEW.WH_ID, NEW.LOCN_ID, NEW.OBJECT, 'PKUP', 'i', NEW.TRN_DATE, 'set pick_line_priority',
+              NEW.QTY, '', NEW.INSTANCE_ID, NEW.EXPORTED, NEW.SUB_LOCN_ID, NEW.INPUT_SOURCE,
+              NEW.PERSON_ID, NEW.DEVICE_ID, NEW.RECORD_ID ,:WK_WORK_PROD, :WK_WORK_COMPANY, :WK_WORK_ORDER );
+           END
+           UPDATE PICK_ITEM
+              SET PICK_LINE_PRIORITY = NEW.QTY
+              WHERE DEVICE_ID = :WK_DEVICE
+              AND PROD_ID = :WK_PROD
+              AND (PICK_LINE_PRIORITY IS NULL)
+              AND PICK_LINE_STATUS IN ('AL', 'PG', 'PL', 'Al', 'Pg', 'Pl');
+
+/* converts PL to pl
+   converts PG to pg
+   converts AL to al
+this should only be for doing one at a time
+*/
+           WK_DO_ONE_ONLY = 'F';
+           SELECT DESCRIPTION FROM OPTIONS WHERE GROUP_CODE = 'PICK' AND CODE = 'OneataTime' INTO :WK_DO_ONE_ONLY;
+           IF (WK_DO_ONE_ONLY IS NULL ) THEN
+           BEGIN
+              WK_DO_ONE_ONLY = 'F';
+           END
+           IF (WK_DO_ONE_ONLY = 'T') THEN
+           BEGIN
+              UPDATE PICK_ITEM
+                 SET PICK_LINE_STATUS = 'Pl' 
+                 WHERE DEVICE_ID = :WK_DEVICE
+                 AND PROD_ID = :WK_PROD
+                 AND PICK_LINE_STATUS = 'PL';
+              UPDATE PICK_ITEM
+                 SET PICK_LINE_STATUS = 'Pg' 
+                 WHERE DEVICE_ID = :WK_DEVICE
+                 AND PROD_ID = :WK_PROD
+                 AND PICK_LINE_STATUS = 'PG';
+              UPDATE PICK_ITEM
+                 SET PICK_LINE_STATUS = 'Al' 
+                 WHERE DEVICE_ID = :WK_DEVICE
+                 AND PROD_ID = :WK_PROD
+                 AND PICK_LINE_STATUS = 'AL';
+           END
+           EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+        END
+        ELSE
+        BEGIN
+           IF (NEW.TRN_CODE = 'O') THEN
+           BEGIN
+              /* update a picks pick_line_priority */
+              WK_ORDER = NEW.OBJECT;
+              UPDATE PICK_ITEM
+                 SET PICK_LINE_PRIORITY = PICK_LINE_PRIORITY + NEW.QTY
+                 WHERE DEVICE_ID = :WK_DEVICE
+                 AND PICK_ORDER  = :WK_ORDER
+                 AND PICK_LINE_PRIORITY IS NOT NULL;
+              UPDATE PICK_ITEM
+                 SET PICK_LINE_PRIORITY = NEW.QTY
+                 WHERE DEVICE_ID = :WK_DEVICE
+                 AND PICK_ORDER  = :WK_ORDER
+                 AND PICK_LINE_PRIORITY IS NULL;
+              EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+           END
+        END
+     END
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+  END
+ END
+END ^
+ 
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

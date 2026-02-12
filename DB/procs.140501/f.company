@@ -1,0 +1,1 @@
+alter table company add PICK_IMPORT_PD_LINE_ADDRESS VALUE_TF;

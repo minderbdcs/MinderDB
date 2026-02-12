@@ -1,0 +1,410 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP   TRIGGER RUN_TRANSACTION_TRBK ^
+COMMIT^
+
+CREATE TRIGGER RUN_TRANSACTION_TRBK FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 149 
+AS
+/* Transfer of issn back to warehouse 
+   ie a return 
+   from DX status to PA 
+   amend qty which should be less than the prev_qty
+
+   then do transfer to location 
+   that will optionally change the qty if its zero
+   release the issn from the previous order (as in DI returns)
+   change its status
+   note that glen was talking about using a receive location
+   ie 'RC' move stat
+
+   then print issn label
+   if control.external_script_4_label = 'T'
+   {
+      here an external php script creates the labels or bartender files
+      if control.generate_label_text = 'T'
+      {
+          create a file for bartender to use - from the error text of this transaction
+      }
+      else
+      {
+          create a file for label to use - from the error text of this transaction
+      }
+   }
+   else
+   {
+      if control.generate_label_text = 'T'
+      {
+          if the issn is a product 
+          {
+              use pc_label_product to cronstuct a file for bartender to use
+          }
+          else
+          {
+              use pc_label_issn    to cronstuct a file for bartender to use
+          }
+      }
+      else
+      {
+          use pc_label to create a label
+      }
+   }
+   10/AUG/2009
+   using the printer device in the sub_locn field
+ */
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_OBJECT VARCHAR(30);
+DECLARE VARIABLE WK_REFERENCE VARCHAR(40);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_SUB_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_ISSN VARCHAR(20);
+DECLARE VARIABLE WK_ISSN_PICK_ORDER VARCHAR(20);
+DECLARE VARIABLE WK_ISSN_PROD VARCHAR(30);
+DECLARE VARIABLE WK_ISSN_WH_ID CHAR(2);
+DECLARE VARIABLE WK_ISSN_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_ISSN_CURRENT_QTY INTEGER;
+DECLARE VARIABLE WK_ISSN_ORIGINAL_SSN VARCHAR(20);
+DECLARE VARIABLE WK_DEFAULT_SSN_STATUS CHAR(2);
+DECLARE VARIABLE WK_DEFAULT_PROD_STATUS CHAR(2);
+DECLARE VARIABLE WK_NEW_STATUS CHAR(2);
+DECLARE VARIABLE WK_DO_CREDIT CHAR(1);
+DECLARE VARIABLE WK_CREDIT_QTY INTEGER;
+DECLARE VARIABLE WK_DESPATCH_LOCATION VARCHAR(10);
+DECLARE VARIABLE WK_FROM_LOCATION VARCHAR(10);
+DECLARE VARIABLE WK_PI_PICK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_PI_PICK_ORDER2 VARCHAR(15);
+DECLARE VARIABLE WK_SSN_QTY_ADJ INTEGER;
+DECLARE VARIABLE WK_LABEL_TYPE CHAR(1);
+DECLARE VARIABLE WK_LABEL_USE_EXTERNAL CHAR(1);
+DECLARE VARIABLE WK_LABEL_FIELD_WRAPPER CHAR(1);
+DECLARE VARIABLE WK_RESULT INTEGER;
+DECLARE VARIABLE WK_BUFFER VARCHAR(40);
+DECLARE VARIABLE WK_LABEL_PRINTER CHAR(2);
+DECLARE VARIABLE WK_ERROR_TEXT VARCHAR(1024);
+DECLARE VARIABLE WK_LABEL_DATA VARCHAR(32000);
+DECLARE VARIABLE WK_LABEL_PART VARCHAR(32000);
+DECLARE VARIABLE WK_WHERE VARCHAR(100);
+DECLARE VARIABLE WK_DUMMY INTEGER;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'TRBK') THEN
+  BEGIN
+     WK_ERROR_TEXT = '';
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.WH_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_OBJECT = NEW.OBJECT;
+     WK_REFERENCE = NEW.REFERENCE;
+     WK_QTY = NEW.QTY;
+     WK_SUB_LOCN_ID = NEW.SUB_LOCN_ID;
+     IF (NEW.TRN_CODE = 'A') THEN
+     BEGIN
+        WK_ISSN = WK_OBJECT;
+        IF (WK_QTY IS NULL OR WK_QTY = 0) THEN
+        BEGIN
+           SELECT PREV_QTY
+           FROM ISSN
+           WHERE SSN_ID = :WK_ISSN
+           INTO :WK_QTY ;
+        END
+        IF (WK_QTY IS NULL OR WK_QTY = 0) THEN
+        BEGIN
+           WK_QTY = 1;
+        END
+        WK_ISSN_PICK_ORDER = '';
+        WK_ISSN_PROD = '';
+        WK_ISSN_WH_ID = '';
+        WK_ISSN_LOCN_ID = '';
+        WK_ISSN_CURRENT_QTY = 0;
+        WK_ISSN_ORIGINAL_SSN = '';
+        SELECT PICK_ORDER, PROD_ID, WH_ID, LOCN_ID, CURRENT_QTY, ORIGINAL_SSN
+        FROM ISSN
+        WHERE SSN_ID = :WK_ISSN
+        INTO :WK_ISSN_PICK_ORDER, :WK_ISSN_PROD , WK_ISSN_WH_ID, :WK_ISSN_LOCN_ID, :WK_ISSN_CURRENT_QTY, :WK_ISSN_ORIGINAL_SSN;
+        IF (WK_ISSN_WH_ID IS NULL) THEN
+        BEGIN
+           WK_ISSN_WH_ID = '';
+        END
+        IF (WK_ISSN_LOCN_ID IS NULL) THEN
+        BEGIN
+           WK_ISSN_LOCN_ID = '';
+        END
+        IF (WK_ISSN_CURRENT_QTY IS NULL) THEN
+        BEGIN
+           WK_ISSN_CURRENT_QTY = 0;
+        END
+        IF (WK_ISSN_ORIGINAL_SSN IS NULL) THEN
+        BEGIN
+           WK_ISSN_ORIGINAL_SSN = '';
+        END
+        WK_DO_CREDIT = 'F';
+        SELECT NEW_SSN_STATUS, 
+               NEW_PROD_STATUS, 
+               RETURN_GENERATES_CREDIT, 
+               GENERATE_LABEL_TEXT, 
+               EXTERNAL_SCRIPT_4_LABEL,
+               DEFAULT_RECEIVE_PRINTER,
+               LABEL_FIELD_WRAPPER 
+        FROM CONTROL
+        INTO :WK_DEFAULT_SSN_STATUS, 
+             :WK_DEFAULT_PROD_STATUS, 
+             :WK_DO_CREDIT, 
+             :WK_LABEL_TYPE, 
+             :WK_LABEL_USE_EXTERNAL,
+             :WK_LABEL_PRINTER,
+             :WK_LABEL_FIELD_WRAPPER;
+        IF (WK_DO_CREDIT IS NULL) THEN
+        BEGIN
+           WK_DO_CREDIT = 'F';
+        END
+        IF (WK_LABEL_TYPE IS NULL) THEN
+        BEGIN
+           WK_LABEL_TYPE = 'F';
+        END
+        IF (WK_LABEL_USE_EXTERNAL IS NULL) THEN
+        BEGIN
+           WK_LABEL_USE_EXTERNAL = 'F';
+        END
+        IF (WK_LABEL_FIELD_WRAPPER IS NULL) THEN
+        BEGIN
+           WK_LABEL_FIELD_WRAPPER = '%';
+        END
+        IF (WK_LABEL_PRINTER IS NULL) THEN
+        BEGIN
+           WK_LABEL_PRINTER = 'PA';
+        END
+        IF (WK_SUB_LOCN_ID IS NULL) THEN
+        BEGIN
+           WK_DUMMY = 1;
+        END
+        ELSE
+        BEGIN
+           IF (WK_SUB_LOCN_ID > '') THEN
+           BEGIN
+              WK_LABEL_PRINTER = SUBSTR(WK_SUB_LOCN_ID,1,2);
+           END 
+        END
+
+        IF (WK_ISSN_PROD IS NOT NULL) THEN
+        BEGIN
+           WK_NEW_STATUS = :WK_DEFAULT_PROD_STATUS;
+        END
+        ELSE
+        BEGIN
+           WK_NEW_STATUS = :WK_DEFAULT_SSN_STATUS;
+        END
+        /* update the issn */
+        UPDATE ISSN
+        SET CURRENT_QTY = :WK_QTY,
+            ISSN_STATUS = :WK_NEW_STATUS,
+            PREV_PREV_PICK_ORDER = PREV_PICK_ORDER,
+            PREV_PICK_ORDER = PICK_ORDER,
+            PICK_ORDER = NULL,
+            PREV_PREV_PACK_ID = PREV_PACK_ID,
+            PREV_PACK_ID = PACK_ID,
+            PACK_ID = NULL,
+            PREV_PREV_DESPATCH_ID = PREV_DESPATCH_ID,
+            PREV_DESPATCH_ID = DESPATCH_ID,
+            DESPATCH_ID = NULL,
+            WH_ID = :WK_WH_ID,
+            LOCN_ID = :WK_LOCN_ID
+           WHERE SSN_ID = :WK_ISSN;
+        IF (WK_ISSN_PICK_ORDER IS NOT NULL) THEN
+        BEGIN
+           UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'CL' 
+            WHERE PICK_ITEM.SSN_ID = :WK_ISSN
+            AND   PICK_ITEM.PICK_LABEL_NO = :WK_ISSN_PICK_ORDER ;
+        END
+        /* what about the added pick item and pick item detail for the credit of this */
+        IF (WK_DO_CREDIT = 'T') THEN
+        BEGIN
+            /* must calculate the pick order to use */
+            WK_PI_PICK_ORDER = '';
+            /* if the original order was for an ssn */
+            SELECT PICK_ORDER 
+            FROM PICK_ITEM
+            WHERE  PICK_ITEM.PICK_LABEL_NO = :WK_ISSN_PICK_ORDER 
+            INTO :WK_PI_PICK_ORDER;
+            IF (WK_PI_PICK_ORDER IS NULL) THEN
+            BEGIN
+               WK_PI_PICK_ORDER = '';
+            END
+            /* if the original order was for a product */
+            IF (WK_PI_PICK_ORDER = '') THEN
+            BEGIN
+               WK_PI_PICK_ORDER2 = '';
+               FOR SELECT P3.PICK_ORDER 
+               FROM PICK_ITEM_DETAIL P2
+               LEFT OUTER JOIN  PICK_ITEM P3 ON P2.PICK_LABEL_NO = P3.PICK_LABEL_NO 
+               WHERE  P2.SSN_ID = :WK_ISSN
+               AND P2.PICK_DETAIL_STATUS IN ('DX','Dl','DL')
+               ORDER BY P3.LAST_UPDATE_DATE DESC
+               INTO :WK_PI_PICK_ORDER2
+               DO
+               BEGIN
+                  IF (WK_PI_PICK_ORDER2 IS NULL) THEN
+                  BEGIN
+                     WK_PI_PICK_ORDER2 = '';
+                  END
+                  IF (WK_PI_PICK_ORDER = '') THEN
+                  BEGIN
+                     IF (WK_PI_PICK_ORDER2 <> '') THEN 
+                     BEGIN
+                        WK_PI_PICK_ORDER = WK_PI_PICK_ORDER2;
+                     END
+                  END
+               END
+            END
+            IF (WK_PI_PICK_ORDER = '') THEN
+            BEGIN
+               WK_PI_PICK_ORDER2 = '';
+               FOR SELECT P3.PICK_ORDER 
+               FROM PICK_ITEM_DETAIL P2
+               LEFT OUTER JOIN  PICK_ITEM P3 ON P2.PICK_LABEL_NO = P3.PICK_LABEL_NO 
+               WHERE  P2.SSN_ID = :WK_ISSN
+               ORDER BY P3.LAST_UPDATE_DATE DESC
+               INTO :WK_PI_PICK_ORDER2
+               DO
+               BEGIN
+                  IF (WK_PI_PICK_ORDER2 IS NULL) THEN
+                  BEGIN
+                     WK_PI_PICK_ORDER2 = '';
+                  END
+                  IF (WK_PI_PICK_ORDER = '') THEN
+                  BEGIN
+                     IF (WK_PI_PICK_ORDER2 <> '') THEN 
+                     BEGIN
+                        WK_PI_PICK_ORDER = WK_PI_PICK_ORDER2;
+                     END
+                  END
+               END
+            END
+            WK_CREDIT_QTY = 0 - WK_QTY;
+            WK_DESPATCH_LOCATION = :WK_WH_ID || WK_LOCN_ID;
+            WK_FROM_LOCATION = :WK_ISSN_WH_ID || WK_ISSN_LOCN_ID;
+            IF (WK_PI_PICK_ORDER <> '') THEN
+            BEGIN
+               EXECUTE PROCEDURE ADD_PICK_SSN_DESPATCH_ITEMS(
+                   :WK_PI_PICK_ORDER,
+                   'CR',
+                   :WK_ISSN,
+                   '',
+                   :WK_CREDIT_QTY,
+                   :WK_DESPATCH_LOCATION,
+                   :WK_FROM_LOCATION,
+                   :WK_DATE,
+                   :WK_USER);
+            END
+        END
+        WK_SSN_QTY_ADJ = WK_QTY - WK_ISSN_CURRENT_QTY;
+        UPDATE SSN
+        SET CURRENT_QTY = CURRENT_QTY + :WK_SSN_QTY_ADJ
+        WHERE SSN_ID = :WK_ISSN_ORIGINAL_SSN;
+        /* now must print a label */
+        IF (WK_LABEL_USE_EXTERNAL = 'F') THEN
+        BEGIN
+           IF (WK_LABEL_USE_EXTERNAL = 'F') THEN
+           BEGIN
+              /* use pc_label for label creation */
+              WK_RESULT = 0;
+              WK_LABEL_DATA = '';
+              WK_LABEL_PART = '';
+              WK_WHERE = " WHERE SSN_ID='" || WK_ISSN || "'";
+              EXECUTE PROCEDURE GET_TABLE_DATA ('ISSN', WK_LABEL_FIELD_WRAPPER, '|', :WK_WHERE)
+              RETURNING_VALUES :WK_LABEL_PART;
+              IF (WK_LABEL_PART IS NULL) THEN
+              BEGIN
+                 WK_LABEL_PART = '';
+              END
+              WK_LABEL_DATA = WK_LABEL_DATA || :WK_LABEL_PART;
+              WK_WHERE = " WHERE SSN_ID='" || WK_ISSN_ORIGINAL_SSN || "'";
+              EXECUTE PROCEDURE GET_TABLE_DATA ('SSN', WK_LABEL_FIELD_WRAPPER, '|', :WK_WHERE)
+              RETURNING_VALUES :WK_LABEL_PART;
+              IF (WK_LABEL_PART IS NULL) THEN
+              BEGIN
+                 WK_LABEL_PART = '';
+              END
+              WK_LABEL_DATA = WK_LABEL_DATA || :WK_LABEL_PART;
+              WK_WHERE = " WHERE PROD_ID='" || WK_ISSN_PROD  || "'";
+              EXECUTE PROCEDURE GET_TABLE_DATA ('PROD_PROFILE', WK_LABEL_FIELD_WRAPPER, '|', :WK_WHERE)
+              RETURNING_VALUES :WK_LABEL_PART;
+              IF (WK_LABEL_PART IS NULL) THEN
+              BEGIN
+                 WK_LABEL_PART = '';
+              END
+              WK_LABEL_DATA = WK_LABEL_DATA || :WK_LABEL_PART;
+
+              EXECUTE  PROCEDURE PC_LABEL (:WK_LABEL_PRINTER ,
+                       'ISSN' , 
+                       1 ,
+                       NULL ,
+                       :WK_LABEL_DATA ,
+                       :WK_USER )
+              RETURNING_VALUES :WK_RESULT ,
+                                :WK_ERROR_TEXT ;
+           END
+           ELSE
+           BEGIN
+              /* use bartender for printing */
+              IF (WK_ISSN_PROD IS NOT NULL) THEN
+              BEGIN
+                 /* use pc_label_product for label creation */
+                 WK_BUFFER = WK_LABEL_PRINTER  || WK_ISSN;
+                 EXECUTE PROCEDURE PC_LABEL_PRODUCT WK_BUFFER RETURNING_VALUES :WK_RESULT;
+              END
+              ELSE
+              BEGIN
+                 /* use pc_label_issn for label creation */
+                 WK_BUFFER = WK_LABEL_PRINTER  || WK_ISSN;
+                 EXECUTE PROCEDURE PC_LABEL_ISSN WK_BUFFER RETURNING_VALUES :WK_RESULT;
+              END
+           END
+        END
+        EXECUTE PROCEDURE ADD_SSN_HIST (:WK_WH_ID ,
+           :WK_LOCN_ID ,
+           :WK_ISSN ,
+           NEW.TRN_TYPE ,
+           NEW.TRN_CODE ,
+           :WK_DATE ,
+           ' Received Back into Warehouse' ,
+           :WK_REFERENCE ,
+           :WK_QTY ,
+           :WK_USER ,
+           :WK_DEVICE );
+        IF (WK_ERROR_TEXT = '') THEN
+        BEGIN
+           WK_ERROR_TEXT = 'Processed successfully';
+        END
+        IF (WK_RESULT = 0) THEN
+        BEGIN
+           EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+        END
+        ELSE
+        BEGIN
+           WK_ERROR_TEXT = WK_ERROR_TEXT || ' result :' || :WK_RESULT;
+           EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F',:WK_ERROR_TEXT);
+        END
+     END
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+  END
+ END
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

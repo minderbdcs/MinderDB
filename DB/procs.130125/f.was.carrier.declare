@@ -1,0 +1,6 @@
+update carrier 
+set manifest_declaration = 'DANGEROUS GOODS DECLARATION
+I, the undersigned, do declare that. To the best of my knowledge and understanding. 
+This shipment does not contain any dangerous goods as defined in the Dangerous Goods Act. 
+I understand that breaching this Act may result in heavy fines or imprisonment.'
+where carrier_id='CPLEASE'; 

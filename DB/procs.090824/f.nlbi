@@ -1,0 +1,150 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP   TRIGGER RUN_TRANSACTION_NLBI ^
+COMMIT^
+
+CREATE TRIGGER RUN_TRANSACTION_NLBI FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 151 
+AS
+/* Add/ Update a borrowers location */
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_OBJECT VARCHAR(30);
+DECLARE VARIABLE WK_REFERENCE VARCHAR(40);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_SUB_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_LOCN_STATUS CHAR(2);
+DECLARE VARIABLE WK_LOCN_LABEL_DATE TIMESTAMP;
+DECLARE VARIABLE WK_LOCN_OLD_DATE TIMESTAMP;
+DECLARE VARIABLE WK_IN_LABEL_DATE VARCHAR(30);
+DECLARE VARIABLE WK_ERROR_TEXT VARCHAR(1024);
+DECLARE VARIABLE WK_RESULT INTEGER ;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'NLBI') THEN
+  BEGIN
+     WK_ERROR_TEXT = '';
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_OBJECT = NEW.OBJECT;
+     WK_REFERENCE = NEW.REFERENCE;
+     WK_QTY = NEW.QTY;
+     WK_SUB_LOCN_ID = NEW.SUB_LOCN_ID;
+     WK_RESULT = 0;
+     IF (NEW.TRN_CODE = 'B') THEN
+     BEGIN
+        WK_LOCN_STATUS = 'XX';
+        IF (WK_QTY IS NULL ) THEN
+        BEGIN
+           WK_QTY = 0;
+        END
+        IF (WK_QTY = 0) THEN
+        BEGIN
+           WK_LOCN_STATUS = 'CL';
+        END
+        IF (WK_QTY = 1) THEN
+        BEGIN
+           WK_LOCN_STATUS = 'OK';
+        END
+        /* get the label date */
+        WK_IN_LABEL_DATE = '';
+        WK_LOCN_LABEL_DATE = NULL;
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_OBJECT, 2  RETURNING_VALUES :WK_IN_LABEL_DATE ; 
+        IF (LEN(WK_IN_LABEL_DATE) > 0) THEN
+        BEGIN
+           WK_LOCN_LABEL_DATE = CAST(WK_IN_LABEL_DATE AS TIMESTAMP);
+           WHEN SQLCODE -413
+           DO
+           BEGIN
+              /* No Ship date */
+              WK_LOCN_LABEL_DATE = NULL;
+           END
+        END
+        WK_FOUND = 0;
+        SELECT 1, LABEL_DATE
+        FROM LOCATION
+        WHERE WH_ID = :WK_WH_ID
+        AND   LOCN_ID = :WK_LOCN_ID
+        INTO :WK_FOUND, :WK_LOCN_OLD_DATE;
+        IF (WK_FOUND IS NULL) THEN
+        BEGIN
+           WK_FOUND = 0;
+        END
+        IF (WK_FOUND = 0) THEN
+        BEGIN
+           /* no location so add it */
+           INSERT INTO LOCATION (
+               LOCN_NAME , 
+               LOCN_OWNER , 
+               LOCN_STAT , 
+               LABEL_DATE , 
+               WH_ID , 
+               LOCN_ID ) 
+           VALUES (
+               :WK_REFERENCE,
+               :WK_SUB_LOCN_ID,
+               :WK_LOCN_STATUS,
+               :WK_LOCN_LABEL_DATE,
+               :WK_WH_ID ,
+               :WK_LOCN_ID);
+        END
+        ELSE
+        BEGIN
+           IF (WK_LOCN_LABEL_DATE IS NULL) THEN
+           BEGIN
+              WK_LOCN_LABEL_DATE = WK_LOCN_OLD_DATE;
+           END
+           /* location found so update it */
+           UPDATE LOCATION
+           SET LOCN_NAME = :WK_REFERENCE,
+               LOCN_OWNER = :WK_SUB_LOCN_ID,
+               LOCN_STAT = :WK_LOCN_STATUS,
+               LABEL_DATE = :WK_LOCN_LABEL_DATE
+              WHERE WH_ID = :WK_WH_ID 
+              AND   LOCN_ID = :WK_LOCN_ID;
+        END
+        IF (WK_ERROR_TEXT = '') THEN
+        BEGIN
+           WK_ERROR_TEXT = 'Processed successfully';
+        END
+        IF (WK_RESULT <> 0) THEN
+        BEGIN
+           WK_ERROR_TEXT = WK_ERROR_TEXT || ' result :' || :WK_RESULT;
+        END
+        ELSE
+        BEGIN
+           WK_ERROR_TEXT = 'Processed successfully';
+        END
+        IF (WK_RESULT = 0) THEN
+        BEGIN
+           EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'T',:WK_ERROR_TEXT);
+        END
+        ELSE
+        BEGIN
+           EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'F',:WK_ERROR_TEXT);
+        END
+     END
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+  END
+ END
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

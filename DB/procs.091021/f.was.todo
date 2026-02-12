@@ -1,0 +1,12 @@
+want to have a class for a product
+	eg class 'medium'
+	has products p1 , p2 , p3, p4
+	which this class value set to 'medium'
+	I have added size_type for this
+
+then when we get a sales order for a 'medium' product
+	change use any of the products p1, p2, p3, p4
+	so that is the prod_profiles size_type is not null
+
+	must alter pkua
+	and pkal for the product replacement

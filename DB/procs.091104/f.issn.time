@@ -1,0 +1,31 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP TRIGGER ADD_ISSN_TIME ^
+COMMIT^
+
+
+CREATE TRIGGER ADD_ISSN_TIME FOR ISSN 
+ACTIVE BEFORE INSERT POSITION 20 
+AS
+BEGIN
+   NEW.LAST_UPDATE_DATE = 'NOW';
+   IF (NEW.CREATE_DATE IS NULL) THEN
+   BEGIN
+      NEW.CREATE_DATE = 'NOW';
+   END
+   SELECT CREATE_DATE FROM SSN
+   WHERE SSN_ID = NEW.ORIGINAL_SSN
+   INTO NEW.ORIGINAL_CREATE_DATE;
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+
+/*
+update issn set original_create_date = (select create_date from ssn where ssn.ssn_id=issn.original_ssn) where original_create_date is null;
+commit;
+*/

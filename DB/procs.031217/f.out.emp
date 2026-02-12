@@ -1,0 +1,76 @@
+
+EMPLOYEE_ID                     (PERSON) VARCHAR(10) Not Null 
+PROJECT_ID                      VARCHAR(10) Nullable 
+STATUS                          (STATUS) CHAR(2) Nullable 
+INDUCTION_DATE                  TIMESTAMP Nullable 
+TITLE                           VARCHAR(5) Nullable 
+FIRST_NAME                      VARCHAR(25) Nullable 
+LAST_NAME                       VARCHAR(25) Nullable 
+DOB                             TIMESTAMP Nullable 
+PREFERRED_LANGUAGE              VARCHAR(20) Nullable 
+COMPANY_ID                      VARCHAR(10) Nullable 
+EMPLOYEE_TYPE                   CHAR(2) Nullable 
+LOCATION                        VARCHAR(40) Nullable 
+OCCUPATION                      VARCHAR(30) Nullable 
+DRIVER_LIC_NO                   VARCHAR(20) Nullable 
+DRIVER_LIC_CLASS                VARCHAR(10) Nullable 
+DRIVER_LIC_STATE                VARCHAR(3) Nullable 
+DRIVER_LIC_EXPIRY_DATE          TIMESTAMP Nullable 
+ADDRESS_LINE1                   (ADDRESS_LINE) VARCHAR(50) Nullable 
+ADDRESS_LINE2                   (ADDRESS_LINE) VARCHAR(50) Nullable 
+CITY                            (CITY) VARCHAR(25) Nullable 
+STATE                           (STATE) VARCHAR(15) Nullable 
+POST_CODE                       (POST_CODE) VARCHAR(10) Nullable 
+COUNTRY                         (COUNTRY) VARCHAR(25) Nullable 
+PHONE_NO                        (PHONE_NO) VARCHAR(30) Nullable 
+FAX_NO                          (FAX_NO) VARCHAR(30) Nullable 
+MOBILE_NO                       (MOBILE_NO) VARCHAR(15) Nullable 
+EMAIL                           (EMAIL) VARCHAR(50) Nullable 
+MAIL_ADDRESS1                   (ADDRESS_LINE) VARCHAR(50) Nullable 
+MAIL_ADDRESS2                   (ADDRESS_LINE) VARCHAR(50) Nullable 
+MAIL_CITY                       (CITY) VARCHAR(25) Nullable 
+MAIL_STATE                      (STATE) VARCHAR(15) Nullable 
+MAIL_POST_CODE                  (POST_CODE) VARCHAR(10) Nullable 
+MAIL_COUNTRY                    (COUNTRY) VARCHAR(25) Nullable 
+MAIL_PHONE                      (PHONE_NO) VARCHAR(30) Nullable 
+CONTACT_FIRST_NAME              (CONTACT_FIRST_NAME) VARCHAR(25) Nullable 
+CONTACT_LAST_NAME               (CONTACT_LAST_NAME) VARCHAR(25) Nullable 
+CONTACT_ADDRESS1                (ADDRESS_LINE) VARCHAR(50) Nullable 
+CONTACT_ADDRESS2                (ADDRESS_LINE) VARCHAR(50) Nullable 
+CONTACT_CITY                    (CITY) VARCHAR(25) Nullable 
+CONTACT_STATE                   (STATE) VARCHAR(15) Nullable 
+CONTACT_POST_CODE               (POST_CODE) VARCHAR(10) Nullable 
+CONTACT_COUNTRY                 (COUNTRY) VARCHAR(25) Nullable 
+CONTACT_PHONE                   (PHONE_NO) VARCHAR(30) Nullable 
+EMP_UDF1                        VARCHAR(50) Nullable 
+EMP_UDF2                        VARCHAR(50) Nullable 
+EMP_UDF3                        VARCHAR(50) Nullable 
+EMP_UDF4                        VARCHAR(50) Nullable 
+EMP_UDF5                        VARCHAR(50) Nullable 
+EMP_UDF6                        VARCHAR(50) Nullable 
+EMP_UDF7                        VARCHAR(50) Nullable 
+EMP_UDF8                        TIMESTAMP Nullable 
+EMP_UDF9                        VARCHAR(50) Nullable 
+EMP_UDF10                       TIMESTAMP Nullable 
+SUPER_FUND_NO                   VARCHAR(20) Nullable 
+SUPER_FUND_NAME                 VARCHAR(50) Nullable 
+CREATE_DATE                     (CREATE_DATE) TIMESTAMP Nullable 
+CREATE_BY                       (PERSON) VARCHAR(10) Nullable 
+INDUCTION_FORM_NO               VARCHAR(8) Nullable 
+KIT_ID                          (PRODUCT) VARCHAR(30) Nullable 
+UPDATE_DATE                     (CREATE_DATE) TIMESTAMP Nullable 
+UPDATE_BY                       (USER_ID) VARCHAR(10) Nullable 
+GENDER                          CHAR(1) Nullable 
+COMPULSORY_SKILL                CHAR(1) Nullable 
+UNION_MEMBERSHIP                (CODE) VARCHAR(40) Nullable 
+UNION_MEMBERSHIP_NO             (UNION_MEMBERSHIP_NO) VARCHAR(20) Nullable 
+NOTES                           (DISPOSAL_NOTES) VARCHAR(255) Nullable 
+CONSTRAINT INTEG_273:
+  Primary key (EMPLOYEE_ID)
+
+Triggers on Table EMPLOYEE:
+EMP_SKILL_DEFAULT_TRG, Sequence: 1, Type: AFTER INSERT, Active
+INSERT_EMPLOYEE, Sequence: 10, Type: AFTER INSERT, Inactive
+UPDATE_EMPLOYEE, Sequence: 10, Type: AFTER UPDATE, Active
+DELETE_EMPLOYEE, Sequence: 0, Type: AFTER DELETE, Inactive
+

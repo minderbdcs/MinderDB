@@ -1,0 +1,2 @@
+alter table pick_order_item_temp add p_no_person_upd char(1);
+

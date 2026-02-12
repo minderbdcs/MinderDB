@@ -1,0 +1,21 @@
+create generator carrier_connote_id_gen16;
+create generator carrier_connote_id_gen17;
+create generator carrier_connote_id_gen18;
+create generator carrier_connote_id_gen19;
+create generator carrier_connote_id_gen20;
+create generator carrier_connote_id_gen21;
+create generator carrier_connote_id_gen22;
+create generator carrier_connote_id_gen23;
+create generator carrier_connote_id_gen24;
+create generator carrier_connote_id_gen25;
+
+create generator carrier_pack_label_gen16;
+create generator carrier_pack_label_gen17;
+create generator carrier_pack_label_gen18;
+create generator carrier_pack_label_gen19;
+create generator carrier_pack_label_gen20;
+create generator carrier_pack_label_gen21;
+create generator carrier_pack_label_gen22;
+create generator carrier_pack_label_gen23;
+create generator carrier_pack_label_gen24;
+create generator carrier_pack_label_gen25;

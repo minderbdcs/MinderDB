@@ -1,0 +1,2 @@
+alter table prod_profile add replenish value_tf;
+

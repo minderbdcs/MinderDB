@@ -1,0 +1,227 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/* DROP PROCEDURE ADDRESS_FROM_DESPATCH */
+/* CREATE OR ALTER PROCEDURE ADDRESS_FROM_DESPATCH ( */
+
+
+CREATE OR ALTER PROCEDURE ADDRESS_DESPATCH_FROM (
+SO_COMPANY               COMPANY,
+SO_SEND_FIRST_NAME       VARCHAR(50),
+SO_SEND_LAST_NAME        VARCHAR(50),
+SO_SEND_ADDRESS_LINE1    VARCHAR(100),
+SO_SEND_ADDRESS_LINE2    VARCHAR(50),
+SO_SEND_CITY             CITY,
+SO_SEND_SUBURB           SUBURB,
+SO_SEND_STATE            STATE,
+SO_SEND_POST_CODE        VARCHAR(10),
+SO_SEND_COUNTRY          COUNTRY)
+RETURNS (
+PA_FIRST_NAME            VARCHAR(50),
+PA_LAST_NAME             VARCHAR(50),
+PA_ADDRESS_LINE1         VARCHAR(100),
+PA_ADDRESS_LINE2         VARCHAR(100),
+PA_CITY                  CITY,
+PA_SUBURB                SUBURB,
+PA_STATE                 STATE,
+PA_POST_CODE             VARCHAR(10),
+PA_COUNTRY               COUNTRY,
+PA_EMAIL                 EMAIL,
+PA_PHONE_NO              PHONE_NO)
+AS
+
+DECLARE VARIABLE WK_SO  VARCHAR(40);
+
+DECLARE VARIABLE WK_BUFFER                   VARCHAR(1024);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(80);
+DECLARE VARIABLE WK_LOG_RESULT INTEGER;
+
+DECLARE VARIABLE SO_FIRST_NAME    FIRST_NAME;
+DECLARE VARIABLE SO_LAST_NAME     LAST_NAME;
+DECLARE VARIABLE PA_SAVE_STATE            STATE;
+DECLARE VARIABLE PA_SAVE_POST_CODE        VARCHAR(10);
+DECLARE VARIABLE PA_SAVE_COUNTRY          COUNTRY;
+
+BEGIN
+
+     WK_LOG_FILENAME = '/data/tmp/ADDRESS.FROM.log';
+WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'start of of ADDRESS.FROM.DESPATCH');
+WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'company');
+WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :SO_COMPANY);
+     /* now get the Person address for the company of the order */
+     WK_FOUND = 0;
+     SELECT FIRST 1 1,
+            PERSON_ADDRESS.ADDR_FIRST_NAME,
+            PERSON_ADDRESS.ADDR_LAST_NAME,
+            PERSON_ADDRESS.ADDR_LINE1,
+            PERSON_ADDRESS.ADDR_LINE2,
+            PERSON_ADDRESS.ADDR_SUBURB,
+            PERSON_ADDRESS.ADDR_CITY,
+            PERSON_ADDRESS.ADDR_STATE,
+            PERSON_ADDRESS.ADDR_POST_CODE,
+            PERSON_ADDRESS.ADDR_COUNTRY,
+            PERSON_ADDRESS.ADDR_EMAIL,
+            PERSON_ADDRESS.ADDR_PHONE_NO
+     FROM PERSON_ADDRESS 
+     WHERE PERSON_ID = :SO_COMPANY
+           AND ADDR_TYPE = 'SF'
+           AND ADDR_STATUS = 'CU'
+     ORDER BY PERSON_ADDRESS.RECORD_ID
+     INTO 
+          :WK_FOUND,
+          :PA_FIRST_NAME,
+          :PA_LAST_NAME,
+          :PA_ADDRESS_LINE1,
+          :PA_ADDRESS_LINE2,
+          :PA_SUBURB,
+          :PA_CITY,
+          :PA_STATE,
+          :PA_POST_CODE,
+          :PA_COUNTRY,
+          :PA_EMAIL,
+          :PA_PHONE_NO;
+      IF (WK_FOUND IS NULL) THEN
+      BEGIN
+         WK_FOUND = 0;
+      END
+WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'found person address');
+WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_FOUND);
+      IF (WK_FOUND = 0) THEN 
+      BEGIN
+WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'try MT address');
+         SELECT FIRST 1 1,
+               PERSON_ADDRESS.ADDR_FIRST_NAME,
+               PERSON_ADDRESS.ADDR_LAST_NAME,
+               PERSON_ADDRESS.ADDR_LINE1,
+               PERSON_ADDRESS.ADDR_LINE2,
+               PERSON_ADDRESS.ADDR_SUBURB,
+               PERSON_ADDRESS.ADDR_CITY,
+               PERSON_ADDRESS.ADDR_STATE,
+               PERSON_ADDRESS.ADDR_POST_CODE,
+               PERSON_ADDRESS.ADDR_COUNTRY,
+               PERSON_ADDRESS.ADDR_EMAIL,
+               PERSON_ADDRESS.ADDR_PHONE_NO
+         FROM PERSON_ADDRESS 
+         WHERE PERSON_ID = :SO_COMPANY
+              AND ADDR_TYPE = 'MT'
+              AND ADDR_STATUS = 'CU'
+         ORDER BY PERSON_ADDRESS.RECORD_ID
+         INTO 
+             :WK_FOUND,
+             :PA_FIRST_NAME,
+             :PA_LAST_NAME,
+             :PA_ADDRESS_LINE1,
+             :PA_ADDRESS_LINE2,
+             :PA_SUBURB,
+             :PA_CITY,
+             :PA_STATE,
+             :PA_POST_CODE,
+             :PA_COUNTRY,
+             :PA_EMAIL,
+             :PA_PHONE_NO;
+      END
+      IF (WK_FOUND IS NULL) THEN
+      BEGIN
+         WK_FOUND = 0;
+      END
+WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'found person address3');
+WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_FOUND);
+      IF (WK_FOUND = 0) THEN 
+      BEGIN
+         /* use the pick order s fields */
+         PA_FIRST_NAME    = SO_SEND_FIRST_NAME;
+         PA_LAST_NAME     = SO_SEND_LAST_NAME;
+      END
+/* 21/02/2014 always use the address from the sales order if there is one */
+      IF ((SO_SEND_ADDRESS_LINE1 IS NOT NULL) ) THEN
+      BEGIN
+         IF (TRIM(SO_SEND_ADDRESS_LINE1) = '') THEN
+         BEGIN
+            SO_SEND_ADDRESS_LINE1 = NULL;
+         END  
+      END
+      IF ((SO_SEND_ADDRESS_LINE2 IS NOT NULL) ) THEN
+      BEGIN
+         IF (TRIM(SO_SEND_ADDRESS_LINE2) = '') THEN
+         BEGIN
+            SO_SEND_ADDRESS_LINE2 = NULL;
+         END  
+      END
+      IF ((SO_SEND_SUBURB IS NOT NULL) ) THEN
+      BEGIN
+         IF (TRIM(SO_SEND_SUBURB) = '') THEN
+         BEGIN
+            SO_SEND_SUBURB = NULL;
+         END  
+      END
+      IF ((SO_SEND_CITY IS NOT NULL) ) THEN
+      BEGIN
+         IF (TRIM(SO_SEND_CITY) = '') THEN
+         BEGIN
+            SO_SEND_CITY = NULL;
+         END  
+      END
+      IF ((SO_SEND_STATE IS NOT NULL) ) THEN
+      BEGIN
+	 IF (TRIM(SO_SEND_STATE) = '') THEN
+	 BEGIN
+	    SO_SEND_STATE = NULL;
+	 END  
+      END
+      IF ((SO_SEND_POST_CODE IS NOT NULL) ) THEN
+      BEGIN
+	 IF (TRIM(SO_SEND_POST_CODE) = '') THEN
+	 BEGIN
+	    SO_SEND_POST_CODE = NULL;
+	 END  
+      END
+      IF ((SO_SEND_COUNTRY IS NOT NULL) ) THEN
+      BEGIN
+	 IF (TRIM(SO_SEND_COUNTRY) = '') THEN
+	 BEGIN
+	    SO_SEND_COUNTRY = NULL;
+	 END  
+      END
+      PA_SAVE_COUNTRY   = PA_COUNTRY;
+      PA_SAVE_STATE     = PA_STATE;
+      PA_SAVE_POST_CODE = PA_POST_CODE;
+      IF ((SO_SEND_ADDRESS_LINE1 IS NOT NULL) OR
+          (SO_SEND_ADDRESS_LINE2 IS NOT NULL) OR
+          (SO_SEND_SUBURB        IS NOT NULL) OR
+          (SO_SEND_CITY          IS NOT NULL) OR
+          (SO_SEND_STATE         IS NOT NULL) OR
+          (SO_SEND_POST_CODE     IS NOT NULL) OR
+          (SO_SEND_COUNTRY       IS NOT NULL)) THEN
+      BEGIN
+         PA_ADDRESS_LINE1 = SO_SEND_ADDRESS_LINE1;
+         PA_ADDRESS_LINE2 = SO_SEND_ADDRESS_LINE2;
+         PA_SUBURB        = SO_SEND_SUBURB;
+         PA_CITY          = SO_SEND_CITY;
+         PA_STATE         = SO_SEND_STATE;
+         PA_POST_CODE     = SO_SEND_POST_CODE;
+         PA_COUNTRY       = SO_SEND_COUNTRY;
+      END 
+      IF (COALESCE(PA_POST_CODE,'') = '') THEN
+      BEGIN
+         PA_POST_CODE = PA_SAVE_POST_CODE;
+      END
+      IF (COALESCE(PA_STATE,'') = '') THEN
+      BEGIN
+         PA_STATE = PA_SAVE_STATE;
+      END
+      IF (COALESCE(PA_COUNTRY,'') = '') THEN
+      BEGIN
+         PA_COUNTRY = PA_SAVE_COUNTRY;
+      END
+
+     /* ================================================================== */
+WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'end of of ADDRESS_FROM_DESPATCH');
+    SUSPEND;
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

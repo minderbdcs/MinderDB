@@ -1,0 +1,4 @@
+create domain pack_no integer;
+
+alter table pack_id add pack_no pack_no;
+alter table pack_id_dx add pack_no pack_no;

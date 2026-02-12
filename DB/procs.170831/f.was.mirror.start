@@ -1,0 +1,66 @@
+set echo;
+update ISSN set mirror_data=last_update_date where mirror_data is null;
+update ISSN set mirror_data='NOW' where mirror_data is null;
+update SSN set mirror_data=last_update_date where mirror_data is null;
+update SSN set mirror_data='NOW' where mirror_data is null;
+update GRN set mirror_data=grn_date where mirror_data is null;
+update GRN set mirror_data='NOW' where mirror_data is null;
+update GRN_ORDER set mirror_data=create_date where mirror_data is null;
+update GRN_ORDER set mirror_data='NOW' where mirror_data is null;
+
+update PICK_ORDER set mirror_data=create_date where mirror_data is null;
+update PICK_ORDER set mirror_data='NOW' where mirror_data is null;
+update PICK_ITEM_LINE_NO set mirror_data=last_update_date where mirror_data is null;
+update PICK_ITEM_LINE_NO set mirror_data='NOW' where mirror_data is null;
+update PICK_ITEM set mirror_data=last_update_date where mirror_data is null;
+update PICK_ITEM set mirror_data='NOW' where mirror_data is null;
+update PICK_ITEM_DETAIL set mirror_data=last_update_date where mirror_data is null;
+update PICK_ITEM_DETAIL set mirror_data='NOW' where mirror_data is null;
+update PICK_ORDER_IMPORT set mirror_data=last_update_date where mirror_data is null;
+update PICK_ORDER_IMPORT set mirror_data='NOW' where mirror_data is null;
+
+update PICK_INVOICE set mirror_data=last_update_date where mirror_data is null;
+update PICK_INVOICE set mirror_data='NOW' where mirror_data is null;
+update PICK_INVOICE_LINE set mirror_data=invline_update_date where mirror_data is null;
+update PICK_INVOICE_LINE set mirror_data='NOW' where mirror_data is null;
+
+update PICK_DESPATCH set mirror_data=last_update_date    where mirror_data is null;
+update PICK_DESPATCH set mirror_data='NOW' where mirror_data is null;
+update PICK_MANIFEST set mirror_data=last_update_date    where mirror_data is null;
+update PICK_MANIFEST set mirror_data='NOW' where mirror_data is null;
+update PACK_ID       set mirror_data=last_update_date    where mirror_data is null;
+update PACK_ID       set mirror_data='NOW' where mirror_data is null;
+update PICK_ITEM_ADDRESS set mirror_data=last_update_date where mirror_data is null;
+update PICK_ITEM_ADDRESS set mirror_data='NOW' where mirror_data is null;
+update PACK_SSCC     set mirror_data=ps_last_update_date    where mirror_data is null;
+update PACK_SSCC     set mirror_data='NOW' where mirror_data is null;
+
+update TRANSACTIONS4 set mirror_data=trn_date where mirror_data is null;
+update TRANSACTIONS4 set mirror_data='NOW' where mirror_data is null;
+
+update ISSN_DX set mirror_data=last_update_date where mirror_data is null;
+update ISSN_DX set mirror_data='NOW' where mirror_data is null;
+update SSN_DX set mirror_data=last_update_date where mirror_data is null;
+update SSN_DX set mirror_data='NOW' where mirror_data is null;
+update SSN_HIST set mirror_data=trn_date where mirror_data is null;
+update SSN_HIST set mirror_data='NOW' where mirror_data is null;
+update PACK_ID_DX    set mirror_data=last_update_date    where mirror_data is null;
+update PACK_ID_DX    set mirror_data='NOW' where mirror_data is null;
+
+update PICK_ITEM_DX set mirror_data=last_update_date where mirror_data is null;
+update PICK_ITEM_DX set mirror_data='NOW' where mirror_data is null;
+update PICK_DESPATCH_DX set mirror_data=last_update_date    where mirror_data is null;
+update PICK_DESPATCH_DX set mirror_data='NOW' where mirror_data is null;
+
+update PICK_ITEM_DETAIL_DX set mirror_data=last_update_date where mirror_data is null;
+update PICK_ITEM_DETAIL_DX set mirror_data='NOW' where mirror_data is null;
+update PICK_ORDER_DX set mirror_data=create_date where mirror_data is null;
+update PICK_ORDER_DX set mirror_data='NOW' where mirror_data is null;
+
+update TRANSACTIONS_ARCHIVE set mirror_data=trn_date where mirror_data is null;
+update TRANSACTIONS_ARCHIVE set mirror_data='NOW' where mirror_data is null;
+update TRANSACTIONS4_ARCHIVE set mirror_data=trn_date where mirror_data is null;
+update TRANSACTIONS4_ARCHIVE set mirror_data='NOW' where mirror_data is null;
+
+update GRN_DX set mirror_data=grn_date where mirror_data is null;
+update GRN_DX set mirror_data='NOW' where mirror_data is null;

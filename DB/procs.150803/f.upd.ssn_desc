@@ -1,0 +1,372 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER UPDATE_SSN_SSNDESCRIPTION FOR SSN 
+ACTIVE BEFORE UPDATE POSITION 10 
+AS                       
+
+DECLARE VARIABLE WK_FIELD VARCHAR(200);
+DECLARE VARIABLE WK_DESC_TYPE VARCHAR(40);
+DECLARE VARIABLE WK_STATUS CHAR(2);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+/* DECLARE VARIABLE WK_DESC VARCHAR(80); */
+DECLARE VARIABLE WK_DESC SSN_DESCRIPTION;
+DECLARE VARIABLE WK_NEW_DESC VARCHAR(1000);
+DECLARE VARIABLE WK_NEW_DESC2 VARCHAR(1000);
+DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(255);
+DECLARE VARIABLE WK_RESULT INTEGER;
+
+BEGIN    
+    
+    /* Get SSN to update */
+   WK_STATUS = NEW.STATUS_SSN;
+   WK_WH_ID = NEW.WH_ID;
+   /* WK_LOG_FILENAME = '/tmp/desc.log'; */
+   /* IF ((WK_STATUS = 'PA' OR WK_STATUS = 'ST' OR WK_STATUS = 'TS' OR WK_STATUS = 'QR')
+      AND (WK_WH_ID < 'X' 
+      OR WK_WH_ID > 'X~')) THEN */
+   IF ( (WK_WH_ID < 'X' OR WK_WH_ID > 'X~') 
+        OR (WK_WH_ID = 'XB') ) THEN
+   BEGIN
+      /* WK_DESC = NONULL(NEW.SSN_DESCRIPTION); */
+      WK_DESC = NEW.SSN_DESCRIPTION;
+      IF (WK_DESC IS NULL) THEN
+      BEGIN
+         WK_DESC = '';
+      END
+      WK_NEW_DESC2 = '';
+      FOR SELECT CODE     
+          FROM DESCRIPTION_LAYOUT
+          ORDER BY SEQUENCE
+          INTO :WK_DESC_TYPE
+      DO
+      BEGIN
+         WK_FIELD = '';
+         IF (WK_DESC_TYPE = 'SSN_TYPE') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.SSN_TYPE)); */
+            WK_FIELD = NEW.SSN_TYPE;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'SSN_TYPE.DESCRIPTION') THEN
+         BEGIN
+            SELECT DESCRIPTION 
+            FROM SSN_TYPE
+            WHERE CODE = NEW.SSN_TYPE
+            INTO :WK_FIELD;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'GENERIC') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.GENERIC)); */
+            WK_FIELD = NEW.GENERIC;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'GENERIC.DESCRIPTION') THEN
+         BEGIN
+            SELECT DESCRIPTION 
+            FROM GENERIC
+            WHERE CODE = NEW.GENERIC
+            AND SSN_TYPE  = NEW.SSN_TYPE
+            INTO :WK_FIELD;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'BRAND') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.BRAND)); */
+            WK_FIELD = NEW.BRAND; 
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'BRAND.DESCRIPTION') THEN
+         BEGIN
+            SELECT DESCRIPTION 
+            FROM BRAND
+            WHERE CODE = NEW.BRAND
+            INTO :WK_FIELD;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'SSN_SUB_TYPE') THEN
+         BEGIN
+            WK_FIELD = NEW.SSN_SUB_TYPE;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'SSN_SUB_TYPE.DESCRIPTION') THEN
+         BEGIN
+            SELECT DESCRIPTION 
+            FROM SSN_SUB_TYPE
+            WHERE CODE = NEW.SSN_SUB_TYPE
+            AND   GENERIC = NEW.GENERIC
+            AND SSN_TYPE  = NEW.SSN_TYPE
+            INTO :WK_FIELD;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'MODEL') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.MODEL)); */
+            WK_FIELD = NEW.MODEL;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'SERIAL_NUMBER') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.SERIAL_NUMBER)); */
+            WK_FIELD = NEW.SERIAL_NUMBER;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'OTHER1') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.OTHER1)); */
+            WK_FIELD = NEW.OTHER1;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'OTHER2') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.OTHER2)); */
+            WK_FIELD = NEW.OTHER2;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'OTHER3') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.OTHER3)); */
+            WK_FIELD = NEW.OTHER3;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD);
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'OTHER4') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.OTHER4)); */
+            WK_FIELD = NEW.OTHER4;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'OTHER5') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.OTHER5)); */
+            WK_FIELD = NEW.OTHER5;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'OTHER6') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.OTHER6)); */
+            WK_FIELD = NEW.OTHER6;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'OTHER7') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.OTHER7)); */
+            WK_FIELD = NEW.OTHER7;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'OTHER8') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.OTHER8)); */
+            WK_FIELD = NEW.OTHER8;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'OTHER9') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.OTHER9)); */
+            WK_FIELD = NEW.OTHER9;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'OTHER10') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.OTHER10)); */
+            WK_FIELD = NEW.OTHER10;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'LEGACY_ID') THEN
+         BEGIN
+            WK_FIELD = NEW.LEGACY_ID;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'LEGACY_DESCRIPTION') THEN
+         BEGIN
+            SELECT LEGACY_DESCRIPTION 
+            FROM LEGACY 
+            WHERE LEGACY_ID = NEW.LEGACY_ID
+            INTO :WK_FIELD;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'LEGACY_DESCRIPTION2') THEN
+         BEGIN
+            SELECT LEGACY_DESCRIPTION2
+            FROM LEGACY 
+            WHERE LEGACY_ID = NEW.LEGACY_ID
+            INTO :WK_FIELD;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'PROD_ID') THEN
+         BEGIN
+            /* WK_FIELD = ALLTRIM(NONULL(NEW.PROD_ID)); */
+            WK_FIELD = NEW.PROD_ID;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'PROD_ID.SHORT_DESC') THEN
+         BEGIN
+            SELECT SHORT_DESC 
+            FROM PROD_PROFILE
+            WHERE PROD_ID = NEW.PROD_ID
+            AND COMPANY_ID = NEW.COMPANY_ID
+            INTO :WK_FIELD;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+         IF (WK_DESC_TYPE = 'ALT_NAME') THEN
+         BEGIN
+            WK_FIELD = NEW.ALT_NAME;
+            IF (WK_FIELD IS NULL) THEN
+            BEGIN
+               WK_FIELD = '';
+            END
+            WK_FIELD = ALLTRIM(WK_FIELD); 
+            WK_NEW_DESC2 = WK_NEW_DESC2 || WK_FIELD || ' ';
+         END
+      END
+      /* WK_NEW_DESC = LEFTS(WK_NEW_DESC2 , 80); */ 
+      /* IF (STRLEN(WK_NEW_DESC2) > 80) THEN */
+      IF (STRLEN(WK_NEW_DESC2) > 255) THEN
+      BEGIN
+         /* WK_NEW_DESC = LEFTS(WK_NEW_DESC2,79); */
+         WK_NEW_DESC = V6SUBSTRING(:WK_NEW_DESC2, 1,254);
+      END
+      ELSE
+      BEGIN
+         WK_NEW_DESC = WK_NEW_DESC2;
+      END
+      /* IF (WK_DESC <> WK_NEW_DESC) THEN */
+      BEGIN      
+        /* Update SSN Description */
+        NEW.SSN_DESCRIPTION = :WK_NEW_DESC;
+      END                     
+   END                     
+END ^
+
+                                                       
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

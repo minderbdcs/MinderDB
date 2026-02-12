@@ -1,0 +1,1 @@
+alter table prod_profile add url code_255;

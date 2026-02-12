@@ -1,0 +1,337 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP TRIGGER RUN_TRANSACTION_PKOZ ^
+COMMIT^
+
+CREATE TRIGGER RUN_TRANSACTION_PKOZ FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 128 
+AS
+/* Pick a whole order using the imported locns   
+   only if order has status OP or DA
+   transfer the order to the device 
+   031006 -  can only do this to pick a whole line
+   for lines in this order
+       with statuses AL PG PL
+            and over_sized = 'F'
+       do a PKOL for the wh_id and pick_location
+          for the min of the required qty (order qty - picked)
+              and qty in location
+              if this is not the required qty then 
+                 dont do the pkol
+    at the end of this for
+    if all picked OK
+    do a PKIL (M) to the default despatch location
+             make status 'AL' and device the default one
+    
+*/
+
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_ORDER VARCHAR(30);
+DECLARE VARIABLE WK_DEVICE_2 CHAR(2);
+DECLARE VARIABLE WK_PO_STATUS CHAR(2);
+DECLARE VARIABLE WK_PO_COMPANY VARCHAR(20);
+DECLARE VARIABLE WK_PO_COUNTRY VARCHAR(25);
+DECLARE VARIABLE WK_PI_PROD VARCHAR(30);
+DECLARE VARIABLE WK_PI_ORDER_QTY INTEGER;
+DECLARE VARIABLE WK_PI_PICKED_QTY INTEGER;
+DECLARE VARIABLE WK_PI_WH_ID CHAR(2);
+DECLARE VARIABLE WK_PI_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_PI_DEVICE CHAR(2);
+DECLARE VARIABLE WK_PI_STATUS CHAR(2);
+DECLARE VARIABLE WK_DOIT CHAR(1);
+DECLARE VARIABLE WK_IMPORTSTATUS VARCHAR(40);
+DECLARE VARIABLE WK_CURRENT_QTY INTEGER;
+DECLARE VARIABLE WK_TOPICK_QTY INTEGER;
+DECLARE VARIABLE WK_DESPATCH_LOCATION VARCHAR(10);
+DECLARE VARIABLE WK_DESPATCH_WH CHAR(2);
+DECLARE VARIABLE WK_DESPATCH_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_LOG VARCHAR(255);
+DECLARE VARIABLE WK_DATE_TXT VARCHAR(25);
+DECLARE VARIABLE WK_PI_LABEL_NO VARCHAR(10);
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKOZ') THEN
+  BEGIN
+     WK_USER = NEW.PERSON_ID;
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_ORDER = NEW.OBJECT;
+     WK_DOIT = 'T';
+     WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+     WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' OBJECT ' || NEW.OBJECT || ' date ' || WK_DATE_TXT || ' start';
+     INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+     SELECT PICK_IMPORT_SSN_STATUS, DEFAULT_DESPATCH_LOCATION
+     FROM CONTROL
+     INTO :WK_IMPORTSTATUS, :WK_DESPATCH_LOCATION; 
+        WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+        WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' SELECT CONTROL ' || NEW.OBJECT || ' end';
+        INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+     WK_DESPATCH_WH = SUBSTR(WK_DESPATCH_LOCATION,1,2);
+     WK_DESPATCH_LOCN = SUBSTR(WK_DESPATCH_LOCATION,3,10);
+     SELECT PICK_STATUS, COMPANY_ID, P_COUNTRY
+     FROM PICK_ORDER
+     WHERE PICK_ORDER = :WK_ORDER
+     INTO :WK_PO_STATUS, :WK_PO_COMPANY, :WK_PO_COUNTRY;
+        WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+        WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' SELECT ORDER ' || NEW.OBJECT || ' end';
+        INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+     IF (WK_PO_STATUS IS NULL) THEN
+     BEGIN
+        WK_PO_STATUS = '';
+     END
+     IF ((WK_PO_STATUS = 'OP') OR (WK_PO_STATUS = 'DA')) THEN
+     BEGIN
+        WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+        WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' UPDATE ORDER ' || NEW.OBJECT || ' start';
+        INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+        UPDATE PICK_ORDER SET PICK_ORDER_STARTED = 'NOW'
+        WHERE PICK_ORDER = :WK_ORDER;   
+        WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+        WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' UPDATE ORDER ' || NEW.OBJECT || ' end';
+        INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+        UPDATE PICK_ITEM 
+        SET DEVICE_ID = :WK_DEVICE
+        WHERE PICK_ORDER = :WK_ORDER    
+        AND PICK_LINE_STATUS IN ('AL','PG','PL')
+        AND OVER_SIZED = 'F';
+        WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+        WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' UPDATE ITEM ' || NEW.OBJECT || ' end';
+        INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+/*
+        UPDATE PICK_ITEM_DETAIL
+        SET DEVICE_ID = :WK_DEVICE
+        WHERE PICK_LABEL_NO IN 
+           (SELECT PICK_LABEL_NO FROM PICK_ITEM
+            WHERE PICK_ORDER = :WK_ORDER    
+            AND DEVICE_ID = :WK_DEVICE);
+*/
+        FOR SELECT PICK_LABEL_NO
+            FROM PICK_ITEM
+            WHERE PICK_ORDER = :WK_ORDER    
+            AND DEVICE_ID = :WK_DEVICE
+            INTO :WK_PI_LABEL_NO
+        DO
+        BEGIN
+           UPDATE PICK_ITEM_DETAIL
+           SET DEVICE_ID = :WK_DEVICE
+           WHERE PICK_LABEL_NO =  :WK_PI_LABEL_NO;
+        END
+        WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+        WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' UPDATE DETAIL ' || NEW.OBJECT || ' end';
+        INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+        FOR SELECT PROD_ID, 
+           PICK_ORDER_QTY, 
+           PICKED_QTY,  
+           WH_ID, 
+           PICK_LOCATION,
+           DEVICE_ID,
+           PICK_LINE_STATUS
+        FROM PICK_ITEM
+        WHERE PICK_ORDER = :WK_ORDER    
+        AND DEVICE_ID = :WK_DEVICE
+        AND (PICK_LINE_STATUS IN ('AL','PG')
+ OR   (PICK_LINE_STATUS ='PL' AND PICKED_QTY < PICK_ORDER_QTY AND (REASON = '' OR REASON IS NULL))) 
+        AND OVER_SIZED = 'F'
+        INTO :WK_PI_PROD, :WK_PI_ORDER_QTY, :WK_PI_PICKED_QTY, :WK_PI_WH_ID, :WK_PI_LOCN_ID, :WK_PI_DEVICE, WK_PI_STATUS
+        DO
+        BEGIN
+           IF (WK_DOIT = 'T') THEN
+           BEGIN
+              WK_DOIT = 'L';
+           END
+           IF (WK_PI_ORDER_QTY IS NULL) THEN
+           BEGIN
+              WK_PI_ORDER_QTY = 0;
+           END
+           IF (WK_PI_PICKED_QTY IS NULL) THEN
+           BEGIN
+              WK_PI_PICKED_QTY = 0;
+           END
+           WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+           WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' SELECT ISSN ' || NEW.OBJECT || ' start';
+           INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+           SELECT SUM( ISSN.CURRENT_QTY ) 
+              FROM ISSN
+              WHERE ISSN.PROD_ID = :WK_PI_PROD
+              AND WH_ID = :WK_PI_WH_ID
+              AND LOCN_ID = :WK_PI_LOCN_ID
+              AND (POS(:WK_IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1) 
+              INTO :WK_CURRENT_QTY;
+           WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+           WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' SELECT ISSN ' || NEW.OBJECT || ' end';
+           INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+           IF (WK_CURRENT_QTY IS NULL) THEN
+           BEGIN
+              WK_CURRENT_QTY = 0;
+           END
+           WK_TOPICK_QTY =  WK_PI_ORDER_QTY - WK_PI_PICKED_QTY;
+           IF (WK_TOPICK_QTY > WK_CURRENT_QTY) THEN
+           BEGIN
+              /* WK_TOPICK_QTY = WK_CURRENT_QTY; */
+              WK_TOPICK_QTY = 0;
+           END
+           IF (WK_TOPICK_QTY > 0) THEN
+           BEGIN
+              /* have something to pick */
+              /* do pkol */
+              EXECUTE PROCEDURE ADD_TRAN(
+                 :WK_PI_WH_ID,
+                 :WK_PI_LOCN_ID,
+                 :WK_PI_PROD,
+                 'PKOL',
+                 'P',
+                 'NOW',
+                 '',
+                 :WK_TOPICK_QTY,
+                 'F',
+                 '',
+                 'MASTER',
+                 0,
+                 '',
+                 'SSSSSSSSS',
+                 :WK_USER,
+                 :WK_DEVICE);
+           END
+        END /* for */
+        IF (WK_DOIT = 'T') THEN
+        BEGIN
+           /* do we have any PL lines */
+           WK_FOUND = 0;
+        WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+        WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' SELECT PL ITEM ' || NEW.OBJECT || ' start';
+        INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+           SELECT FIRST 1  1 
+           FROM PICK_ITEM
+           WHERE PICK_ORDER = :WK_ORDER    
+           AND DEVICE_ID = :WK_DEVICE
+           AND PICK_LINE_STATUS = 'PL'
+           AND OVER_SIZED = 'F'
+           INTO :WK_FOUND;
+        WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+        WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' SELECT PL ITEM ' || NEW.OBJECT || ' end';
+        INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+           IF (WK_FOUND = 1) THEN
+           BEGIN
+              WK_DOIT = 'K';
+           END
+        END
+        IF ((WK_DOIT = 'L') OR (WK_DOIT = 'K')) THEN
+        BEGIN
+           /* do pkil */
+             EXECUTE PROCEDURE ADD_TRAN(
+                :WK_DESPATCH_WH,
+                :WK_DESPATCH_LOCN,
+                :WK_ORDER,
+                'PKIL',
+                'M',
+                 'NOW',
+                '',
+                1,
+                'F',
+                '',
+                'MASTER',
+                0,
+                :WK_DEVICE,
+                'SSSSSSSSS',
+                :WK_USER,
+                :WK_DEVICE);
+        END
+
+        WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+        WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' SELECT ZONE ' || NEW.OBJECT || ' start';
+        INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+        SELECT FIRST 1 ZONE.DEFAULT_DEVICE_ID   
+        FROM COMPANY 
+        JOIN ZONE ON ZONE.COMPANY_ID = COMPANY.COMPANY_ID 
+        WHERE COMPANY.COMPANY_ID = :WK_PO_COMPANY
+        INTO :WK_DEVICE_2;
+        WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+        WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' UPDATE ITEM2 ' || NEW.OBJECT || ' start';
+        INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+        UPDATE PICK_ITEM 
+        SET DEVICE_ID = :WK_DEVICE_2
+        WHERE PICK_ORDER = :WK_ORDER    
+        AND DEVICE_ID = :WK_DEVICE
+        AND OVER_SIZED = 'F';
+        WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+        WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' UPDATE ITEM2 ' || NEW.OBJECT || ' end';
+        INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+        UPDATE PICK_ITEM_DETAIL
+        SET DEVICE_ID = :WK_DEVICE_2
+        WHERE DEVICE_ID = :WK_DEVICE
+        AND PICK_LABEL_NO IN 
+           (SELECT PICK_LABEL_NO FROM PICK_ITEM
+            WHERE PICK_ORDER = :WK_ORDER);  
+        WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+        WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' UPDATE DETAIL2 ' || NEW.OBJECT || ' end';
+        INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+     END
+     ELSE
+     BEGIN
+        WK_DOIT = 'X';
+        EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'F', 'Cannot Pick Invalid Order Status'); 
+
+     END 
+     IF (WK_DOIT = 'T') THEN
+     BEGIN
+        EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'F', 'Nothing to Pick See Line Statuses'); 
+     END
+     IF ((WK_DOIT = 'L') OR (WK_DOIT = 'K')) THEN
+     BEGIN
+        EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'T', 'Processed successfully'); 
+     END
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+     WK_DATE_TXT = CAST(CAST('NOW' AS TIMESTAMP) AS CHAR(24));
+     WK_LOG = 'TRN_TYPE ' || NEW.TRN_TYPE ||
+     ' TRN_CODE ' || NEW.TRN_CODE || ' date ' || WK_DATE_TXT ||
+     ' OBJECT ' || NEW.OBJECT || ' date ' || WK_DATE_TXT || ' end ';
+     INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+  END
+ END
+END ^
+ 
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,2 @@
+alter table sys_equip add wh_id wh_id;
+

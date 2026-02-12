@@ -1,0 +1,2 @@
+alter table pick_item add COMPANY_ID COMPANY;
+alter table pick_item_dx add COMPANY_ID COMPANY;

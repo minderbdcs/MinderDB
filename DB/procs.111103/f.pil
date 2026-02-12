@@ -1,0 +1,2 @@
+alter table pick_invoice_line add invline_unit_sale double precision default 0.00;
+

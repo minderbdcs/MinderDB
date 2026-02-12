@@ -1,0 +1,1 @@
+create index trans4_archive_date_class_idx on transactions4_archive(trn_date, trn_class);

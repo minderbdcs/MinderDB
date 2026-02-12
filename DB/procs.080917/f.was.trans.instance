@@ -1,0 +1,6 @@
+pc_auob 15674:          IF (strINSTANCE = :INSTANCE_ID) THEN  
+pc_stob 20794:             IF (strINSTANCE = :INSTANCE_ID) THEN  
+pc_strc 21096:             IF (strINSTANCE = :INSTANCE_ID) THEN  
+AUOB 39349:    WK_INSTANCE_ID = NEW.INSTANCE_ID;
+PC_NIXX 18546:        IF (strINSTANCE <> :INSTANCE_ID) THEN  
+PC_NIXX_P 18906:        IF (strINSTANCE <> :INSTANCE_ID) THEN  

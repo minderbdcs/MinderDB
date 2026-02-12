@@ -1,0 +1,4 @@
+create table ssn_product(code code not null,
+description description,
+primary key (code));
+

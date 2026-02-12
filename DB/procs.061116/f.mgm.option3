@@ -1,0 +1,5 @@
+
+insert into options(group_code, code,description) values('CMPPKHELD','MM|AU','CN');
+insert into options(group_code, code,description) values('CMPPKHELD','MM|NZ','CN');
+insert into options(group_code, code,description) values('CMPPKHELD','BW|NZ','CN');
+insert into options(group_code, code,description) values('CMPPKHELD','BW|AU','OP');

@@ -1,0 +1,327 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER PROCEDURE LOCN_STATISTICS  (IN_WH_ID CHAR(2) ,
+IN_LOCN_ID VARCHAR(20),
+IN_OVERALL_WEIGHT CHAR(1),
+IN_TARE_WEIGHT CHAR(1),
+IN_MOBILE_WEIGHT CHAR(1),
+IN_SSN_WEIGHT CHAR(1),
+IN_PROD_WEIGHT CHAR(1),
+IN_ISSUES CHAR(1)) 
+RETURNS (WK_WT_OVERALL NUMERIC(12,3),
+WK_WT_TARE NUMERIC(12,3),
+WK_WT_MOBILE NUMERIC(12,3),
+WK_WT_SSN NUMERIC(12,3),
+WK_WT_PROD NUMERIC(12,3),
+WK_ISSUE_PROD INTEGER
+)
+AS
+
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_SSN_ID VARCHAR(20);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_PROD_TYPE VARCHAR(40);
+DECLARE VARIABLE WK_STATUS CHAR(2);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_STD_WT_UOM CHAR(2);
+DECLARE VARIABLE WK_TARE_WEIGHT DOUBLE PRECISION;
+DECLARE VARIABLE WK_TARE_WEIGHT_UOM CHAR(2);
+DECLARE VARIABLE WK_TO_STD_CONV DOUBLE PRECISION;
+DECLARE VARIABLE WK_SSN_WEIGHT DOUBLE PRECISION;
+DECLARE VARIABLE WK_PROD_WEIGHT DOUBLE PRECISION;
+DECLARE VARIABLE WK_TARE_WT DOUBLE PRECISION;
+DECLARE VARIABLE WK_MOBILE_WT DOUBLE PRECISION;
+DECLARE VARIABLE WK_SSN_WT DOUBLE PRECISION;
+DECLARE VARIABLE WK_PROD_WT DOUBLE PRECISION;
+DECLARE VARIABLE WK_WT_STD_TARE DOUBLE PRECISION;
+DECLARE VARIABLE WK_WT_STD_SSN DOUBLE PRECISION;
+DECLARE VARIABLE WK_WT_STD_PROD DOUBLE PRECISION;
+DECLARE VARIABLE WK_WT_FROM_KG DOUBLE PRECISION;
+DECLARE VARIABLE WK_REC_ID INTEGER;
+DECLARE VARIABLE WK_MOBILE_DONE INTEGER;
+DECLARE VARIABLE WK_PREV_WH_ID CHAR(2);
+DECLARE VARIABLE WK_PREV_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_CURRENT_WH_ID CHAR(2);
+DECLARE VARIABLE WK_CURRENT_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_CURRENT_QTY INTEGER;
+DECLARE VARIABLE WK_LOCN_TYPE VARCHAR(30);
+DECLARE VARIABLE WK_CNT INTEGER;
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(70);
+DECLARE VARIABLE WK_RESULT INTEGER;
+
+BEGIN    
+    
+/*
+input locn_id as locn_id or a like clause
+
+want  tare weights of locations involved
+
+moveable locations
+
+ssn's
+
+(issn's - this must be zero since no issn's have weights)
+
+prod_id's
+
+overall weight
+
+# issue units for prods
+
+now since all reported weights are in kg's
+	want to use the uom weight conversion table
+
+*/
+
+   WK_LOG_FILENAME = '/tmp/locnstat.log';
+   /* what is std WT uom */
+   SELECT STANDARD_UOM FROM UOM_TYPE WHERE CODE = 'WT' INTO :WK_STD_WT_UOM;
+   /* what is conv from std to KG */
+   SELECT TO_STANDARD_CONV FROM UOM WHERE CODE = 'KG' AND UOM_TYPE = 'WT' INTO :WK_WT_FROM_KG;
+
+   WK_TARE_WT = 0;
+   WK_MOBILE_WT = 0;
+   WK_SSN_WT = 0;
+   WK_PROD_WT = 0;
+   WK_CNT = 0;
+   WK_REC_ID = GEN_ID(TRANSACTION_ID, 1);    
+   DELETE FROM TRANSACTIONS_WORK WHERE RECORD_ID = :WK_REC_ID;
+   FOR SELECT LOCATION.WH_ID, LOCATION.LOCN_ID, LOCATION.LOCN_TARE_WEIGHT, LOCATION.LOCN_TARE_WEIGHT_UOM, UOM.TO_STANDARD_CONV
+   FROM LOCATION 
+   LEFT OUTER JOIN UOM ON LOCATION.LOCN_TARE_WEIGHT_UOM = UOM.CODE
+   WHERE WH_ID = :IN_WH_ID AND LOCN_ID LIKE :IN_LOCN_ID
+   INTO :WK_WH_ID, :WK_LOCN_ID, :WK_TARE_WEIGHT, :WK_TARE_WEIGHT_UOM, :WK_TO_STD_CONV
+   DO
+   BEGIN
+      IF (WK_TO_STD_CONV IS NULL) THEN
+      BEGIN
+         WK_TO_STD_CONV = 1;
+      END
+      IF (WK_TARE_WEIGHT IS NULL) THEN
+      BEGIN
+         WK_TARE_WEIGHT  = 0;
+      END
+      /* does the location already exist */
+      WK_FOUND = 0;
+      SELECT 1 FROM TRANSACTIONS_WORK
+      WHERE RECORD_ID = :WK_REC_ID
+      AND LOCN_ID = :WK_LOCN_ID 
+      INTO :WK_FOUND;
+      IF (WK_FOUND = 0) THEN
+      BEGIN
+         INSERT INTO TRANSACTIONS_WORK (RECORD_ID, WH_ID, LOCN_ID, OBJECT, SUB_LOCN_ID, QTY) VALUES (:WK_REC_ID, :WK_WH_ID, :WK_LOCN_ID, 'P', 'PO', :WK_CNT);
+         /* then in standard units */
+         WK_WT_STD_TARE = WK_TARE_WEIGHT * WK_TO_STD_CONV;
+         WK_TARE_WT = WK_TARE_WT + (WK_WT_STD_TARE / WK_WT_FROM_KG);
+      END
+      WK_CNT = WK_CNT + 1;
+      /* now get mobile locations in there */
+      IF (IN_MOBILE_WEIGHT = 'T') THEN
+      BEGIN
+         WK_MOBILE_DONE = 1;
+      END
+      ELSE
+      BEGIN
+         /* do not check mobile locations */
+         WK_MOBILE_DONE = 0;
+      END
+      WK_PREV_WH_ID =  WK_WH_ID;
+      WK_PREV_LOCN_ID =  WK_LOCN_ID;
+      WHILE (WK_MOBILE_DONE = 1) DO
+      BEGIN
+         FOR SELECT WH_ID, LOCN_ID 
+             FROM LOCATION 
+             WHERE PARENT_LOCN_ID = :WK_PREV_LOCN_ID
+             AND CURRENT_WH_ID = :WK_PREV_WH_ID
+             INTO :WK_CURRENT_WH_ID ,:WK_CURRENT_LOCN_ID
+         DO
+         BEGIN
+            /* include this location */
+            /* does the location already exist */
+            WK_FOUND = 0;
+            SELECT 1 FROM TRANSACTIONS_WORK
+            WHERE RECORD_ID = :WK_REC_ID
+            AND LOCN_ID = :WK_CURRENT_LOCN_ID 
+            INTO :WK_FOUND;
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               INSERT INTO TRANSACTIONS_WORK (RECORD_ID, WH_ID, LOCN_ID, OBJECT, SUB_LOCN_ID, QTY) VALUES (:WK_REC_ID, :WK_CURRENT_WH_ID, :WK_CURRENT_LOCN_ID, 'M', 'OK', :WK_CNT);
+               FOR SELECT LOCATION.LOCN_TARE_WEIGHT, LOCATION.LOCN_TARE_WEIGHT_UOM, UOM.TO_STANDARD_CONV
+                   FROM LOCATION 
+                   LEFT OUTER JOIN UOM ON LOCATION.LOCN_TARE_WEIGHT_UOM = UOM.CODE
+                   WHERE WH_ID = :WK_CURRENT_WH_ID AND LOCN_ID = :WK_CURRENT_LOCN_ID
+                   INTO :WK_TARE_WEIGHT, :WK_TARE_WEIGHT_UOM, :WK_TO_STD_CONV
+               DO
+               BEGIN
+                  IF (WK_TO_STD_CONV IS NULL) THEN
+                  BEGIN
+                     WK_TO_STD_CONV = 1;
+                  END
+                  IF (WK_TARE_WEIGHT IS NULL) THEN
+                  BEGIN
+                     WK_TARE_WEIGHT  = 0;
+                  END
+                  /* then in standard units */
+                  WK_WT_STD_TARE = WK_TARE_WEIGHT * WK_TO_STD_CONV;
+                  /* WK_TARE_WT = WK_TARE_WT + (WK_WT_STD_TARE / WK_WT_FROM_KG); */
+                  /* tare weight is in the mobile wt field for mobiles */
+                  WK_MOBILE_WT = WK_MOBILE_WT + (WK_WT_STD_TARE / WK_WT_FROM_KG);
+               END
+            END
+            ELSE
+            BEGIN
+               UPDATE TRANSACTIONS_WORK SET SUB_LOCN_ID = 'OK'
+               WHERE RECORD_ID = :WK_REC_ID
+               AND LOCN_ID = :WK_CURRENT_LOCN_ID
+               AND SUB_LOCN_ID = 'PO';
+            END
+            WK_CNT = WK_CNT + 1;
+         END
+         /* change the prev locn to next in list   */
+         WK_FOUND = 0;
+         SELECT FIRST 1 1, LOCN_ID FROM TRANSACTIONS_WORK 
+         WHERE RECORD_ID = :WK_REC_ID
+         AND SUB_LOCN_ID = 'OK'
+         INTO :WK_FOUND, :WK_PREV_LOCN_ID;
+         /* if no more then  mobile done = 0 */
+         IF (WK_FOUND IS NULL) THEN
+         BEGIN
+            WK_FOUND = 0;
+         END
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            WK_PREV_LOCN_ID = NULL;
+         END
+         IF (WK_PREV_LOCN_ID IS NULL) THEN 
+         BEGIN
+            WK_MOBILE_DONE = 0;
+         END
+         ELSE
+         BEGIN
+            UPDATE TRANSACTIONS_WORK SET SUB_LOCN_ID = 'PM'
+            WHERE RECORD_ID = :WK_REC_ID
+            AND LOCN_ID = :WK_PREV_LOCN_ID
+            AND SUB_LOCN_ID = 'OK';
+         END
+      END
+   END
+
+   /* now get issns in the locations */
+   FOR SELECT WH_ID, LOCN_ID , OBJECT
+       FROM TRANSACTIONS_WORK
+       WHERE RECORD_ID = :WK_REC_ID
+       INTO :WK_WH_ID, :WK_LOCN_ID, :WK_LOCN_TYPE
+   DO
+   BEGIN
+      /* now get ssns in the locations */
+      FOR SELECT SSN.NET_WEIGHT, UOM.TO_STANDARD_CONV, ISSN.CURRENT_QTY
+          FROM ISSN 
+          JOIN SSN ON SSN.SSN_ID = ISSN.ORIGINAL_SSN
+          LEFT OUTER JOIN UOM ON SSN.NET_WEIGHT_UOM = UOM.CODE
+          WHERE ISSN.WH_ID = :WK_WH_ID AND ISSN.LOCN_ID = :WK_LOCN_ID
+          AND ISSN.CURRENT_QTY > 0
+          AND (ISSN.PROD_ID IS NULL)
+          INTO :WK_SSN_WEIGHT, :WK_TO_STD_CONV, :WK_CURRENT_QTY
+      DO
+      BEGIN
+         IF (WK_TO_STD_CONV IS NULL) THEN
+         BEGIN
+            WK_TO_STD_CONV = 1;
+         END
+         IF (WK_SSN_WEIGHT IS NULL) THEN
+         BEGIN
+            WK_SSN_WEIGHT  = 0;
+         END
+         IF (WK_CURRENT_QTY IS NULL) THEN
+         BEGIN
+            WK_CURRENT_QTY  = 1;
+         END
+         /* then in standard units */
+         WK_WT_STD_SSN = WK_SSN_WEIGHT * WK_TO_STD_CONV;
+         WK_SSN_WT = WK_SSN_WT + WK_CURRENT_QTY *  (WK_WT_STD_SSN / WK_WT_FROM_KG);
+      END
+      /* now get products in the locations */
+      FOR SELECT PROD_PROFILE.NET_WEIGHT, UOM.TO_STANDARD_CONV, ISSN.CURRENT_QTY
+          FROM ISSN 
+          JOIN PROD_PROFILE ON ISSN.PROD_ID = PROD_PROFILE.PROD_ID
+          AND ISSN.COMPANY_ID = PROD_PROFILE.COMPANY_ID
+          LEFT OUTER JOIN UOM ON PROD_PROFILE.NET_WEIGHT_UOM = UOM.CODE
+          WHERE ISSN.WH_ID = :WK_WH_ID AND ISSN.LOCN_ID = :WK_LOCN_ID
+          AND ISSN.CURRENT_QTY > 0
+          AND (ISSN.PROD_ID IS NOT NULL)
+          INTO :WK_PROD_WEIGHT, :WK_TO_STD_CONV, :WK_CURRENT_QTY
+      DO
+      BEGIN
+         IF (WK_TO_STD_CONV IS NULL) THEN
+         BEGIN
+            WK_TO_STD_CONV = 1;
+         END
+         IF (WK_PROD_WEIGHT IS NULL) THEN
+         BEGIN
+            WK_PROD_WEIGHT  = 0;
+         END
+         IF (WK_CURRENT_QTY IS NULL) THEN
+         BEGIN
+            WK_CURRENT_QTY  = 1;
+         END
+         /* then in standard units */
+         WK_WT_STD_PROD = WK_PROD_WEIGHT * WK_TO_STD_CONV;
+         WK_PROD_WT = WK_PROD_WT + WK_CURRENT_QTY *  (WK_WT_STD_PROD / WK_WT_FROM_KG);
+      END
+   END
+
+   IF (IN_TARE_WEIGHT = 'T') THEN
+   BEGIN
+      WK_WT_TARE = WK_TARE_WT;
+   END
+   ELSE
+   BEGIN
+      WK_WT_TARE = 0;
+   END
+
+   IF (IN_MOBILE_WEIGHT = 'T') THEN
+   BEGIN
+      WK_WT_MOBILE = WK_MOBILE_WT;
+   END
+   ELSE
+   BEGIN
+      WK_WT_MOBILE = 0;
+   END
+
+   IF (IN_SSN_WEIGHT = 'T') THEN
+   BEGIN
+      WK_WT_SSN = WK_SSN_WT;
+   END
+   ELSE
+   BEGIN
+      WK_WT_SSN = 0;
+   END
+
+   IF (IN_PROD_WEIGHT = 'T') THEN
+   BEGIN
+      WK_WT_PROD = WK_PROD_WT;
+   END
+   ELSE
+   BEGIN
+      WK_WT_PROD = 0;
+   END
+
+   IF (IN_OVERALL_WEIGHT = 'T') THEN
+   BEGIN
+      WK_WT_OVERALL = WK_WT_TARE + WK_WT_MOBILE +  WK_WT_SSN + WK_WT_PROD;
+   END
+   ELSE
+   BEGIN
+      WK_WT_OVERALL = 0;
+   END
+   SUSPEND;
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+

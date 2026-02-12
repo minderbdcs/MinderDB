@@ -1,0 +1,2 @@
+alter table loan_order add loan_pick_due_date loan_due_return ;
+

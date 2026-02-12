@@ -1,0 +1,2 @@
+update pick_order set approved_date = create_date, approved_desp_date = create_date;
+

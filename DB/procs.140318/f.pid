@@ -1,0 +1,9 @@
+/*
+CREATE INDEX PICK_ITEM_DETAIL_ORDER_IDX ON PICK_ITEM_DETAIL (PICK_ORDER);
+CREATE INDEX PICK_ITEM_DETAIL_DX_ORDER_IDX ON PICK_ITEM_DETAIL_DX (PICK_ORDER);
+*/
+drop index pick_item_detail_order_idx;
+drop index pick_item_detail_dx_order_idx;
+drop trigger add_pick_item_detail_time;
+drop trigger update_pick_item_detail_time;
+drop procedure pinpoint_picks_ondevice;

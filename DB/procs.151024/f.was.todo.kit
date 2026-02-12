@@ -1,0 +1,76 @@
+in add pick order via pick_order_item_temp
+
+have 
+product is unique by either 
+1	Order
+2	Order + Line
+
+A product cannot be duplicated in a kit so for 1 level of kit this is OK.
+
+for two levels of kitting
+kit k1 with prod k3 1 and kp1 2  and kp2 1 and k2 3
+    k2 with prod kp1 2 
+    k3 with prod kp2 1
+
+I order 2 k1
+expect 
+level 0
+  line 1 DX for k1 2
+level 1
+  line 2 DX for k3 2
+  line 3    for kp1 4 kit k1 
+  line 4    for kp2 2 kit k1
+  line 5 DX for k2  6
+level 2
+  line 6    for kp2 2 kit k3
+  line 7    for kp1 12 kit k2
+
+for three levels of kitting
+kit k1 with prod k3 1 and kp1 2  and kp2 1 and k2 3
+    k2 with prod kp1 2  and kit k3 1
+    k3 with prod kp2 1  and kit k4 1
+    k4 with prod kp1 1
+
+I order 2 k1
+expect 
+level 0
+  line 1 DX for k1 2
+level 1
+  line 2 DX for k3 2
+  line 3    for kp1 4 kit k1 
+  line 4    for kp2 2 kit k1
+  line 5 DX for k2  6
+level 2
+  line 6    for kp2 2 kit k3
+  line 7    for k4 2  kit k3
+            note k3 kit from  k1
+  line 8    for kp1 12 kit k2
+  line 9    for k3 2  kit k2
+level 3
+  line 10   for kp1 2 kit k4
+  line 11   for kp2 2 kit k3
+  line 12   for k4 2  kit k3
+            note k3 kit from  k2 from k1
+level 4
+  line 13   for kp1 2 kit k4
+            note k4 from k3 from k2 from k1 is longest
+
+so a 4 level kit is here
+
+we will only support upto 5 levels
+
+in the import here we have the product
+line and qty
+we check whether its kitted using the company and product
+(product kit has no company is across all )
+if it is the status goes to DX
+set the kit level to 0
+
+
+then set kit level to last level + 1
+
+for
+   products from product kit where kit id = the original prod
+   add the line setting the parent_label_id 
+===================================================
+

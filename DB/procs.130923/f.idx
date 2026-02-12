@@ -1,0 +1,1 @@
+create index ISSN_LOC_NO_WH_IDX  ON ISSN( LOCN_ID, SSN_ID);

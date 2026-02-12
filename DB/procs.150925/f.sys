@@ -1,0 +1,2 @@
+alter table sys_screen_form  add ssf_type status;
+alter table sys_screen_form  add ssf_title code;

@@ -1,0 +1,15 @@
+alter table depreciation add save_method code;
+commit;
+update depreciation set save_method=method;
+commit;
+alter table depreciation drop method;
+commit;
+create domain method_code10 varchar(10);
+commit;
+alter table depreciation add method method_code10;
+commit;
+update depreciation set method=save_method;
+commit;
+ALTER TABLE DEPRECIATION DROP SAVE_METHOD;
+
+

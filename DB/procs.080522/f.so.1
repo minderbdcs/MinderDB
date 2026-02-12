@@ -1,0 +1,17 @@
+
+alter table pick_order add so_legacy_consignment	other_char;
+alter table pick_order add so_legacy_project	varchar(50);
+alter table pick_order add so_legacy_internal_id	varchar(20);
+alter table pick_order add so_legacy_last_modified	last_update_date;
+alter table pick_order add so_legacy_pick_wh_id	char(2);
+alter table pick_order add so_legacy_pick_wh_name	varchar(50);
+alter table pick_order add so_legacy_memo		varchar(1024);
+alter table pick_order add so_legacy_status_id	varchar(2);
+alter table pick_order add so_legacy_status	varchar(50);
+alter table pick_order add ship_via_name		varchar(50);
+alter table pick_order add so_legacy_create_date	last_update_date ;
+
+create domain legacy_country varchar(35);
+
+alter table pick_order alter d_country type legacy_country;
+

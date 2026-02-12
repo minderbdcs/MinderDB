@@ -1,0 +1,20 @@
+update person set person_type=null where person_type='';
+update person set person_type=null where person_type=' ';
+update person set person_type=null where person_type='  ';
+commit;
+/*
+cannot rename person_type since its referenced by person_subtype
+create domain person_type varchar(2);
+alter table person alter person_type to old_person_type;
+alter table person add person_type person_type not null;
+update person set person_type = old_person_type;
+*/
+alter table person alter person_type position 2;
+/*
+alter table person alter old_person_type position 47;
+*/
+update person set person_type = null where person_type not in (select code from person_type);
+commit;
+
+
+alter table PERSON add  CONSTRAINT PERSON_FK_TYPE foreign key (PERSON_TYPE) references PERSON_TYPE(CODE);

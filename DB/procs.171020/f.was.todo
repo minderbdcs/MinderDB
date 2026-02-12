@@ -1,0 +1,3 @@
+disable deletes in issn and issn_dx tables
+except for archiving
+ie ISSN_STATUS = 'DX' or wh_id starting 'X' 

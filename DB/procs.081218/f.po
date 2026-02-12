@@ -1,0 +1,6 @@
+alter table purchase_order add po_receiver user_id;
+
+alter table control add po_receive_by_1_user value_tf;
+update control set po_receive_by_1_user = 'F';
+
+

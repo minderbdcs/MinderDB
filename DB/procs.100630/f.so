@@ -1,0 +1,2 @@
+alter table pick_order add shipping_method carrier_account_no;
+

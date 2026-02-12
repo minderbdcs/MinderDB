@@ -1,0 +1,3 @@
+alter table pick_order drop p_post_code_search ;
+alter table pick_order drop d_post_code_search ;
+alter table pick_order drop s_post_code_search ;

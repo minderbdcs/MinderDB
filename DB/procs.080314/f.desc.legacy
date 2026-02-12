@@ -1,0 +1,1 @@
+insert into description_layout(sequence,code,description) values (45,'LEGACY_ID','LEGACY ID');

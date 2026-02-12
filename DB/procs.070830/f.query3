@@ -1,0 +1,8 @@
+select * from query_layout where code='msales';
+update query_layout set description='pick_order.pick_order',label='Order' where code='msales' and sequence=0;
+update query_layout set description='pick_order.person_id',label='Customer' where code='msales' and sequence=1;
+update query_layout set description='pick_order.contact_name',label='Name' where code='msales' and sequence=2;
+update query_layout set description='pick_order.p_address_line1',label='Address1' where code='msales' and sequence=3;
+update query_layout set description='pick_order.create_date',label='Created' where code='msales' and sequence=4;
+delete from query_layout where code='msales'and sequence>4;
+select * from query_layout where code='msales';

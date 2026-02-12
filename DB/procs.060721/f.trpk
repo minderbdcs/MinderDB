@@ -1,0 +1,110 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP TRIGGER RUN_TRANSACTION_TRPK ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_TRPK FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 118 
+AS
+/* Transfer of allocated pick to another handheld */
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_DEVICE_FROM CHAR(2);
+DECLARE VARIABLE WK_DEVICE_TO CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_ORDER VARCHAR(30);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_OVER_SIZED VARCHAR(10);
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'TRPK') THEN
+  BEGIN
+     WK_DEVICE_FROM = NEW.WH_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_RECORD = NEW.RECORD_ID;
+     IF (LEN(NEW.SUB_LOCN_ID) = 2) THEN
+     BEGIN
+        WK_DEVICE_TO = NEW.SUB_LOCN_ID;
+        IF (LEN(NEW.SUB_LOCN_ID) = 2) THEN
+        BEGIN
+           IF (NEW.TRN_CODE = ' ' OR NEW.TRN_CODE = 'K') THEN
+           BEGIN
+              /* transfer all picks from one device to another */
+              UPDATE PICK_ITEM_DETAIL
+                 SET DEVICE_ID = :WK_DEVICE_TO
+                 WHERE DEVICE_ID = :WK_DEVICE_FROM
+                 AND PICK_DETAIL_STATUS IN ('AL', 'PG', 'OP', 'PL');
+              UPDATE PICK_ITEM
+                 SET DEVICE_ID = :WK_DEVICE_TO
+                 WHERE DEVICE_ID = :WK_DEVICE_FROM
+                 AND PICK_LINE_STATUS IN ('AL', 'PG', 'OP', 'PL');
+              EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+           END
+           ELSE
+           IF (NEW.TRN_CODE = 'P') THEN
+           BEGIN
+              /* transfer next product from one device to another */
+              WK_PROD = NEW.OBJECT;
+              WK_OVER_SIZED = NEW.LOCN_ID;
+              UPDATE PICK_ITEM_DETAIL
+                 SET DEVICE_ID = :WK_DEVICE_TO
+                 WHERE PICK_LABEL_NO IN 
+                 (SELECT PICK_LABEL_NO 
+                  FROM PICK_ITEM 
+                  WHERE PROD_ID = :WK_PROD
+                  AND DEVICE_ID = :WK_DEVICE_FROM
+                 AND OVER_SIZED = :WK_OVER_SIZED);
+              UPDATE PICK_ITEM
+                 SET DEVICE_ID = :WK_DEVICE_TO,
+                 PICK_LINE_PRIORITY = PICK_LINE_PRIORITY + NEW.QTY
+                 WHERE PROD_ID = :WK_PROD
+                 AND DEVICE_ID = :WK_DEVICE_FROM
+                 AND OVER_SIZED = :WK_OVER_SIZED;
+              EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+           END
+           ELSE
+           IF (NEW.TRN_CODE = 'O') THEN
+           BEGIN
+              /* transfer an order from one device to another */
+              WK_ORDER = NEW.OBJECT;
+              WK_OVER_SIZED = NEW.LOCN_ID;
+              UPDATE PICK_ITEM_DETAIL
+                 SET DEVICE_ID = :WK_DEVICE_TO
+                 WHERE PICK_LABEL_NO IN 
+                 (SELECT PICK_LABEL_NO 
+                  FROM PICK_ITEM 
+                  WHERE PICK_ORDER = :WK_ORDER
+                  AND PICK_LINE_STATUS IN ('AL', 'PG', 'OP', 'PL')
+                 /* AND OVER_SIZED = :WK_OVER_SIZED */)
+                 AND PICK_DETAIL_STATUS IN ('AL', 'PG', 'OP', 'PL');
+              UPDATE PICK_ITEM
+                 SET DEVICE_ID = :WK_DEVICE_TO,
+                 PICK_LINE_PRIORITY = PICK_LINE_PRIORITY + NEW.QTY,
+                 USER_ID = :WK_USER
+                 WHERE PICK_ORDER = :WK_ORDER
+                 AND PICK_LINE_STATUS IN ('AL', 'PG', 'OP', 'PL')
+                 /* AND OVER_SIZED = :WK_OVER_SIZED */;
+              EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+           END
+        END
+     END
+     ELSE
+     BEGIN
+        /* invalid length for device */
+        EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F','Invalid To Device');
+     END
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+  END
+ END
+END ^
+ 
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

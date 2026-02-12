@@ -1,0 +1,123 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER PROCEDURE PC_TRLO_TRLI (RECORD_ID INTEGER,
+WH_ID CHAR(2) CHARACTER SET NONE,
+LOCN_ID VARCHAR(10) CHARACTER SET NONE,
+OBJECT VARCHAR(30) CHARACTER SET NONE,
+TRN_TYPE VARCHAR(4) CHARACTER SET NONE,
+TRN_CODE CHAR(1) CHARACTER SET NONE,
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(1024) CHARACTER SET NONE,
+QTY INTEGER,
+PERSON_ID VARCHAR(10) CHARACTER SET NONE,
+DEVICE_ID CHAR(2) CHARACTER SET NONE)
+AS 
+ 
+  DECLARE VARIABLE strWH_ID CHAR(2);
+  DECLARE VARIABLE strLOCN_ID VARCHAR(10);
+  DECLARE VARIABLE strAUDIT_DESC VARCHAR(70);
+  DECLARE VARIABLE WK_SUB_LOCN VARCHAR(10);
+  DECLARE VARIABLE WK_CURRENT_QTY INTEGER;
+BEGIN
+  strAUDIT_DESC = '';
+  IF (:TRN_TYPE = 'TRLO') THEN
+  BEGIN       
+     strWH_ID = '';
+     strLOCN_ID = '';
+     /* Check transit location */
+     SELECT FIRST 1 LOCN_ID, WH_ID 
+     FROM LOCATION
+     WHERE LOCN_ID = :DEVICE_ID
+     ORDER BY WH_ID
+     INTO :strLOCN_ID, :strWH_ID;
+     IF (strLOCN_ID = '') THEN /* Transit Location not found */
+     BEGIN
+        /* Update transactions table */        
+        /* EXECUTE PROCEDURE UPDATE_TRAN (RECORD_ID, 'F', 'Transit Location not found -TRLO'); */
+        INSERT INTO LOCATION (WH_ID, LOCN_ID, LOCN_NAME) VALUES('SY',:DEVICE_ID, 'Transit for ' || :DEVICE_ID);
+        strWH_ID = 'SY';
+        strLOCN_ID = :DEVICE_ID;
+        /* EXIT; */
+     END
+     /* ELSE */
+     BEGIN                         
+         /* for SSNs in location */
+         FOR
+           SELECT SSN_ID, CURRENT_QTY 
+           FROM ISSN
+           WHERE LOCN_ID = :LOCN_ID AND WH_ID = :WH_ID
+           INTO :OBJECT, :WK_CURRENT_QTY
+         DO
+         BEGIN
+           /* Update SSN */
+           EXECUTE PROCEDURE UPDATE_SSN_TROL_A (OBJECT, strWH_ID, strLOCN_ID, TRN_DATE, DEVICE_ID);
+           strAUDIT_DESC = 'Transfered all qty  ' || :QTY || ' into transit location';
+           /* Add transaction history */                                                                                     
+/*
+           EXECUTE PROCEDURE ADD_SSN_HIST(WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE,
+                                          strAUDIT_DESC, REFERENCE, QTY,  PERSON_ID, DEVICE_ID);
+*/
+           EXECUTE PROCEDURE ADD_SSN_HIST(WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE,
+                                          strAUDIT_DESC, REFERENCE, :WK_CURRENT_QTY,  PERSON_ID, DEVICE_ID);
+         END /* FOR ISSN */
+         /* Update transactions table */               
+         EXECUTE PROCEDURE UPDATE_TRAN (RECORD_ID, 'T', 'Processed successfully');
+     END /* else */
+  END /* TRN_TYPE = 'TRLO' */
+  ELSE IF (:TRN_TYPE = 'TRLI') THEN
+  BEGIN
+     strWH_ID = '';
+     strLOCN_ID = '';
+     /* Check transit location */
+     SELECT FIRST 1 LOCN_ID, WH_ID 
+     FROM LOCATION
+     WHERE LOCN_ID = :DEVICE_ID
+     ORDER BY WH_ID
+     INTO :strLOCN_ID, :strWH_ID;
+     IF (strLOCN_ID = '') THEN /* Transit Location not found */
+     BEGIN
+        /* Update transactions table */        
+        /* EXECUTE PROCEDURE UPDATE_TRAN (RECORD_ID, 'F', 'Transit Location not found TRLI'); */
+        INSERT INTO LOCATION (WH_ID, LOCN_ID, LOCN_NAME) VALUES('SY',:DEVICE_ID, 'Transit for ' || :DEVICE_ID);
+        strWH_ID = 'SY';
+        strLOCN_ID = :DEVICE_ID;
+        /* EXIT; */
+     END
+     ELSE
+     BEGIN                         
+         SELECT SUB_LOCN_ID 
+         FROM TRANSACTIONS 
+         WHERE RECORD_ID = :RECORD_ID 
+         INTO :WK_SUB_LOCN;
+         /* for SSNs in location */
+         FOR
+           SELECT SSN_ID , CURRENT_QTY
+           FROM ISSN
+           WHERE LOCN_ID = :strLOCN_ID AND WH_ID = :strWH_ID
+           INTO :OBJECT, :WK_CURRENT_QTY
+         DO
+         BEGIN
+          /* Update SSN */
+          EXECUTE PROCEDURE UPDATE_SSN_TRIL_A (OBJECT, WH_ID, LOCN_ID, TRN_DATE, QTY, TRN_CODE, WK_SUB_LOCN, DEVICE_ID, PERSON_ID);
+          strAUDIT_DESC = 'Transfered all qty into location'; 
+          /* Add transaction history */                                                                                     
+/*
+          EXECUTE PROCEDURE ADD_SSN_HIST(WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE,
+                                         strAUDIT_DESC, REFERENCE, QTY,  PERSON_ID, DEVICE_ID);
+*/
+          EXECUTE PROCEDURE ADD_SSN_HIST(WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE,
+                                         strAUDIT_DESC, REFERENCE, :WK_CURRENT_QTY,  PERSON_ID, DEVICE_ID);
+         END /* for */
+         /* Update transactions table */               
+         EXECUTE PROCEDURE UPDATE_TRAN (RECORD_ID, 'T', 'Processed successfully');
+     END /* else */
+  END /* TRN_TYPE = 'TRLI' */
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

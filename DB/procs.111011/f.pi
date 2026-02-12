@@ -1,0 +1,1 @@
+alter table pick_item add parent_label_no pick_label_no;

@@ -1,0 +1,93 @@
+/* 1
+update or insert into warehouse(wh_id, description) values('NF','Not Found');
+update ssn set wh_id ='NF' where not exists(select warehouse.wh_id from warehouse where warehouse.wh_id = ssn.wh_id);
+commit;
+
+alter table SSN add  CONSTRAINT SSN_FK_WH_ID foreign key (WH_ID) references WAREHOUSE(WH_ID);
+*/
+
+/* ===== SSN TYPE ============================= */
+/* 2
+update or insert  into  ssn_type(code, description) values('UNKNOWN','Unknown');
+update ssn set ssn_type = upper(ssn_type) where upper(ssn_type) <> ssn_type;
+update ssn set ssn_type = 'UNKNOWN'  where coalesce(ssn_type,'') = '';
+insert into ssn_type (code,description)
+select s1.ssn_type, s1.ssn_type as s1_desc from ssn s1 left outer join ssn_type s2 on s1.ssn_type = s2.code
+where s2.code is null
+group by s1.ssn_type
+;
+*/
+/* ===== GENERIC ================== */
+/* 3 - error
+update or insert  into  generic(code, description, ssn_type) values('UNKNOWN','Unknown', 'UNKNOWN');
+update ssn set generic = upper(generic) where upper(generic) <> generic;
+update ssn set generic = 'UNKNOWN'  where coalesce(generic,'') = '';
+insert into generic (code,description, ssn_type)
+select s1.generic, s1.generic , s1.ssn_type 
+from ssn s1 
+left outer join generic s2 on s1.generic = s2.code and  s1.ssn_type = s2.ssn_type
+where s2.code is null
+group by s1.ssn_type, s1.generic
+;
+*/
+/* ===== ssn_sub_type ================== */
+/* 4 all are empty
+update or insert  into  ssn_sub_type(code, description, ssn_type, generic) values('UNKNOWN','Unknown', 'UNKNOWN', 'UNKNOWN');
+update ssn set ssn_sub_type = upper(ssn_sub_type) where upper(ssn_sub_type) <> ssn_sub_type;
+-* update ssn set ssn_sub_type = 'UNKNOWN'  where coalesce(ssn_sub_type,'') = ''; *-
+insert into ssn_sub_type (code,description, ssn_type, generic)
+select s1.ssn_sub_type, s1.ssn_sub_type , s1.ssn_type , s1.generic
+from ssn s1 
+left outer join ssn_sub_type s2 
+on s1.ssn_sub_type = s2.code and  s1.ssn_type = s2.ssn_type
+and s1.generic = s2.generic 
+where s2.code is null
+group by s1.ssn_type, s1.generic, s1.ssn_sub_type
+;
+*/
+/* ===== Brand ============================= */
+/* 5
+update or insert  into  brand(code, description) values('UNKNOWN','Unknown');
+update ssn set brand = upper(brand) where upper(brand) <> brand;
+update ssn set brand = 'UNKNOWN'  where coalesce(brand,'') = '';
+insert into brand (code,description)
+select s1.brand, s1.brand as s1_desc from ssn s1 left outer join brand s2 on s1.brand = s2.code
+where s2.code is null
+group by s1.brand
+;
+*/
+/* ===== LEGACY ===================== 6 */
+update ssn set legacy_id = upper(legacy_id) where coalesce(legacy_id,'') <> ''  and upper(legacy_id) <> legacy_id;
+/* ================================== */
+
+/* constraints  7
+alter table SSN add  CONSTRAINT SSN_FK_SSN_TYPE foreign key (SSN_TYPE) references SSN_TYPE(CODE) ON UPDATE CASCADE;
+alter table SSN add  CONSTRAINT SSN_FK_GENERIC foreign key (SSN_TYPE, GENERIC) references GENERIC(SSN_TYPE,CODE) ON UPDATE CASCADE;
+alter table SSN add  CONSTRAINT SSN_FK_SSN_SUB_TYPE foreign key (SSN_TYPE, GENERIC, SSN_SUB_TYPE) references SSN_SUB_TYPE(SSN_TYPE,GENERIC,CODE) ON UPDATE CASCADE;
+alter table SSN add  CONSTRAINT SSN_FK_BRAND foreign key (BRAND) references BRAND(CODE) ON UPDATE CASCADE;
+
+*/
+/*
+update ssn set prev_wh_id=wh_id,prev_locn_id=locn_id, wh_id ='NF',locn_id='00000000',ssn_type='UNKNOWN' where ssn_type is null;
+commit;
+update ssn set prev_wh_id=wh_id,prev_locn_id=locn_id, wh_id ='NF',locn_id='00000000',file_number = ssn_type,ssn_type='UNKNOWN' where not exists(select ssn_type.code from ssn_type  where ssn_type.code  = ssn.ssn_type);
+commit;
+alter table SSN add  CONSTRAINT SSN_FK_SSN_TYPE foreign key (SSN_TYPE) references SSN_TYPE(CODE) ON UPDATE CASCADE;
+*/
+/* want to upshift 
+ssn_type, generic
+model
+brand
+legacy_id
+
+other1 - 20
+other 1 - 3 and 5 uses global conditions - these are all optional fields
+other 6 - 10 uses product_description using ssn_type - all optional fields
+other 19 - 20 uses global conditions all optional fields
+
+wh_id
+locn_id
+
+*/
+/* 8 */
+/* alter table SSN add  foreign key SSN_FK_LOCATION (WH_ID, LOCN_ID) references LOCATION(WH_ID, LOCN_ID); */

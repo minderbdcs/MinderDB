@@ -1,0 +1,7 @@
+insert into options(group_code,code,description) values('PICK_SEQ','01','7000');
+insert into options(group_code,code,description) values('PICK_SEQ','02','49787');
+insert into options(group_code,code,description) values('PICK_SEQ','03','92575');
+insert into options(group_code,code,description) values('PICK_SEQ','04','135362');
+insert into options(group_code,code,description) values('PICK_SEQ','05','178150');
+insert into options(group_code,code,description) values('PICK_DIR','A','ASC');
+insert into options(group_code,code,description) values('PICK_DIR','D','DESC');

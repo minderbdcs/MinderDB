@@ -1,0 +1,25 @@
+/* other 5 - uses global conditions  */
+/*
+update or insert  into  global_conditions( description, other_no, result ) values('UNKNOWN', '5', 'O');
+*/
+update ssn set other5 = upper(other5) where upper(other5) <> other5;
+/*
+update ssn set other5 = 'UNKNOWN'  where coalesce(other5,'') = '';
+update ssn set other5 = 'UNKNOWN'  where other5 = '';
+*/
+update ssn set other5 = null  where other5 = '';
+update ssn set other5 = alltrim(other5)  where other5 starting ' ';
+update ssn set other5 = 'GRN 44302 DEL - REBOOK AS DMP' where len(other5)>30 and other5 like 'DELETED%GRN 44302';
+update ssn set other5 = substr(other5,1,30)  where len(other5)>30 ;
+
+commit;
+insert into global_conditions (description, other_no, result)
+select s1.other5, '5', 'O'
+from ssn s1
+left outer join global_conditions s2 on
+s2.other_no  = '5' and
+s2.description    = s1.other5
+where s2.description is null
+and (s1.other5 is not null)
+group by s1.other5
+;

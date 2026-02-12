@@ -1,0 +1,3 @@
+update control set pick_transfer_status = pick_transfer_status || 'Al,Pg,Pl,'; 
+update control set pick_transfer_status = pick_cancel_pk_status || 'Al,Pg,Pl,';
+

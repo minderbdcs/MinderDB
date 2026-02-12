@@ -1,0 +1,13 @@
+
+create procedure grn_change_product_id
+passed new and old po and line
+thus have old and new prod_id's
+/* old product and new product */
+old grn
+? qty to process
+
+then create new grn
+update the issn and ssn's that were not direct delivered (unpicked)
+
+return the new grn
+

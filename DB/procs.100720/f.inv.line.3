@@ -1,0 +1,7 @@
+
+
+alter table pick_invoice_line add constraint invline_primary primary key(invline_line_id);
+
+alter table pick_invoice_line drop invoice_line_id;
+alter table pick_invoice_line drop invoice_total_cost;
+

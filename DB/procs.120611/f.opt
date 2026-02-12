@@ -1,0 +1,7 @@
+insert into options(group_code,code,description) values('PROD_ID_GN','GTIN=PROD_13|CHECK_DIGIT=T','Create Prod ID');
+
+create generator PROD_GS1_GEN;
+
+update param set data_generator='PROD_GS1_GEN' where data_id='PROD_13';
+
+

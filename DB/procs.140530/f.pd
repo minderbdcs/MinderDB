@@ -1,0 +1,5 @@
+alter table pick_despatch add PS_DEL_TO_STORE_IN_HOUSE_NO EDI_LOCN_NO;
+alter table pick_despatch add PS_CUSTOMER_EDI_NO EDI_NO;
+
+alter table pick_despatch_dx add PS_DEL_TO_STORE_IN_HOUSE_NO EDI_LOCN_NO;
+alter table pick_despatch_dx add PS_CUSTOMER_EDI_NO EDI_NO;

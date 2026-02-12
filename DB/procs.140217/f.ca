@@ -1,0 +1,1 @@
+alter table carrier add carrier_parent_id despatch_carrier;

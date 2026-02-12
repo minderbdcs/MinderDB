@@ -1,0 +1,1 @@
+alter table company add gs1_company_id varchar(10);

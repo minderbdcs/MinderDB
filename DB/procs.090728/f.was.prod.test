@@ -1,0 +1,22 @@
+/*
+DB Error
+:
+Arithmetic overflow or division by zero has occurred.arithmetic exception, numeric overflow, or string truncation.
+
+SQL:
+EXECUTE PROCEDURE ADD_TRAN_V4 (?TRN_VERSION, ?TRN_TYPE, ?TRN_CLASS, ?TRN_DATE, ?TRN_DELIMITER, ?PERSON_ID, ?DEVICE_ID, ?MESSAGE_ID, ?TRN_DATA, ?COMPLETE, ?ERROR_TEXT, ?INSTANCE_ID, ?EXPORTED, ?INPUT_SOURCE)
+
+TRN_TYPE:GLTD
+TRN_DATA:EANNumber>9320075042677|BusinessUnitNameID>99999999|BusinessUnitName>No Business Owner|LiteratureExternalTitle>LYSAGHT® PERMALITE&#8482; Roofing Solutions - Design & Installation|LiteratureOwnersNameID>99999999|LiteratureOwnersName>No Owner Name|LiteratureShortDescription>LYSAGHT® PERMALITE&#8482; Roofing Solutions - Design & I|LiteratureStatus>C|LiteratureUnitWeight>80|LiteratureUnitWeightUOM>GM|LiteraturePackWeightUOM>GM|GetLiteratureDetailStatus>true|
+TRN_VERSION:V4
+TRN_DELIMITER:|
+PERSON_ID:BDCS
+DEVICE_ID:XX
+MESSAGE_ID:6034246
+COMPLETE:
+ERROR_TEXT:
+INSTANCE_ID:MASTER
+EXPORTED:0
+*/
+
+EXECUTE PROCEDURE ADD_TRAN_V4 ('V4','GLTD','C','NOW','|','BDCS','XX','6034246','EANNumber>9320075042677|BusinessUnitNameID>99999999|BusinessUnitName>No Business Owner|LiteratureExternalTitle>LYSAGHT® PERMALITE&#8482; Roofing Solutions - Design & Installation|LiteratureOwnersNameID>99999999|LiteratureOwnersName>No Owner Name|LiteratureShortDescription>LYSAGHT® PERMALITE&#8482; Roofing Solutions - Design & I|LiteratureStatus>C|LiteratureUnitWeight>80|LiteratureUnitWeightUOM>GM|LiteraturePackWeightUOM>GM|GetLiteratureDetailStatus>true|','F','','MASTER','0','ssssssssssss');

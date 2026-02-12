@@ -1,0 +1,74 @@
+PURCHASE_ORDER                  (PURCHASE_ORDER) VARCHAR(10) Not Null 
+PERSON_ID                       (PERSON) VARCHAR(10) Nullable 
+REQUISITION_NO                  (REQUISITION_NO) VARCHAR(10) Nullable 
+PO_DATE                         (PO_DATE) TIMESTAMP Nullable 
+PO_REVISION_NO                  (PO_REVISION_NO) CHAR(2) Nullable 
+COMPANY_ID                      (COMPANY) VARCHAR(20) Nullable 
+DIVISION_ID                     (DIVISION) VARCHAR(20) Nullable 
+PO_STATUS                       (STATUS) CHAR(2) Nullable 
+COMMENTS                        (COMMENTS) VARCHAR(512) Nullable 
+PO_PRINTED                      (PO_PRINTED) TIMESTAMP Nullable 
+USER_ID                         (USER_ID) VARCHAR(10) Nullable 
+ORDER_TYPE                      (CODE_TWO) CHAR(2) Nullable 
+PO_LEGACY_DATE                  (PO_DATE) TIMESTAMP Nullable 
+PO_CURRENCY                     VARCHAR(20) Nullable 
+PO_DUE_DATE                     (PO_DUE_DATE) TIMESTAMP Nullable 
+PO_LEGACY_INTERNAL_ID           VARCHAR(20) Nullable 
+PO_RECEIVE_WH_ID                VARCHAR(20) Nullable 
+PO_LEGACY_MEMO                  VARCHAR(1024) Nullable 
+PO_LEGACY_STATUS                VARCHAR(50) Nullable 
+PO_LEGACY_RECVD_DATE            (PO_RECEIVE_DATE) TIMESTAMP Nullable 
+PO_SHIP_TO_ADDRESS3             (ADDRESS_LINE) VARCHAR(50) Nullable 
+PO_SHIP_TO_ADDRESS4             (ADDRESS_LINE) VARCHAR(50) Nullable 
+PO_SHIP_TO_ADDRESS5             (ADDRESS_LINE) VARCHAR(50) Nullable 
+PO_CREATED_BY_NAME              VARCHAR(40) Nullable 
+PO_RECEIVE_WH_NAME              VARCHAR(50) Nullable 
+PO_LEGACY_STATUS_ID             VARCHAR(2) Nullable 
+PO_SHIP_TO_ATTENSION            (LEGACY_ADDRESS_LINE) VARCHAR(80) Nullable 
+PO_SHIP_TO_ADDRESSEE            (LEGACY_ADDRESS_LINE) VARCHAR(80) Nullable 
+PO_SHIP_TO_PHONE                (ADDRESS_LINE) VARCHAR(50) Nullable 
+PO_SHIP_TO_ADDRESS1             (LEGACY_ADDRESS_LINE) VARCHAR(80) Nullable 
+PO_SHIP_TO_ADDRESS2             (LEGACY_ADDRESS_LINE) VARCHAR(80) Nullable 
+PO_SHIP_TO_SUBURB               (ADDRESS_LINE) VARCHAR(50) Nullable 
+PO_SHIP_TO_STATE                (ADDRESS_LINE) VARCHAR(50) Nullable 
+PO_SHIP_TO_POSTCODE             (LEGACY_POST_CODE) VARCHAR(20) Nullable 
+PO_SHIP_TO_COUNTRY              (ADDRESS_LINE) VARCHAR(50) Nullable 
+PO_LEGACY_CONSIGNMENT           VARCHAR(10) Nullable 
+PO_LEGACY_CREATED_BY_NAME       VARCHAR(40) Nullable 
+PO_LEGACY_OWNER                 (DESCRIPTION) VARCHAR(50) Nullable 
+PO_LEGACY_OWNER_ID              (CODE_TWO) CHAR(2) Nullable 
+PO_LEGACY_RECV_ID               INTEGER Nullable 
+PO_RECEIVER                     (USER_ID) VARCHAR(10) Nullable 
+EARLIEST_DATE                   (DATETIME) TIMESTAMP Nullable 
+COST_CENTER                     (CODE) VARCHAR(40) Nullable 
+PO_LEGACY_RECVD_QTY             (QTY) INTEGER Nullable 
+SUPPLIED_BY_ID                  (CODE) VARCHAR(40) Nullable 
+SUPPLIER_CONTACT                (DESCRIPTION) VARCHAR(50) Nullable 
+PO_SHIP_VIA                     (SHIP_VIA) VARCHAR(10) Nullable 
+PO_SHIP_VIA_SERVICE             (SHIP_SERVICE) VARCHAR(10) Nullable 
+PO_SHIPPING_METHOD              (CARRIER_ACCOUNT_NO) VARCHAR(10) Nullable 
+PO_LINE_EXTERNAL_NOTES          (NOTES) BLOB segment 80, subtype TEXT Nullable 
+PO_CONTAINER_NO                 (CONTAINER_NO) VARCHAR(20) Nullable 
+PO_VESSEL_NAME                  (DESCR) VARCHAR(75) Nullable 
+PO_VESSEL_NO                    (DESCR) VARCHAR(75) Nullable 
+LAST_UPDATE_DATE                (LAST_UPDATE_DATE) TIMESTAMP Nullable 
+LAST_UPDATE_BY                  (PERSON) VARCHAR(10) Nullable 
+PO_LEGACY_RECEIVE_WH_ID         VARCHAR(20) Nullable 
+PO_LEGACY_RECEIVE_WH_NAME       VARCHAR(50) Nullable 
+PO_VOYAGE_NO                    (DESCR) VARCHAR(75) Nullable 
+PO_GRN                          (GRN) VARCHAR(10) Nullable 
+PO_RECEIVE_LOCN_ID              (LOCN_ID) VARCHAR(10) Nullable 
+PO_SHIPPING_ACCOUNT             (FREIGHT_ACCOUNT_NO) VARCHAR(20) Nullable 
+PO_FREIGHT_COST                 (SMALL_FLOAT) FLOAT Nullable DEFAULT 0
+PO_CUSTOM_FEES                  (SMALL_FLOAT) FLOAT Nullable DEFAULT 0
+PO_STORAGE_FEES                 (SMALL_FLOAT) FLOAT Nullable DEFAULT 0
+PO_INSURANCE                    (SMALL_FLOAT) FLOAT Nullable DEFAULT 0
+PO_AMOUNT_PAID                  (SMALL_FLOAT) FLOAT Nullable DEFAULT 0
+PO_CONTAINER_FEES               (SMALL_FLOAT) FLOAT Nullable DEFAULT 0
+PO_UNLOADING_FEES               (SMALL_FLOAT) FLOAT Nullable DEFAULT 0
+PO_ADMIN_FEES                   (SMALL_FLOAT) FLOAT Nullable DEFAULT 0
+PO_OTHER_FEES                   (SMALL_FLOAT) FLOAT Nullable DEFAULT 0
+PO_TAX_AMOUNT                   (SMALL_FLOAT) FLOAT Nullable DEFAULT 0
+PO_TAX_RATE                     (SMALL_FLOAT) FLOAT Nullable DEFAULT 0
+PO_AMOUNT_DUE                   (SMALL_FLOAT) FLOAT Nullable DEFAULT 0
+PO_SALE_CHANNEL_CODE            (CODE) VARCHAR(40) Nullable 

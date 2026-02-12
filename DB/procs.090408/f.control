@@ -1,0 +1,2 @@
+alter table control add return_generates_credit value_tf;
+

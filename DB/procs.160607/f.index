@@ -1,0 +1,2 @@
+ALTER INDEX costcentreindex1 INACTIVE;
+drop index COSTCENTREINDEX1;

@@ -1,0 +1,23 @@
+/*
+        PCT_ID                    CODE NOT NULL,
+	PCT_NAME                  DESCRIPTION, 
+        PCT_PICK_ORDER_SUB_TYPE   CODE_TWO,
+        PCT_ALLOW_KIT_COMPONENTS  VALUE_TF,
+        PCT_PARTIAL_PICK_ALLOWED  VALUE_TF,
+*/
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('EBF','EBF','EB','F','F');
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('COR10EBF','COR10EBF','EB','F','F');
+/*
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('REWARDS','REWARDS','EB','F','F');
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('WGP_MBB','WGP_MBB','EB','F','F');
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('PGC_AU','PGC_AU','EB','F','F');
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('AQUWPRDJ','AQUWPRDJ','EB','F','F');
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('KAILISO','KAILISO','EB','F','F');
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('ANZCCPRO','ANZCCPRO','EB','F','F');
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('ANZCCPRC','ANZCCPRC','EB','F','F');
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('GQU','GQU','EB','F','F');
+*/
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('PGM_AU','PGM_AU','EB','F','F');
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('WGP_BSA','WGP_BSA','EB','F','F');
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('WGP_BOM','WGP_BOM','EB','F','F');
+insert into pick_client_type(pct_id, pct_name,pct_pick_order_sub_type,pct_allow_kit_components, pct_partial_pick_allowed) values('WGP_SGB','WGP_SGB','EB','F','F');

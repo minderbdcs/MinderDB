@@ -1,0 +1,2 @@
+alter table transactions_work add error_text error_text;
+

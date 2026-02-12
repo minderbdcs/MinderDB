@@ -1,0 +1,3 @@
+/* add ship via to pack customer */
+ALTER TABLE PACK_CUSTOMER ADD PC_SHIP_VIA SHIP_VIA;
+

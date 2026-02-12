@@ -1,0 +1,6 @@
+
+alter table  control add use_po_leadtime value_tf;
+commit;
+
+update control set use_po_leadtime = 'F';
+commit;

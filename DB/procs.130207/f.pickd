@@ -1,0 +1,3 @@
+/* alter table pick_despatch_dx add pickd_connote_type code_two; */
+alter table pack_id_dx add pack_label_type code_two;
+

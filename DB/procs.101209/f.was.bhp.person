@@ -1,0 +1,10 @@
+               UPDATE PICK_ORDER
+               SET D_TITLE = P_TITLE, 
+                  D_FIRST_NAME = P_FIRST_NAME, 
+                  D_LAST_NAME = P_LAST_NAME, 
+                  D_ADDRESS_LINE1 = P_ADDRESS_LINE1, 
+                  D_ADDRESS_LINE2 = P_ADDRESS_LINE2, 
+                  D_ADDRESS_LINE3 = P_ADDRESS_LINE3, 
+                  D_ADDRESS_LINE4 = P_ADDRESS_LINE4, 
+                  P_SAME_AS_INVOICE_TO = 'T'
+               WHERE POCK_STATUS in ('OP','DA');

@@ -1,0 +1,3 @@
+alter trigger update_issn_locn_log active;
+alter trigger update_ssn_locn_log active;
+alter trigger add_ssn_hist_log active;

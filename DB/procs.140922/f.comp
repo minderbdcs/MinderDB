@@ -1,0 +1,2 @@
+alter table company add WEIGHT_CHECK_BY_ORDER value_tf;
+update company set weight_check_by_order='F';

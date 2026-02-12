@@ -1,0 +1,537 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP TRIGGER RUN_TRANSACTION_GLPP ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GLPP FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 5 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_CHILD_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_PARENT_PROD VARCHAR(30);
+DECLARE VARIABLE WK_PARENT_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD1_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD1_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_QTY_X VARCHAR(10);
+DECLARE VARIABLE WK_CHILD1_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD2_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD2_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD2_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD3_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD3_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD3_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD4_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD4_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD4_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD5_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD5_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD5_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD6_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD6_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD6_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD7_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD7_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD7_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD8_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD8_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD8_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD9_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD9_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD9_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD10_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD10_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD10_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD_NO INTEGER;
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_KIT_MESSAGE VARCHAR(10);
+DECLARE VARIABLE WK_RES INTEGER;
+DECLARE VARIABLE WK_WORK_END CHAR(1);
+DECLARE VARIABLE WK_PROD_DESC VARCHAR(50);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GLPP') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the parent product code (EAN)
+            field 2 is the parent Extension (EAN Extension)
+            upto 10 child prod groups
+            field 3 is the child product code (EAN)
+            field 4 is the child Extension (EAN Extension)
+            field 5 is the child Quantity 
+            field 6 is the child product code (EAN)
+            field 7 is the child Extension (EAN Extension)
+            field 8 is the child Quantity 
+            field 9 is the child product code (EAN)
+            field 10 is the child Extension (EAN Extension)
+            field 11 is the child Quantity 
+            field 12 is the child product code (EAN)
+            field 13 is the child Extension (EAN Extension)
+            field 14 is the child Quantity 
+            field 15 is the child product code (EAN)
+            field 16 is the child Extension (EAN Extension)
+            field 17 is the child Quantity 
+            field 18 is the child product code (EAN)
+            field 19 is the child Extension (EAN Extension)
+            field 20 is the child Quantity 
+            field 21 is the child product code (EAN)
+            field 22 is the child Extension (EAN Extension)
+            field 23 is the child Quantity 
+            field 24 is the child product code (EAN)
+            field 25 is the child Extension (EAN Extension)
+            field 26 is the child Quantity 
+            field 27 is the child product code (EAN)
+            field 28 is the child Extension (EAN Extension)
+            field 29 is the child Quantity 
+            field 30 is the child product code (EAN)
+            field 31 is the child Extension (EAN Extension)
+            field 32 is the child Quantity 
+            field 33 is the retrieve status 
+         */
+         WK_STATUS = '';
+         WK_PARENT_PROD = 'NOPROD';
+         WK_PARENT_EXTENSION = '';
+         WK_CHILD1_PROD = '';
+         WK_CHILD1_EXTENSION = '';
+         WK_CHILD1_QTY = 1;
+         WK_CHILD2_PROD = '';
+         WK_CHILD2_EXTENSION = '';
+         WK_CHILD2_QTY = 1;
+         WK_CHILD3_PROD = '';
+         WK_CHILD3_EXTENSION = '';
+         WK_CHILD3_QTY = 1;
+         WK_CHILD4_PROD = '';
+         WK_CHILD4_EXTENSION = '';
+         WK_CHILD4_QTY = 1;
+         WK_CHILD5_PROD = '';
+         WK_CHILD5_EXTENSION = '';
+         WK_CHILD5_QTY = 1;
+         WK_CHILD6_PROD = '';
+         WK_CHILD6_EXTENSION = '';
+         WK_CHILD6_QTY = 1;
+         WK_CHILD7_PROD = '';
+         WK_CHILD7_EXTENSION = '';
+         WK_CHILD7_QTY = 1;
+         WK_CHILD8_PROD = '';
+         WK_CHILD8_EXTENSION = '';
+         WK_CHILD8_QTY = 1;
+         WK_CHILD9_PROD = '';
+         WK_CHILD9_EXTENSION = '';
+         WK_CHILD9_QTY = 1;
+         WK_CHILD10_PROD = '';
+         WK_CHILD10_EXTENSION = '';
+         WK_CHILD10_QTY = 1;
+         /* WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ; */
+         WK_FIELD_NO = 1;
+         WK_WORK_END = 'F';
+         /* WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO */
+         WHILE (WK_WORK_END = 'F') DO
+         BEGIN
+            SELECT WK_FIELD_TEXT , WK_AT_END
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD, :WK_WORK_END;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'ParentEANNumber') THEN
+            BEGIN
+               WK_PARENT_PROD = WK_WORK_DATA;
+               WK_CHILD_NO = 0;
+            END
+            IF (WK_WORK_LABEL = 'ParentEANextension') THEN
+            BEGIN
+               WK_PARENT_EXTENSION = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'ChildEANnumber') THEN
+            BEGIN
+               WK_CHILD_NO = WK_CHILD_NO + 1;
+               IF (WK_CHILD_NO = 1) THEN
+               BEGIN
+                  WK_CHILD1_PROD = WK_WORK_DATA;
+               END
+               ELSE
+               IF (WK_CHILD_NO = 2) THEN
+               BEGIN
+                  WK_CHILD2_PROD = WK_WORK_DATA;
+               END
+               ELSE
+               IF (WK_CHILD_NO = 3) THEN
+               BEGIN
+                  WK_CHILD3_PROD = WK_WORK_DATA;
+               END
+               ELSE
+               IF (WK_CHILD_NO = 4) THEN
+               BEGIN
+                  WK_CHILD4_PROD = WK_WORK_DATA;
+               END
+               ELSE
+               IF (WK_CHILD_NO = 5) THEN
+               BEGIN
+                  WK_CHILD5_PROD = WK_WORK_DATA;
+               END
+               ELSE
+               IF (WK_CHILD_NO = 6) THEN
+               BEGIN
+                  WK_CHILD6_PROD = WK_WORK_DATA;
+               END
+               ELSE
+               IF (WK_CHILD_NO = 7) THEN
+               BEGIN
+                  WK_CHILD7_PROD = WK_WORK_DATA;
+               END
+               ELSE
+               IF (WK_CHILD_NO = 8) THEN
+               BEGIN
+                  WK_CHILD8_PROD = WK_WORK_DATA;
+               END
+               ELSE
+               IF (WK_CHILD_NO = 9) THEN
+               BEGIN
+                  WK_CHILD9_PROD = WK_WORK_DATA;
+               END
+               ELSE
+               IF (WK_CHILD_NO = 10) THEN
+               BEGIN
+                  WK_CHILD10_PROD = WK_WORK_DATA;
+               END
+            END
+            IF (WK_WORK_LABEL = 'ChildEANextension') THEN
+            BEGIN
+               IF (WK_CHILD_NO = 1) THEN
+                  WK_CHILD1_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 2) THEN
+                  WK_CHILD2_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 3) THEN
+                  WK_CHILD3_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 4) THEN
+                  WK_CHILD4_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 5) THEN
+                  WK_CHILD5_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 6) THEN
+                  WK_CHILD6_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 7) THEN
+                  WK_CHILD7_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 8) THEN
+                  WK_CHILD8_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 9) THEN
+                  WK_CHILD9_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 10) THEN
+                  WK_CHILD10_EXTENSION = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'ChildQuantity') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               IF (WK_CHILD_NO = 1) THEN
+                  WK_CHILD1_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 2) THEN
+                  WK_CHILD2_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 3) THEN
+                  WK_CHILD3_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 4) THEN
+                  WK_CHILD4_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 5) THEN
+                  WK_CHILD5_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 6) THEN
+                  WK_CHILD6_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 7) THEN
+                  WK_CHILD7_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 8) THEN
+                  WK_CHILD8_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 9) THEN
+                  WK_CHILD9_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 10) THEN
+                  WK_CHILD10_QTY = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'ParentRetrievePrePackStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         IF (WK_PARENT_EXTENSION = '0') THEN
+         BEGIN
+            WK_PARENT_EXTENSION = '';
+         END
+         IF (WK_CHILD1_EXTENSION = '0') THEN
+         BEGIN
+            WK_CHILD1_EXTENSION = '';
+         END
+         IF (WK_CHILD2_EXTENSION = '0') THEN
+         BEGIN
+            WK_CHILD2_EXTENSION = '';
+         END
+         IF (WK_CHILD3_EXTENSION = '0') THEN
+         BEGIN
+            WK_CHILD3_EXTENSION = '';
+         END
+         IF (WK_CHILD4_EXTENSION = '0') THEN
+         BEGIN
+            WK_CHILD4_EXTENSION = '';
+         END
+         IF (WK_CHILD5_EXTENSION = '0') THEN
+         BEGIN
+            WK_CHILD5_EXTENSION = '';
+         END
+         IF (WK_CHILD6_EXTENSION = '0') THEN
+         BEGIN
+            WK_CHILD6_EXTENSION = '';
+         END
+         IF (WK_CHILD7_EXTENSION = '0') THEN
+         BEGIN
+            WK_CHILD7_EXTENSION = '';
+         END
+         IF (WK_CHILD8_EXTENSION = '0') THEN
+         BEGIN
+            WK_CHILD8_EXTENSION = '';
+         END
+         IF (WK_CHILD9_EXTENSION = '0') THEN
+         BEGIN
+            WK_CHILD9_EXTENSION = '';
+         END
+         IF (WK_CHILD10_EXTENSION = '0') THEN
+         BEGIN
+            WK_CHILD10_EXTENSION = '';
+         END
+         WK_PROD_ID = WK_PARENT_PROD || WK_PARENT_EXTENSION;
+         /* does product exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM PROD_PROFILE
+         WHERE PROD_ID = :WK_PROD_ID
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no prod profile - so create a dummy */
+            INSERT INTO PROD_PROFILE(PROD_ID, SHORT_DESC, PROD_RETRIEVE_STATUS )
+            VALUES (:WK_PROD_ID, :WK_PROD_ID, :WK_STATUS);
+            WK_PROD_DESC = WK_PROD_ID;
+         END
+         ELSE
+         BEGIN
+            UPDATE PROD_PROFILE 
+            SET PROD_RETRIEVE_STATUS = :WK_STATUS
+            WHERE PROD_ID = :WK_PROD_ID;
+            SELECT SHORT_DESC  FROM PROD_PROFILE
+            WHERE PROD_ID = :WK_PROD_ID
+            INTO :WK_PROD_DESC;
+         END
+         WK_FOUND = 0;
+         SELECT 1 FROM PROD_EAN
+         WHERE PROD_EAN = :WK_PARENT_PROD AND 
+               PROD_EAN_EXTENSION = :WK_PARENT_EXTENSION
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no prod ean - so create one */
+            INSERT INTO PROD_EAN(PROD_ID, PROD_EAN, PROD_EAN_EXTENSION)
+            VALUES (:WK_PROD_ID, :WK_PARENT_PROD, :WK_PARENT_EXTENSION);
+         END
+         /* check kit exists */
+         WK_FOUND = 0;
+         SELECT 1, UPDATE_ID
+         FROM KIT
+         WHERE KIT_ID = :WK_PROD_ID
+         INTO :WK_FOUND, :WK_KIT_MESSAGE;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no kit - so create a dummy */
+            /* VALUES (:WK_PROD_ID, :WK_PROD_ID, NEW.PERSON_ID, NEW.TRN_DATE, NEW.MESSAGE_ID); */
+            INSERT INTO KIT(KIT_ID, DESCRIPTION, CREATED_BY, CREATED_DATE, UPDATE_ID )
+            VALUES (:WK_PROD_ID, :WK_PROD_DESC, NEW.PERSON_ID, NEW.TRN_DATE, NEW.MESSAGE_ID);
+/*
+            DELETE FROM PRODUCT_KIT
+            WHERE KIT_ID = :WK_PROD_ID;
+*/
+            UPDATE PRODUCT_KIT SET STATUS = 'NC'
+            WHERE KIT_ID = :WK_PROD_ID;
+         END
+         ELSE
+         BEGIN
+            /* kit already exists */
+            IF (WK_KIT_MESSAGE  IS NULL) THEN
+            BEGIN
+               WK_KIT_MESSAGE = '';
+            END
+            IF (WK_KIT_MESSAGE = NEW.MESSAGE_ID) THEN
+            BEGIN
+               WK_FOUND = 2;
+               UPDATE KIT 
+               SET DESCRIPTION = :WK_PROD_DESC
+               WHERE KIT_ID = :WK_PROD_ID;
+            END
+            ELSE
+            BEGIN
+/*             
+               DELETE FROM PRODUCT_KIT
+               WHERE KIT_ID = :WK_PROD_ID;
+*/
+               UPDATE PRODUCT_KIT SET STATUS = 'NC'
+               WHERE KIT_ID = :WK_PROD_ID;
+               
+               UPDATE KIT 
+               SET UPDATE_ID = NEW.MESSAGE_ID,
+               DESCRIPTION = :WK_PROD_DESC
+               WHERE KIT_ID = :WK_PROD_ID;
+            END
+         END
+         /* check child1 product kit exists */
+         IF (WK_CHILD1_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD1_PROD ,
+               WK_CHILD1_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD1_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child2 product kit exists */
+         IF (WK_CHILD2_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD2_PROD ,
+               WK_CHILD2_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD2_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child3 product kit exists */
+         IF (WK_CHILD3_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD3_PROD ,
+               WK_CHILD3_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD3_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child4 product kit exists */
+         IF (WK_CHILD1_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD4_PROD ,
+               WK_CHILD4_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD4_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child5 product kit exists */
+         IF (WK_CHILD5_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD5_PROD ,
+               WK_CHILD5_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD5_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child6 product kit exists */
+         IF (WK_CHILD6_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD6_PROD ,
+               WK_CHILD6_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD6_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child7 product kit exists */
+         IF (WK_CHILD7_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD7_PROD ,
+               WK_CHILD7_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD7_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child8 product kit exists */
+         IF (WK_CHILD8_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD8_PROD ,
+               WK_CHILD8_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD8_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child9 product kit exists */
+         IF (WK_CHILD9_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD9_PROD ,
+               WK_CHILD9_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD9_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child10 product kit exists */
+         IF (WK_CHILD10_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD10_PROD ,
+               WK_CHILD10_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD10_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

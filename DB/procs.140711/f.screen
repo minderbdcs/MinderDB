@@ -1,0 +1,10 @@
+alter table sys_screen add ss_buttons   value_tf default 'T';
+alter table sys_screen add ss_shortcuts value_tf default 'T';
+alter table sys_screen add ss_limit     value_tf default 'T';
+alter table sys_screen add ss_view_by_display   value_tf default 'T';
+alter table sys_screen add ss_page_no_display   value_tf default 'T';
+alter table sys_screen add ss_menu_display    value_tf default 'T';
+
+create domain view_rows integer;
+alter table sys_screen add ss_view_by_value     view_rows    default 15;
+

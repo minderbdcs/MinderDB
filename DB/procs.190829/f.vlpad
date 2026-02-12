@@ -1,0 +1,6 @@
+/*
+DECLARE EXTERNAL FUNCTION VLPAD
+ENTRY_POINT 'fudlib_lpad' MODULE_NAME 'fudlib';
+*/
+
+drop external function vlpad;

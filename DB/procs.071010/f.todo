@@ -1,0 +1,42 @@
+procedure to return  freshes 
+level 0
+	for a prod
+		and a company
+			totals available
+	(use product_company_wh_stock_status with company populated and '' in wh)
+level 1 details 
+	for a prod
+		and a company
+			totals
+				supplier
+				wh_id 
+				brand 
+				generic 
+				receive date
+	(use product_company_grn_stock with the company populated
+	if not all companys are reported
+	as in product_company_wh_stock_status
+	there is a user_id - whose access rules the returned results)
+level 2
+	for a prod
+		and a company
+			and a wh_id
+			totals available
+	(use product_company_wh_stock_status with both wh and company populated)
+
+level 3 details
+	for a prod
+		and a company
+			and a wh_id
+				supplier
+				brand 
+				generic 
+				receive date
+				ssn_id
+				qty
+	(use product_company_wh_grn_stock with the company and wh populated
+	if not all companys are reported (and wh's)
+	as in product_company_wh_stock_status
+	there is a user_id - whose access rules the returned results)
+
+

@@ -1,0 +1,4 @@
+alter table pick_item_detail add pick_order pick_order;
+
+CREATE INDEX PICK_ITEM_DETAIL_ORDER_IDX ON PICK_ITEM_DETAIL (PICK_ORDER );
+

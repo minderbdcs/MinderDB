@@ -1,0 +1,3 @@
+select * from uom;
+insert into uom(CODE, DESCRIPTION, uom_type) VALUES('GM','Grams','WT');
+insert into uom(CODE, DESCRIPTION, uom_type) VALUES('KG','Kilos','WT');

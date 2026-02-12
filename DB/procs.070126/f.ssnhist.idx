@@ -1,0 +1,1 @@
+create index ssn_hist_location_idx on ssn_hist(wh_id,locn_id,trn_date);

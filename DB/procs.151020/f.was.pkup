@@ -1,0 +1,104 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+ 
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_PKUP FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 127 
+AS
+/* update a picks pick_line_priority */
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_LABEL VARCHAR(10);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKUP') THEN
+  BEGIN
+     WK_USER = NEW.PERSON_ID;
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     IF (NEW.TRN_CODE = 'L') THEN
+     BEGIN
+        /* update a picks pick_line_priority */
+        WK_LABEL = NEW.OBJECT;
+        UPDATE PICK_ITEM
+           SET PICK_LINE_PRIORITY = PICK_LINE_PRIORITY + NEW.QTY
+           WHERE PICK_LABEL_NO = :WK_LABEL
+           AND PICK_LINE_PRIORITY IS NOT NULL;
+        UPDATE PICK_ITEM
+           SET PICK_LINE_PRIORITY = NEW.QTY
+           WHERE PICK_LABEL_NO = :WK_LABEL
+           AND PICK_LINE_PRIORITY IS NULL;
+        EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+     END
+     ELSE
+     BEGIN
+        IF (NEW.TRN_CODE = 'P') THEN
+        BEGIN
+           /* update a picks pick_line_priority */
+           WK_PROD = NEW.OBJECT;
+           UPDATE PICK_ITEM
+              SET PICK_LINE_PRIORITY = PICK_LINE_PRIORITY + NEW.QTY
+              WHERE DEVICE_ID = :WK_DEVICE
+              AND PROD_ID = :WK_PROD
+              AND PICK_LINE_PRIORITY IS NOT NULL;
+           UPDATE PICK_ITEM
+              SET PICK_LINE_PRIORITY = NEW.QTY
+              WHERE DEVICE_ID = :WK_DEVICE
+              AND PROD_ID = :WK_PROD
+              AND PICK_LINE_PRIORITY IS NULL;
+           UPDATE PICK_ITEM
+              SET PICK_LINE_STATUS = 'Pl' 
+              WHERE DEVICE_ID = :WK_DEVICE
+              AND PROD_ID = :WK_PROD
+              AND PICK_LINE_STATUS = 'PL';
+           UPDATE PICK_ITEM
+              SET PICK_LINE_STATUS = 'Pg' 
+              WHERE DEVICE_ID = :WK_DEVICE
+              AND PROD_ID = :WK_PROD
+              AND PICK_LINE_STATUS = 'PG';
+           UPDATE PICK_ITEM
+              SET PICK_LINE_STATUS = 'Al' 
+              WHERE DEVICE_ID = :WK_DEVICE
+              AND PROD_ID = :WK_PROD
+              AND PICK_LINE_STATUS = 'AL';
+           EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+        END
+        ELSE
+        BEGIN
+           IF (NEW.TRN_CODE = 'O') THEN
+           BEGIN
+              /* update a picks pick_line_priority */
+              WK_ORDER = NEW.OBJECT;
+              UPDATE PICK_ITEM
+                 SET PICK_LINE_PRIORITY = PICK_LINE_PRIORITY + NEW.QTY
+                 WHERE DEVICE_ID = :WK_DEVICE
+                 AND PICK_ORDER  = :WK_ORDER
+                 AND PICK_LINE_PRIORITY IS NOT NULL;
+              UPDATE PICK_ITEM
+                 SET PICK_LINE_PRIORITY = NEW.QTY
+                 WHERE DEVICE_ID = :WK_DEVICE
+                 AND PICK_ORDER  = :WK_ORDER
+                 AND PICK_LINE_PRIORITY IS NULL;
+              EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+           END
+        END
+     END
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+  END
+ END
+END ^
+ 
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

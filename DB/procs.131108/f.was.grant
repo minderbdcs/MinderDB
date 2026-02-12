@@ -1,0 +1,4 @@
+grant execute on procedure add_tran_v6 to user minder;
+grant execute on procedure add_tran_v6 to user legacy;
+grant execute on procedure add_tran_response_v6 to user minder;
+grant execute on procedure add_tran_response_v6 to user legacy;

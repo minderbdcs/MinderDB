@@ -1,0 +1,17 @@
+select response_text from  ADD_TRAN_RESPONSE ('RB' ,
+'' ,
+'S155102'  ,
+'PKUF' ,
+'O' ,
+'NOW' ,
+'CUSTOMER_PO_WO|custPO|' ,
+0,
+'F' ,
+'' ,
+'MASTER    ' ,
+0,
+'' ,
+'SSSSSSSSS' ,
+'BDCS' ,
+'XX' )
+;

@@ -1,0 +1,243 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+CREATE OR ALTER PROCEDURE GET_ORDER_REPLENISH
+AS
+/* populate the replenish from the pick_order */
+/*
+this procedure updates the transfer_requests product based
+*/
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_COMPANY COMPANY;
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_MIN_QTY INTEGER;
+DECLARE VARIABLE WK_MAX_QTY INTEGER;
+DECLARE VARIABLE WK_REORDER_QTY INTEGER;
+DECLARE VARIABLE WK_WH_QTY INTEGER;
+DECLARE VARIABLE WK_CURRENT_QTY INTEGER;
+DECLARE VARIABLE WK_NEW_QTY INTEGER;
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_TRANSFER_LINE INTEGER;
+DECLARE VARIABLE WK_TRANSFER_STATUS CHAR(2);
+DECLARE VARIABLE WK_TRANSFER_PRIORITY SMALLINT;
+DECLARE VARIABLE IMPORTSTATUS VARCHAR(40);
+DECLARE VARIABLE WK_DUMMY INTEGER;
+DECLARE VARIABLE WK_RUN_NO KIT_RUN;
+DECLARE VARIABLE WK_LOG_FILE VARCHAR(80);
+DECLARE VARIABLE WK_LOG_RESULT INTEGER;
+BEGIN
+   WK_DATE = 'NOW';
+   WK_LOCN = NULL;
+   WK_LOG_FILE = '/tmp/get.order.replenish.log';
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILE, 'start get order replenish'); 
+   SELECT CONTROL.PICK_IMPORT_SSN_STATUS
+   FROM CONTROL
+   INTO :IMPORTSTATUS; 
+   SELECT GEN_ID(TRANSFER_REQUEST_RUN_NO,1) FROM CONTROL INTO :WK_RUN_NO;
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILE, 'run no '); 
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILE, :WK_RUN_NO); 
+/*   
+now get the totals by company and product from 
+	pickorder and pick_item
+	join  the pick_order.pick_order_sub_type to pick_order_sub_type.code
+want pick_order_sub_type.replenish = 'T'
+that gives totals by  company and product requiring replenish
+*/
+   FOR  SELECT P2.PROD_ID, P1.COMPANY_ID, P1.WH_ID, 
+       SUM(COALESCE(P2.PICK_ORDER_QTY,0) -  COALESCE(P2.PICKED_QTY,0)) AS REORDER_QTY
+      FROM PICK_ORDER P1
+      JOIN PICK_ITEM P2 ON P1.PICK_ORDER = P2.PICK_ORDER
+      JOIN PICK_ORDER_SUB_TYPE P3 ON P1.PICK_ORDER_SUB_TYPE = P3.POS_ID
+
+      WHERE P3.REPLENISH = 'T'
+      AND (P1.PICK_STATUS IN ('OP','DA'))
+      AND (P2.PROD_ID IS NOT NULL)
+      AND (P2.PICK_LINE_STATUS IN ('OP','UP'))
+      AND COALESCE(P2.PICK_ORDER_QTY,0) >  COALESCE(P2.PICKED_QTY,0) 
+      GROUP BY P1.COMPANY_ID, P2.PROD_ID, P1.WH_ID
+      INTO :WK_PROD, 
+           :WK_COMPANY, 
+           :WK_WH_ID, 
+           :WK_REORDER_QTY
+   DO
+   BEGIN
+      WK_LOG_RESULT = FILE_WRITE(WK_LOG_FILE, 'for loop have prod '); 
+      WK_LOG_RESULT = FILE_WRITE(WK_LOG_FILE, :WK_PROD); 
+      WK_LOG_RESULT = FILE_WRITE(WK_LOG_FILE, ' have company '); 
+      WK_LOG_RESULT = FILE_WRITE(WK_LOG_FILE, :WK_COMPANY); 
+      WK_LOG_RESULT = FILE_WRITE(WK_LOG_FILE, ' have wh  '); 
+      WK_LOG_RESULT = FILE_WRITE(WK_LOG_FILE, :WK_WH_ID); 
+      WK_LOG_RESULT = FILE_WRITE(WK_LOG_FILE, ' have reorder qty  '); 
+      WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILE, :WK_REORDER_QTY); 
+      /* ok have a product - and reorder qty  */
+      /* get total that can be transferred */
+      WK_WH_QTY = 0;
+      SELECT SUM( ISSN.CURRENT_QTY ) 
+      FROM ISSN
+      /* JOIN LOCATION ON ISSN.WH_ID = LOCATION.WH_ID AND ISSN.LOCN_ID = LOCATION.LOCN_ID  AND LOCATION.STORE_TYPE = 'ST' */
+      /* what about stock in non ST store type eg receive */
+      WHERE ISSN.PROD_ID = :WK_PROD
+         AND ISSN.COMPANY_ID = :WK_COMPANY
+         AND ISSN.WH_ID = :WK_WH_ID
+         AND ISSN.ISSN_STATUS IN ('ST','PA')
+         INTO :WK_WH_QTY;
+      IF (WK_WH_QTY IS NULL) THEN
+      BEGIN
+         WK_WH_QTY = 0;
+      END
+      IF (WK_WH_QTY > 0) THEN
+      BEGIN
+         WK_LOG_RESULT = FILE_WRITE(WK_LOG_FILE, ' have some stock in ST store type  '); 
+         WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILE, :WK_WH_QTY); 
+         /* have some stock to replenish */
+      /*
+      get the current qty of that product and company in 'DS' store type locations
+      substract from the recorder qty  gives the qty for the transfer request
+      */
+         WK_CURRENT_QTY = 0;
+         SELECT SUM( ISSN.CURRENT_QTY ) 
+         FROM ISSN
+         JOIN LOCATION ON ISSN.WH_ID = LOCATION.WH_ID AND ISSN.LOCN_ID = LOCATION.LOCN_ID  AND LOCATION.STORE_TYPE = 'DS'
+         WHERE ISSN.PROD_ID = :WK_PROD
+            AND ISSN.COMPANY_ID = :WK_COMPANY
+            AND ISSN.WH_ID = :WK_WH_ID
+            AND ISSN.ISSN_STATUS IN ( 'AL','PA','ST')
+            INTO :WK_CURRENT_QTY;
+         IF (WK_CURRENT_QTY IS NULL) THEN
+         BEGIN
+            WK_CURRENT_QTY = 0;
+         END
+         WK_LOG_RESULT = FILE_WRITE(WK_LOG_FILE, ' have stock in DS store type  '); 
+         WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILE, :WK_CURRENT_QTY); 
+/*
+previous replenishes would have the status of the pick_item change to be picked 'DS'
+then the status of the issn's would be 'DS'
+so in move to 'DS' store type must change the status of the issn to be something like 'AL' or 'PA'
+cannot use 'ST' here since 'ST' automatically goes to 'DS' via sys_moves
+'AL' means reserved for this replenish
+'PA' is the oversupply - which can be used on other orders  into 'DS' move stat locations
+'ST' is the oversupply - which can be used on other orders  into 'ST' move stat locations
+*/
+
+         IF (WK_CURRENT_QTY < WK_REORDER_QTY) THEN
+         BEGIN
+            BEGIN
+               WK_TRANSFER_PRIORITY = 10;
+            END
+            /* now get the transfer request to update */
+            WK_NEW_QTY = WK_REORDER_QTY - WK_CURRENT_QTY;
+            WK_FOUND = 0;
+            SELECT FIRST 1 1, TRN_LINE_NO, TRN_STATUS
+            FROM TRANSFER_REQUEST
+            WHERE TO_WH_ID = :WK_WH_ID
+            AND PROD_ID = :WK_PROD
+            AND COMPANY_ID = :WK_COMPANY
+            /* AND TRN_STATUS IN ( 'OP', 'CN','AL','PG','PL') */
+            AND TRN_STATUS IN ( 'OP', 'CN','AL')
+            INTO :WK_FOUND, :WK_TRANSFER_LINE, :WK_TRANSFER_STATUS;
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               /* insert it */
+               /* only nominate the wh,locn ,product and priority */
+               INSERT INTO TRANSFER_REQUEST (TO_WH_ID, TO_LOCN_ID, PROD_ID, TRN_PRIORITY, TRN_STATUS, COMPANY_ID, QTY, TRN_RUN_NO) VALUES (:WK_WH_ID, :WK_LOCN, :WK_PROD, :WK_TRANSFER_PRIORITY, 'OP', :WK_COMPANY, :WK_NEW_QTY, :WK_RUN_NO); 
+            END
+            ELSE
+            BEGIN
+               /* update it */
+               IF (WK_TRANSFER_STATUS = 'CN') THEN
+               BEGIN
+                  UPDATE TRANSFER_REQUEST
+                  SET TRN_STATUS = 'OP',
+                  TRN_PRIORITY = :WK_TRANSFER_PRIORITY,
+                  QTY = :WK_NEW_QTY,
+                  TRN_RUN_NO = :WK_RUN_NO
+                  WHERE TRN_LINE_NO = :WK_TRANSFER_LINE;
+               END
+               ELSE
+               BEGIN
+                  IF (WK_TRANSFER_STATUS = 'OP') THEN
+                  BEGIN
+                     UPDATE TRANSFER_REQUEST
+                     SET TRN_PRIORITY = :WK_TRANSFER_PRIORITY,
+                     QTY = :WK_NEW_QTY,
+                     TRN_RUN_NO = :WK_RUN_NO
+                     WHERE TRN_LINE_NO = :WK_TRANSFER_LINE;
+                  END
+                  ELSE
+                  BEGIN
+                     IF (WK_TRANSFER_STATUS = 'AL') THEN
+                     BEGIN
+                        UPDATE TRANSFER_REQUEST
+                        SET TRN_PRIORITY = :WK_TRANSFER_PRIORITY,
+                        QTY = :WK_NEW_QTY,
+                        TRN_RUN_NO = :WK_RUN_NO
+                        WHERE TRN_LINE_NO = :WK_TRANSFER_LINE;
+                     END
+                  END
+               END
+            END
+         END            
+         ELSE
+         BEGIN
+            /*
+            qty exceeds reorder qty so cancel request
+            need to remove / change status for 
+            records with no qty that 
+            were in the transfer request
+            but now the qty is OK
+            */
+            UPDATE TRANSFER_REQUEST
+            SET TRN_STATUS = 'CN',
+            QTY = NULL,
+            TRN_RUN_NO = :WK_RUN_NO
+            WHERE TO_WH_ID = :WK_WH_ID
+            AND TO_LOCN_ID = :WK_LOCN
+            AND PROD_ID = :WK_PROD
+            AND COMPANY_ID = :WK_COMPANY
+            AND TRN_STATUS = 'OP';
+         END
+      END            
+      ELSE
+      BEGIN
+         /*
+         no qty in warehouse available 
+         so  cancel request
+         */
+         UPDATE TRANSFER_REQUEST
+         SET TRN_STATUS = 'CN',
+         DEVICE_ID = NULL,
+         QTY = NULL,
+         TRN_RUN_NO = :WK_RUN_NO
+         WHERE TO_WH_ID = :WK_WH_ID
+         AND TO_LOCN_ID = :WK_LOCN
+         AND PROD_ID = :WK_PROD
+         AND COMPANY_ID = :WK_COMPANY
+         AND TRN_STATUS IN ('OP','AL') ;
+      END
+   END
+   /* now cancel any requests that I haven't updated */
+   BEGIN
+      UPDATE TRANSFER_REQUEST
+      SET TRN_STATUS = 'CN',
+      DEVICE_ID = NULL,
+      QTY = NULL,
+      TRN_RUN_NO = :WK_RUN_NO
+      WHERE TO_WH_ID = :WK_WH_ID
+      AND TO_LOCN_ID = :WK_LOCN
+      AND PROD_ID = :WK_PROD
+      AND COMPANY_ID = :WK_COMPANY
+      AND TRN_STATUS IN ('OP','AL')
+      AND TRN_RUN_NO <> :WK_RUN_NO;
+   END
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILE, 'end   get order replenish'); 
+END ^
+ 
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

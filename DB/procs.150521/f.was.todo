@@ -1,0 +1,11 @@
+in whsd
+
+the xb locations created include the the first 2 bytes the cost center code
+
+the ssn's whose  current location is in the default  wh_id and  locn_id the new cost center + '000000'  to have their home location changed to be the wh_id and current locn
+=====================================================================
+in pc_trss this splits off the qty from the current_qty into the new issn
+if there is not sufficient stock it creates it
+
+want a version of this that works with the prev_qty
+to split a qty off  of the prev_qty into the prev_qty of the new issn

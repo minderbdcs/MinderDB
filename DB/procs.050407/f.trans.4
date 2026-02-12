@@ -1,0 +1,2868 @@
+DROP TRIGGER RUN_TRANSACTION_PRCL ^
+DROP TRIGGER RUN_TRANSACTION_GCLO ^
+DROP TRIGGER RUN_TRANSACTION_UCIS ^
+DROP TRIGGER RUN_TRANSACTION_UASL ^
+DROP TRIGGER RUN_TRANSACTION_GLPP ^
+DROP TRIGGER RUN_TRANSACTION_GLTD ^
+DROP TRIGGER RUN_TRANSACTION_GPLD ^
+DROP TRIGGER RUN_TRANSACTION_GCPD ^
+DROP TRIGGER RUN_TRANSACTION_GCID ^
+DROP TRIGGER RUN_TRANSACTION_GSMD ^
+DROP TRIGGER RUN_TRANSACTION_GCNA ^
+
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_PRCL FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 1 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'PRCL') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the order 
+            field 2 is the print status 
+         */
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'ContactInstanceID') THEN
+            BEGIN
+               WK_ORDER = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'PrintStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         UPDATE PICK_ORDER 
+         SET PRINTED_DATE = NEW.TRN_DATE,
+             PRINTED_STATUS = :WK_STATUS
+         WHERE PICK_ORDER = :WK_ORDER;
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GCLO FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 2 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_QTY_X VARCHAR(10);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_ORDER_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_PICK_LABEL VARCHAR(7);
+DECLARE VARIABLE WK_LABEL_LENGTH INTEGER;
+DECLARE VARIABLE WK_LAST_LINE INTEGER;
+DECLARE VARIABLE WK_LEN_LINE_NO INTEGER;
+DECLARE VARIABLE WK_PICK_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_L_PICK_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_ORDER_TYPE CHAR(2);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GCLO') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the order 
+            field 2 is the product code (EAN)
+            field 3 is the quantity 
+            field 4 is the Extension (EAN Extension)
+            field 5 is the retrieve status 
+         */
+         WK_ORDER = '';
+         WK_STATUS = '';
+         WK_PROD = 'NOPROD';
+         WK_QTY_X = '';
+         WK_QTY = 0;
+         WK_EXTENSION = '';
+         WK_LINE_NO = '';
+         WK_ORDER_TYPE = 'SO';
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'ContactInstanceID') THEN
+            BEGIN
+               WK_ORDER = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'EANNumber') THEN
+            BEGIN
+               WK_PROD = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'Quantity') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               WK_QTY = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'EANExtension') THEN
+            BEGIN
+               WK_EXTENSION = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'ContactInstanceRetrieveStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         /* does order exist */
+         WK_FOUND = 0;
+         SELECT 1, PICK_RETRIEVE_STATUS  FROM PICK_ORDER
+         WHERE PICK_ORDER = :WK_ORDER
+         INTO :WK_FOUND, :WK_ORDER_STATUS;
+         IF (WK_ORDER_STATUS IS NULL) THEN
+         BEGIN
+            WK_ORDER_STATUS = 'F';
+         END
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            IF (WK_STATUS = 'T') THEN
+            BEGIN
+               /* no order - so probably an urgent */
+               INSERT INTO PICK_ORDER(PICK_ORDER, PICK_STATUS, PICK_RETRIEVE_STATUS)
+               VALUES (:WK_ORDER, 'UC', :WK_STATUS );
+               WK_ORDER_STATUS = WK_STATUS;
+               INSERT INTO PICK_ORDER(PICK_ORDER, 
+                  PICK_STATUS, 
+                  PICK_RETRIEVE_STATUS,
+                  CREATE_DATE,
+                  CREATED_BY,
+                  PICK_ORDER_TYPE)
+               VALUES (:WK_ORDER, 
+                  'UC', 
+                  :WK_STATUS,
+                  NEW.TRN_DATE,
+                  NEW.PERSON_ID,
+                  :WK_ORDER_TYPE);
+            END
+            ELSE
+            BEGIN
+               INSERT INTO PICK_ORDER(PICK_ORDER, PICK_STATUS, PICK_RETRIEVE_STATUS)
+               VALUES (:WK_ORDER, 'HD', :WK_STATUS );
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+         END
+         ELSE
+         BEGIN
+            IF (WK_STATUS = 'F') THEN
+            BEGIN
+               UPDATE PICK_ORDER
+               SET PICK_STATUS='HD',
+                   PICK_RETRIEVE_STATUS = :WK_STATUS
+               WHERE PICK_ORDER = :WK_ORDER;
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+         END
+         /* do line stuff */
+         IF (WK_PROD = '') THEN
+         BEGIN
+            WK_PROD = 'NOPROD';
+            IF (WK_QTY = 0) THEN
+            BEGIN
+               WK_QTY = 1;
+            END
+         END
+         IF (WK_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD ,
+               WK_EXTENSION ,
+               WK_LINE_NO ,
+               WK_QTY ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+CREATE TRIGGER RUN_TRANSACTION_UCIS FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 3 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_ORDER_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'UCIS') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the order 
+            field 2 is the retrieve status 
+         */
+         WK_ORDER = '';
+         WK_STATUS = '';
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'ContactInstanceID') THEN
+            BEGIN
+               WK_ORDER = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'UpdateContactInstanceStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         /* does order exist */
+         WK_FOUND = 0;
+         SELECT 1, PICK_RETRIEVE_STATUS  FROM PICK_ORDER
+         WHERE PICK_ORDER = :WK_ORDER
+         INTO :WK_FOUND, :WK_ORDER_STATUS;
+         IF (WK_ORDER_STATUS IS NULL) THEN
+         BEGIN
+            WK_ORDER_STATUS = 'F';
+         END
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            IF (WK_STATUS = 'T') THEN
+            BEGIN
+               /* no order - so probably an urgent */
+               INSERT INTO PICK_ORDER(PICK_ORDER, PICK_STATUS, PICK_RETRIEVE_STATUS)
+               VALUES (:WK_ORDER, 'UC', :WK_STATUS );
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+            ELSE
+            BEGIN
+               INSERT INTO PICK_ORDER(PICK_ORDER, PICK_STATUS, PICK_RETRIEVE_STATUS)
+               VALUES (:WK_ORDER, 'HD', :WK_STATUS );
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+         END
+         ELSE
+         BEGIN
+            IF (WK_STATUS = 'F') THEN
+            BEGIN
+               UPDATE PICK_ORDER
+               SET PICK_STATUS='HD',
+                   PICK_RETRIEVE_STATUS = :WK_STATUS
+               WHERE PICK_ORDER = :WK_ORDER;
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+         END
+         /* if the status changed to true must recalc the orders retrieve status */
+         IF ((WK_STATUS = 'T') AND (WK_ORDER_STATUS = 'F')) THEN
+         BEGIN
+            WK_FOUND = 0;
+            SELECT FIRST 1 1
+            FROM PICK_ITEM 
+            WHERE PICK_ORDER = :WK_ORDER
+              AND (PICK_LINE_STATUS IN ('UC','CF','OP')
+              OR PICK_LINE_STATUS IS NULL)
+              AND (PICK_RETRIEVE_STATUS = 'F'
+              OR PICK_RETRIEVE_STATUS IS NULL)
+            INTO :WK_FOUND;
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               /* have no more failures */
+               UPDATE PICK_ORDER
+               SET PICK_STATUS='UC',
+                   PICK_RETRIEVE_STATUS = :WK_STATUS
+               WHERE PICK_ORDER = :WK_ORDER;
+            END
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+CREATE TRIGGER RUN_TRANSACTION_UASL FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 4 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'UASL') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the product code (EAN)
+            field 2 is the Extension (EAN Extension)
+            field 3 is the retrieve status 
+         */
+         WK_STATUS = '';
+         WK_PROD = 'NOPROD';
+         WK_EXTENSION = '';
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'EANNumber') THEN
+            BEGIN
+               WK_PROD = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'EANextension') THEN
+            BEGIN
+               WK_EXTENSION = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'UpdateAvailableStock') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         WK_PROD_ID = WK_PROD || WK_EXTENSION;
+         /* does product exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM PROD_PROFILE
+         WHERE PROD_ID = :WK_PROD_ID
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no prod profile - so create a dummy */
+            INSERT INTO PROD_PROFILE(PROD_ID, SHORT_DESC, PROD_RETRIEVE_STATUS )
+            VALUES (:WK_PROD_ID, :WK_PROD_ID, :WK_STATUS);
+         END
+         ELSE
+         BEGIN
+            UPDATE PROD_PROFILE 
+            SET PROD_RETRIEVE_STATUS = :WK_STATUS
+            WHERE PROD_ID = :WK_PROD_ID;
+         END
+         WK_FOUND = 0;
+         SELECT 1 FROM PROD_EAN
+         WHERE PROD_EAN = :WK_PROD AND 
+               PROD_EAN_EXTENSION = :WK_EXTENSION
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no prod ean - so create one */
+            INSERT INTO PROD_EAN(PROD_ID, PROD_EAN, PROD_EAN_EXTENSION)
+            VALUES (:WK_PROD_ID, :WK_PROD, :WK_EXTENSION);
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GLPP FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 5 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_CHILD_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_PARENT_PROD VARCHAR(30);
+DECLARE VARIABLE WK_PARENT_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD1_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD1_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_QTY_X VARCHAR(10);
+DECLARE VARIABLE WK_CHILD1_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD2_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD2_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD2_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD3_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD3_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD3_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD4_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD4_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD4_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD5_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD5_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD5_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD6_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD6_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD6_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD7_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD7_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD7_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD8_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD8_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD8_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD9_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD9_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD9_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD10_PROD VARCHAR(30);
+DECLARE VARIABLE WK_CHILD10_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_CHILD10_QTY INTEGER;
+DECLARE VARIABLE WK_CHILD_NO INTEGER;
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_KIT_MESSAGE VARCHAR(10);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GLPP') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the parent product code (EAN)
+            field 2 is the parent Extension (EAN Extension)
+            upto 10 child prod groups
+            field 3 is the child product code (EAN)
+            field 4 is the child Extension (EAN Extension)
+            field 5 is the child Quantity 
+            field 6 is the child product code (EAN)
+            field 7 is the child Extension (EAN Extension)
+            field 8 is the child Quantity 
+            field 9 is the child product code (EAN)
+            field 10 is the child Extension (EAN Extension)
+            field 11 is the child Quantity 
+            field 12 is the child product code (EAN)
+            field 13 is the child Extension (EAN Extension)
+            field 14 is the child Quantity 
+            field 15 is the child product code (EAN)
+            field 16 is the child Extension (EAN Extension)
+            field 17 is the child Quantity 
+            field 18 is the child product code (EAN)
+            field 19 is the child Extension (EAN Extension)
+            field 20 is the child Quantity 
+            field 21 is the child product code (EAN)
+            field 22 is the child Extension (EAN Extension)
+            field 23 is the child Quantity 
+            field 24 is the child product code (EAN)
+            field 25 is the child Extension (EAN Extension)
+            field 26 is the child Quantity 
+            field 27 is the child product code (EAN)
+            field 28 is the child Extension (EAN Extension)
+            field 29 is the child Quantity 
+            field 30 is the child product code (EAN)
+            field 31 is the child Extension (EAN Extension)
+            field 32 is the child Quantity 
+            field 33 is the retrieve status 
+         */
+         WK_STATUS = '';
+         WK_PARENT_PROD = 'NOPROD';
+         WK_PARENT_EXTENSION = '';
+         WK_CHILD1_PROD = '';
+         WK_CHILD1_EXTENSION = '';
+         WK_CHILD1_QTY = 1;
+         WK_CHILD2_PROD = '';
+         WK_CHILD2_EXTENSION = '';
+         WK_CHILD2_QTY = 1;
+         WK_CHILD3_PROD = '';
+         WK_CHILD3_EXTENSION = '';
+         WK_CHILD3_QTY = 1;
+         WK_CHILD4_PROD = '';
+         WK_CHILD4_EXTENSION = '';
+         WK_CHILD4_QTY = 1;
+         WK_CHILD5_PROD = '';
+         WK_CHILD5_EXTENSION = '';
+         WK_CHILD5_QTY = 1;
+         WK_CHILD6_PROD = '';
+         WK_CHILD6_EXTENSION = '';
+         WK_CHILD6_QTY = 1;
+         WK_CHILD7_PROD = '';
+         WK_CHILD7_EXTENSION = '';
+         WK_CHILD7_QTY = 1;
+         WK_CHILD8_PROD = '';
+         WK_CHILD8_EXTENSION = '';
+         WK_CHILD8_QTY = 1;
+         WK_CHILD9_PROD = '';
+         WK_CHILD9_EXTENSION = '';
+         WK_CHILD9_QTY = 1;
+         WK_CHILD10_PROD = '';
+         WK_CHILD10_EXTENSION = '';
+         WK_CHILD10_QTY = 1;
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'ParentEANNumber') THEN
+            BEGIN
+               WK_PARENT_PROD = WK_WORK_DATA;
+               WK_CHILD_NO = 0;
+            END
+            IF (WK_WORK_LABEL = 'ParentEANextension') THEN
+            BEGIN
+               WK_PARENT_EXTENSION = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'ChildEANnumber') THEN
+            BEGIN
+               WK_CHILD_NO = WK_CHILD_NO + 1;
+               IF (WK_CHILD_NO = 1) THEN
+                  WK_CHILD1_PROD = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 2) THEN
+                  WK_CHILD2_PROD = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 3) THEN
+                  WK_CHILD3_PROD = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 4) THEN
+                  WK_CHILD4_PROD = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 5) THEN
+                  WK_CHILD5_PROD = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 6) THEN
+                  WK_CHILD6_PROD = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 7) THEN
+                  WK_CHILD7_PROD = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 8) THEN
+                  WK_CHILD8_PROD = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 9) THEN
+                  WK_CHILD9_PROD = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 10) THEN
+                  WK_CHILD10_PROD = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'ChildEANextension') THEN
+            BEGIN
+               IF (WK_CHILD_NO = 1) THEN
+                  WK_CHILD1_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 2) THEN
+                  WK_CHILD2_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 3) THEN
+                  WK_CHILD3_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 4) THEN
+                  WK_CHILD4_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 5) THEN
+                  WK_CHILD5_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 6) THEN
+                  WK_CHILD6_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 7) THEN
+                  WK_CHILD7_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 8) THEN
+                  WK_CHILD8_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 9) THEN
+                  WK_CHILD9_EXTENSION = WK_WORK_DATA;
+               ELSE
+               IF (WK_CHILD_NO = 10) THEN
+                  WK_CHILD10_EXTENSION = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'ChildQuantity') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               IF (WK_CHILD_NO = 1) THEN
+                  WK_CHILD1_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 2) THEN
+                  WK_CHILD2_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 3) THEN
+                  WK_CHILD3_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 4) THEN
+                  WK_CHILD4_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 5) THEN
+                  WK_CHILD5_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 6) THEN
+                  WK_CHILD6_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 7) THEN
+                  WK_CHILD7_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 8) THEN
+                  WK_CHILD8_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 9) THEN
+                  WK_CHILD9_QTY = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_CHILD_NO = 10) THEN
+                  WK_CHILD10_QTY = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'ParentRetrievePrePackStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         WK_PROD_ID = WK_PARENT_PROD || WK_PARENT_EXTENSION;
+         /* does product exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM PROD_PROFILE
+         WHERE PROD_ID = :WK_PROD_ID
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no prod profile - so create a dummy */
+            INSERT INTO PROD_PROFILE(PROD_ID, SHORT_DESC, PROD_RETRIEVE_STATUS )
+            VALUES (:WK_PROD_ID, :WK_PROD_ID, :WK_STATUS);
+         END
+         ELSE
+         BEGIN
+            UPDATE PROD_PROFILE 
+            SET PROD_RETRIEVE_STATUS = :WK_STATUS
+            WHERE PROD_ID = :WK_PROD_ID;
+         END
+         WK_FOUND = 0;
+         SELECT 1 FROM PROD_EAN
+         WHERE PROD_EAN = :WK_PARENT_PROD AND 
+               PROD_EAN_EXTENSION = :WK_PARENT_EXTENSION
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no prod ean - so create one */
+            INSERT INTO PROD_EAN(PROD_ID, PROD_EAN, PROD_EAN_EXTENSION)
+            VALUES (:WK_PROD_ID, :WK_PARENT_PROD, :WK_PARENT_EXTENSION);
+         END
+         /* check kit exists */
+         WK_FOUND = 0;
+         SELECT 1, UPDATE_ID
+         FROM KIT
+         WHERE KIT_ID = :WK_PROD_ID
+         INTO :WK_FOUND, :WK_KIT_MESSAGE;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no kit - so create a dummy */
+            INSERT INTO KIT(KIT_ID, DESCRIPTION, CREATED_BY, CREATED_DATE, UPDATE_ID )
+            VALUES (:WK_PROD_ID, :WK_PROD_ID, NEW.PERSON_ID, NEW.TRN_DATE, NEW.MESSAGE_ID);
+/*
+            DELETE FROM PRODUCT_KIT
+            WHERE KIT_ID = :WK_PROD_ID;
+*/
+            UPDATE PRODUCT_KIT SET STATUS = 'NC'
+            WHERE KIT_ID = :WK_PROD_ID;
+         END
+         ELSE
+         BEGIN
+            /* kit already exists */
+            IF (WK_KIT_MESSAGE  IS NULL) THEN
+            BEGIN
+               WK_KIT_MESSAGE = '';
+            END
+            IF (WK_KIT_MESSAGE = NEW.MESSAGE_ID) THEN
+            BEGIN
+               WK_FOUND = 2;
+            END
+            ELSE
+            BEGIN
+/*             
+               DELETE FROM PRODUCT_KIT
+               WHERE KIT_ID = :WK_PROD_ID;
+*/
+               UPDATE PRODUCT_KIT SET STATUS = 'NC'
+               WHERE KIT_ID = :WK_PROD_ID;
+               
+               UPDATE KIT 
+               SET UPDATE_ID = NEW.MESSAGE_ID
+               WHERE KIT_ID = :WK_PROD_ID;
+            END
+         END
+         /* check child1 product kit exists */
+         IF (WK_CHILD1_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD1_PROD ,
+               WK_CHILD1_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD1_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child2 product kit exists */
+         IF (WK_CHILD2_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD2_PROD ,
+               WK_CHILD2_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD2_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child3 product kit exists */
+         IF (WK_CHILD3_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD3_PROD ,
+               WK_CHILD3_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD3_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child4 product kit exists */
+         IF (WK_CHILD1_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD4_PROD ,
+               WK_CHILD4_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD4_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child5 product kit exists */
+         IF (WK_CHILD5_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD5_PROD ,
+               WK_CHILD5_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD5_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child6 product kit exists */
+         IF (WK_CHILD6_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD6_PROD ,
+               WK_CHILD6_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD6_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child7 product kit exists */
+         IF (WK_CHILD7_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD7_PROD ,
+               WK_CHILD7_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD7_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child8 product kit exists */
+         IF (WK_CHILD8_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD8_PROD ,
+               WK_CHILD8_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD8_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child9 product kit exists */
+         IF (WK_CHILD9_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD9_PROD ,
+               WK_CHILD9_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD9_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+         /* check child10 product kit exists */
+         IF (WK_CHILD10_PROD > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_CHILD_KIT (WK_CHILD10_PROD ,
+               WK_CHILD10_EXTENSION ,
+               WK_STATUS ,
+               WK_PROD_ID ,
+               WK_CHILD10_QTY ,
+               NEW.PERSON_ID ,
+               NEW.TRN_DATE );
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GLTD FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 6 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_BUSINESS_ID VARCHAR(10);
+DECLARE VARIABLE WK_BUSINESS_NAME VARCHAR(50);
+DECLARE VARIABLE WK_CURRENT_COMPANY VARCHAR(50);
+DECLARE VARIABLE WK_SHORT_DESC VARCHAR(50);
+DECLARE VARIABLE WK_OWNERS_NAME_ID VARCHAR(10);
+DECLARE VARIABLE WK_OWNERS_NAME VARCHAR(255);
+DECLARE VARIABLE WK_CURRENT_OWNER VARCHAR(255);
+DECLARE VARIABLE WK_TITLE VARCHAR(255);
+DECLARE VARIABLE WK_PROD_TYPE VARCHAR(50);
+DECLARE VARIABLE WK_PROD_TYPE_ID CHAR(2);
+DECLARE VARIABLE WK_PROD_STATUS VARCHAR(2);
+DECLARE VARIABLE WK_QTY_X VARCHAR(10);
+DECLARE VARIABLE WK_PACK_QTY INTEGER;
+DECLARE VARIABLE WK_INNER_PACK_QTY INTEGER;
+DECLARE VARIABLE WK_WEIGHT INTEGER;
+DECLARE VARIABLE WK_WEIGHT_UOM VARCHAR(2);
+DECLARE VARIABLE WK_INNER_PACK_UOM VARCHAR(2);
+DECLARE VARIABLE WK_PACK_UOM VARCHAR(2);
+DECLARE VARIABLE WK_ISSUE_UOM VARCHAR(2);
+DECLARE VARIABLE WK_ISSUE INTEGER;
+DECLARE VARIABLE WK_PACK_WEIGHT INTEGER;
+DECLARE VARIABLE WK_PACK_WEIGHT_UOM VARCHAR(2);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+/* new prod type generation */
+DECLARE VARIABLE WK_CHARS VARCHAR(40);
+DECLARE VARIABLE WK_START INTEGER;
+DECLARE VARIABLE WK_END INTEGER;
+DECLARE VARIABLE WK_TRY_CNT INTEGER;
+DECLARE VARIABLE WK_LABEL_CURRENT INTEGER;
+DECLARE VARIABLE WK_LABEL_NO INTEGER;
+DECLARE VARIABLE WK_LABEL VARCHAR(10);
+DECLARE VARIABLE WK_LABEL_LEN INTEGER;
+DECLARE VARIABLE WK_TOT INTEGER;
+DECLARE VARIABLE WK_QUOT INTEGER;
+DECLARE VARIABLE WK_REM INTEGER;
+DECLARE VARIABLE WK_CHAR VARCHAR(5);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GLTD') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the product code (EAN)
+            field 2 is the Extension (EAN Extension)
+            field 3 is the Business Unit ID
+            field 4 is the Business Unit Name
+            field 5 is the Literature External Title
+            field 6 is the Literature Owners Name ID
+            field 7 is the Literature Owners Name
+            field 8 is the Literature Short Description
+            field 9 is the Literature Type
+            field 10 is the Literature Status
+            field 11 is the Literature Pack Quantity
+            field 12 is the Literature Inner Pack Quantity
+            field 13 is the Literature Unit Weight
+            field 14 is the Literature Unit Weight UOM
+            field 15 is the Literature Inner Pack UOM
+            field 16 is the Literature Pack UOM
+            field 17 is the Literature Pack Weight
+            field 18 is the Literature Pack Weight UOM
+            field 19 is the retrieve status 
+         */
+         WK_STATUS = '';
+         WK_PROD = 'NOPROD';
+         WK_EXTENSION = '';
+         WK_BUSINESS_ID = '';
+         WK_BUSINESS_NAME = '';
+         WK_SHORT_DESC = '';
+         WK_OWNERS_NAME_ID = '';
+         WK_OWNERS_NAME = '';
+         WK_TITLE = '';
+         WK_PROD_TYPE = '';
+         WK_PROD_STATUS = '';
+         WK_PACK_QTY = 1;
+         WK_INNER_PACK_QTY = 1;
+         WK_WEIGHT = 0;
+         WK_WEIGHT_UOM = '';
+         WK_INNER_PACK_UOM = '';
+         WK_PACK_UOM = '';
+         WK_PACK_WEIGHT = 0;
+         WK_PACK_WEIGHT_UOM = '';
+
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'EANNumber') THEN
+            BEGIN
+               WK_PROD = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'EANextension') THEN
+            BEGIN
+               WK_EXTENSION = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'BusinessUnitID') THEN
+            BEGIN
+               WK_BUSINESS_ID = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'BusinessUnitName') THEN
+            BEGIN
+               WK_BUSINESS_NAME = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureExternalTitle') THEN
+            BEGIN
+               WK_TITLE = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureOwnersNameID') THEN
+            BEGIN
+               WK_OWNERS_NAME_ID = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureOwnersName') THEN
+            BEGIN
+               WK_OWNERS_NAME = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureShortDescription') THEN
+            BEGIN
+               WK_SHORT_DESC = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureType') THEN
+            BEGIN
+               WK_PROD_TYPE = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureStatus') THEN
+            BEGIN
+               WK_PROD_STATUS = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteraturePackQuantity') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               WK_PACK_QTY = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'LiteratureInnerPackQuantity') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               WK_INNER_PACK_QTY = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'LiteratureUnitWeight') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               WK_WEIGHT = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'LiteratureUnitWeightUOM') THEN
+            BEGIN
+               WK_WEIGHT_UOM = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureInnerPackUOM') THEN
+            BEGIN
+               WK_INNER_PACK_UOM = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteraturePackUOM') THEN
+            BEGIN
+               WK_PACK_UOM = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteraturePackWeight') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               WK_PACK_WEIGHT = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'LiteraturePackWeightUOM') THEN
+            BEGIN
+               WK_PACK_WEIGHT_UOM = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'GetLiteratureDetailStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         WK_PROD_ID = WK_PROD || WK_EXTENSION;
+         /* does company exist */
+         WK_FOUND = 0;
+         SELECT 1, NAME FROM COMPANY
+         WHERE COMPANY_ID = :WK_BUSINESS_ID 
+         INTO :WK_FOUND, :WK_CURRENT_COMPANY;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO COMPANY(COMPANY_ID, NAME)
+            VALUES (:WK_BUSINESS_ID, :WK_BUSINESS_NAME);
+         END
+         ELSE
+         BEGIN
+            IF (WK_CURRENT_COMPANY IS NULL) THEN
+               WK_CURRENT_COMPANY = '';
+            IF ( NOT(WK_CURRENT_COMPANY = WK_BUSINESS_NAME)) THEN
+            BEGIN
+               UPDATE COMPANY SET NAME = :WK_BUSINESS_NAME
+               WHERE COMPANY_ID = :WK_BUSINESS_ID;
+            END
+         END
+         /* does owner person type exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM PERSON_TYPE
+         WHERE CODE = 'CV'
+         INTO :WK_FOUND ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO PERSON_TYPE(CODE, DESCRIPTION)
+            VALUES ('CV', 'Company - Vendor');
+         END
+         /* does prod type exist */
+         WK_FOUND = 0;
+         SELECT 1, CODE FROM PROD_TYPE
+         WHERE DESCRIPTION = :WK_PROD_TYPE
+         INTO :WK_FOUND, :WK_PROD_TYPE_ID ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* need 2 bytes = 36*36 = 1200 so use a single generator */
+            WK_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@';
+            WK_START = 0;
+            WK_END = 1295;
+            WK_TRY_CNT = 0;
+            WK_FOUND = 1;
+            /* try up to 4 next labels */
+            WHILE (WK_FOUND > 0 AND WK_TRY_CNT < 4)
+            DO
+            BEGIN
+               WK_LABEL_CURRENT = GEN_ID(PROD_TYPE_GEN, 1);
+               WK_LABEL_NO = mod(WK_LABEL_CURRENT, :WK_END - :WK_START) + :WK_START;
+               WK_LABEL = '';
+               WK_LABEL_LEN = 0;
+               WK_TOT = WK_LABEL_NO;
+               WHILE (WK_LABEL_LEN < 2) DO
+               BEGIN
+                  /* do for length remaining */
+                  WK_QUOT = modquot(WK_TOT, 36);
+                  WK_REM = mod(WK_TOT ,36);
+                  WK_CHAR = substr(WK_CHARS,WK_REM +1,WK_REM +1);
+                  WK_LABEL = WK_LABEL || WK_CHAR;
+                  WK_TOT = WK_QUOT;
+                  WK_LABEL_LEN = WK_LABEL_LEN + 1;
+               END
+               /* now swap order */
+               WK_LABEL = reverse(WK_LABEL);
+               /* now try this */
+               WK_TRY_CNT = WK_TRY_CNT + 1;
+               WK_FOUND = 0;
+               SELECT 1  FROM PROD_TYPE
+               WHERE CODE = :WK_LABEL
+               INTO :WK_FOUND ;
+               WK_PROD_TYPE_ID = WK_LABEL;
+               IF (WK_FOUND = 0) THEN
+               BEGIN
+                  INSERT INTO PROD_TYPE(CODE, DESCRIPTION)
+                  VALUES (:WK_PROD_TYPE_ID, :WK_PROD_TYPE );
+               END
+               ELSE
+               BEGIN
+                  IF (WK_TRY_CNT = 4) THEN
+                  BEGIN
+                     UPDATE PROD_TYPE SET DESCRIPTION = :WK_PROD_TYPE
+                     WHERE CODE = :WK_PROD_TYPE_ID;
+                  END
+               END
+            END
+         END
+         /* does owner exist */
+         WK_FOUND = 0;
+         SELECT 1, FIRST_NAME FROM PERSON
+         WHERE PERSON_ID = :WK_OWNERS_NAME_ID
+         INTO :WK_FOUND, :WK_CURRENT_OWNER;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO PERSON(PERSON_ID, FIRST_NAME, PERSON_TYPE)
+            VALUES (:WK_OWNERS_NAME_ID, :WK_OWNERS_NAME, 'CV');
+         END
+         ELSE
+         BEGIN
+            IF (WK_CURRENT_OWNER IS NULL) THEN
+               WK_CURRENT_OWNER = '';
+            IF ( NOT(WK_CURRENT_OWNER = WK_OWNERS_NAME)) THEN
+            BEGIN
+               UPDATE PERSON SET FIRST_NAME = :WK_OWNERS_NAME
+               WHERE PERSON_ID = :WK_OWNERS_NAME_ID;
+            END
+         END
+
+         /* does pack uom exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM UOM
+         WHERE CODE = :WK_PACK_UOM
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO UOM(CODE, DESCRIPTION, UOM_TYPE) VALUES (:WK_PACK_UOM, :WK_PACK_UOM, 'UT');
+         END
+         /* issue uom = ea */
+         WK_ISSUE_UOM = 'EA';
+         WK_ISSUE = 1;
+         WK_FOUND = 0;
+         SELECT 1 FROM UOM
+         WHERE CODE = :WK_ISSUE_UOM
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO UOM(CODE, DESCRIPTION, UOM_TYPE) VALUES (:WK_ISSUE_UOM, :WK_ISSUE_UOM, 'UT');
+         END
+         /* does pack weight uom exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM UOM
+         WHERE CODE = :WK_PACK_WEIGHT_UOM
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO UOM(CODE, DESCRIPTION, UOM_TYPE) VALUES (:WK_PACK_WEIGHT_UOM, :WK_PACK_WEIGHT_UOM, 'WT');
+         END
+         /* does inner pack uom exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM UOM
+         WHERE CODE = :WK_INNER_PACK_UOM
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO UOM(CODE, DESCRIPTION, UOM_TYPE) VALUES (:WK_INNER_PACK_UOM, :WK_INNER_PACK_UOM, 'UT');
+         END
+         /* does unit weight uom exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM UOM
+         WHERE CODE = :WK_WEIGHT_UOM
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO UOM(CODE, DESCRIPTION, UOM_TYPE) VALUES (:WK_WEIGHT_UOM, :WK_WEIGHT_UOM, 'WT');
+         END
+
+         /* does product exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM PROD_PROFILE
+         WHERE PROD_ID = :WK_PROD_ID
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no prod profile - so create a dummy */
+            INSERT INTO PROD_PROFILE(PROD_ID, 
+               SHORT_DESC, 
+               COMPANY_ID, 
+               SUPPLIER_NO1, 
+               LONG_DESC, 
+               PROD_TYPE, 
+               STOCK, 
+               ISSUE_PER_ORDER_UNIT, 
+               ISSUE_PER_INNER_UNIT, 
+               ORDER_UOM, 
+               ISSUE_UOM, 
+               ISSUE, 
+               NET_WEIGHT, 
+               ORDER_WEIGHT, 
+               NET_WEIGHT_UOM, 
+               ORDER_WEIGHT_UOM, 
+               INNER_UOM, 
+               PROD_RETRIEVE_STATUS )
+            VALUES (:WK_PROD_ID, 
+               :WK_SHORT_DESC, 
+               :WK_BUSINESS_ID, 
+               :WK_OWNERS_NAME_ID,
+               :WK_TITLE, 
+               :WK_PROD_TYPE_ID, 
+               :WK_PROD_STATUS, 
+               :WK_PACK_QTY, 
+               :WK_INNER_PACK_QTY, 
+               :WK_PACK_UOM, 
+               :WK_ISSUE_UOM, 
+               :WK_ISSUE, 
+               :WK_WEIGHT, 
+               :WK_PACK_WEIGHT, 
+               :WK_WEIGHT_UOM, 
+               :WK_PACK_WEIGHT_UOM, 
+               :WK_INNER_PACK_UOM, 
+               :WK_STATUS);
+         END
+         ELSE
+         BEGIN
+            UPDATE PROD_PROFILE 
+            SET SHORT_DESC = :WK_SHORT_DESC, 
+            COMPANY_ID = :WK_BUSINESS_ID, 
+            SUPPLIER_NO1 = :WK_OWNERS_NAME_ID, 
+            LONG_DESC = :WK_TITLE, 
+            PROD_RETRIEVE_STATUS = :WK_STATUS,
+            PROD_TYPE = :WK_PROD_TYPE_ID,
+            STOCK = :WK_PROD_STATUS,
+            ISSUE_PER_ORDER_UNIT = :WK_PACK_QTY,
+            ISSUE_PER_INNER_UNIT = :WK_INNER_PACK_QTY,
+            ORDER_UOM = :WK_PACK_UOM,
+            ISSUE = :WK_ISSUE,
+            ISSUE_UOM = :WK_ISSUE_UOM,
+            NET_WEIGHT = :WK_WEIGHT,
+            ORDER_WEIGHT = :WK_PACK_WEIGHT,
+            NET_WEIGHT_UOM = :WK_WEIGHT_UOM,
+            ORDER_WEIGHT_UOM = :WK_PACK_WEIGHT_UOM,
+            INNER_UOM = :WK_INNER_PACK_UOM
+            WHERE PROD_ID = :WK_PROD_ID;
+         END
+         WK_FOUND = 0;
+         SELECT 1 FROM PROD_EAN
+         WHERE PROD_EAN = :WK_PROD AND 
+               PROD_EAN_EXTENSION = :WK_EXTENSION
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no prod ean - so create one */
+            INSERT INTO PROD_EAN(PROD_ID, PROD_EAN, PROD_EAN_EXTENSION)
+            VALUES (:WK_PROD_ID, :WK_PROD, :WK_EXTENSION);
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GPLD FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 7 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_MODE VARCHAR(10);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_ORDER_DATE VARCHAR(20);
+DECLARE VARIABLE WK_ORDER_DATE2 VARCHAR(20);
+DECLARE VARIABLE WK_ORDER_DATET TIMESTAMP;
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_PROD1 VARCHAR(30);
+DECLARE VARIABLE WK_PROD2 VARCHAR(30);
+DECLARE VARIABLE WK_PROD3 VARCHAR(30);
+DECLARE VARIABLE WK_PROD4 VARCHAR(30);
+DECLARE VARIABLE WK_PROD5 VARCHAR(30);
+DECLARE VARIABLE WK_PROD6 VARCHAR(30);
+DECLARE VARIABLE WK_PROD7 VARCHAR(30);
+DECLARE VARIABLE WK_PROD8 VARCHAR(30);
+DECLARE VARIABLE WK_PROD9 VARCHAR(30);
+DECLARE VARIABLE WK_PROD10 VARCHAR(30);
+DECLARE VARIABLE WK_EXTENSION1 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION2 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION3 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION4 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION5 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION6 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION7 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION8 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION9 VARCHAR(6);
+DECLARE VARIABLE WK_EXTENSION10 VARCHAR(6);
+DECLARE VARIABLE WK_QTY_X VARCHAR(10);
+DECLARE VARIABLE WK_QTY1 INTEGER;
+DECLARE VARIABLE WK_QTY2 INTEGER;
+DECLARE VARIABLE WK_QTY3 INTEGER;
+DECLARE VARIABLE WK_QTY4 INTEGER;
+DECLARE VARIABLE WK_QTY5 INTEGER;
+DECLARE VARIABLE WK_QTY6 INTEGER;
+DECLARE VARIABLE WK_QTY7 INTEGER;
+DECLARE VARIABLE WK_QTY8 INTEGER;
+DECLARE VARIABLE WK_QTY9 INTEGER;
+DECLARE VARIABLE WK_QTY10 INTEGER;
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_SUPPLIERLIST VARCHAR(5);
+DECLARE VARIABLE WK_SPECIALMAIL VARCHAR(5);
+DECLARE VARIABLE WK_PRIORITY VARCHAR(5);
+DECLARE VARIABLE WK_PICK_PRIORITY SMALLINT;
+DECLARE VARIABLE WK_ORDER_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_LINE_NO1 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO2 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO3 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO4 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO5 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO6 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO7 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO8 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO9 VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO10 VARCHAR(4);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_PICK_LABEL VARCHAR(7);
+DECLARE VARIABLE WK_LABEL_LENGTH INTEGER;
+DECLARE VARIABLE WK_LAST_LINE INTEGER;
+DECLARE VARIABLE WK_LEN_LINE_NO INTEGER;
+DECLARE VARIABLE WK_PICK_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_L_PICK_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_POSN INTEGER;
+DECLARE VARIABLE WK_LAST_LINE_NO INTEGER;
+DECLARE VARIABLE WK_ORDER_TYPE CHAR(2);
+DECLARE VARIABLE WK_PICK_STATUS CHAR(2);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GPLD') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            for multiple lines have
+            field 1 is the picking mode
+            field 2 is the warehouse id 
+            *field 3 is the retrieve status 
+            *field 4 is the order 
+            field 5 is the order date time 
+            field 6 is the supplier list flag
+            field 7 is the special mailout flag
+            field 8 is the order priority (maybe empty)
+            up to 10 lines
+            field 9 is the pick line no (maybe empty)
+            *field 10 is the product code (EAN)
+            *field 11 is the Extension (EAN Extension)
+            *field 12 is the quantity 
+         */
+         WK_ORDER_TYPE = 'SO';
+         WK_MODE = '';
+         WK_WH_ID = '';
+         WK_ORDER = '';
+         WK_ORDER_DATET = 'NOW';
+         WK_STATUS = '';
+         WK_SUPPLIERLIST = '';
+         WK_SPECIALMAIL = '';
+         WK_PRIORITY = '';
+         WK_LINE_NO1 = '';
+         WK_LINE_NO2 = '';
+         WK_LINE_NO3 = '';
+         WK_LINE_NO4 = '';
+         WK_LINE_NO5 = '';
+         WK_LINE_NO6 = '';
+         WK_LINE_NO7 = '';
+         WK_LINE_NO8 = '';
+         WK_LINE_NO9 = '';
+         WK_LINE_NO10 = '';
+         WK_PROD1 = 'NOPROD';
+         WK_PROD2 = '';
+         WK_PROD3 = '';
+         WK_PROD4 = '';
+         WK_PROD5 = '';
+         WK_PROD6 = '';
+         WK_PROD7 = '';
+         WK_PROD8 = '';
+         WK_PROD9 = '';
+         WK_PROD10 = '';
+         WK_QTY_X = '';
+         WK_QTY1 = 0;
+         WK_QTY2 = 0;
+         WK_QTY3 = 0;
+         WK_QTY4 = 0;
+         WK_QTY5 = 0;
+         WK_QTY6 = 0;
+         WK_QTY7 = 0;
+         WK_QTY8 = 0;
+         WK_QTY9 = 0;
+         WK_QTY10 = 0;
+         WK_EXTENSION1 = '';
+         WK_EXTENSION2 = '';
+         WK_EXTENSION3 = '';
+         WK_EXTENSION4 = '';
+         WK_EXTENSION5 = '';
+         WK_EXTENSION6 = '';
+         WK_EXTENSION7 = '';
+         WK_EXTENSION8 = '';
+         WK_EXTENSION9 = '';
+         WK_EXTENSION10 = '';
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'PickingMode') THEN
+            BEGIN
+               WK_MODE = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'WareHouseID') THEN
+            BEGIN
+               WK_WH_ID = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'PickingListDetailRetrieveStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'ContactInstanceID') THEN
+            BEGIN
+               WK_ORDER = WK_WORK_DATA;
+               WK_LAST_LINE_NO = 0;
+            END
+            IF (WK_WORK_LABEL = 'OrderDateTime') THEN
+            BEGIN
+               WK_ORDER_DATE = WK_WORK_DATA;
+               WK_POSN = POS(WK_ORDER_DATE, 'T', 0, 1);
+               WK_ORDER_DATE2 = SUBSTR(WK_ORDER_DATE, 1, WK_POSN) || ' ' ||
+               SUBSTR(WK_ORDER_DATE, WK_POSN + 2, LEN(WK_ORDER_DATE));
+               WK_ORDER_DATET = CAST(WK_ORDER_DATE2 AS TIMESTAMP);
+
+            END
+            IF (WK_WORK_LABEL = 'SupplierListFlag') THEN
+            BEGIN
+               WK_SUPPLIERLIST = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'SpecialMailoutFlag') THEN
+            BEGIN
+               WK_SPECIALMAIL = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'OrderPriority') THEN
+            BEGIN
+               WK_PRIORITY = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'PickLineNumber') THEN
+            BEGIN
+               WK_LAST_LINE_NO = WK_LAST_LINE_NO + 1;
+               IF (WK_LAST_LINE_NO = 1) THEN
+                  WK_LINE_NO1 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 2) THEN
+                  WK_LINE_NO2 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 3) THEN
+                  WK_LINE_NO3 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 4) THEN
+                  WK_LINE_NO4 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 5) THEN
+                  WK_LINE_NO5 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 6) THEN
+                  WK_LINE_NO6 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 7) THEN
+                  WK_LINE_NO7 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 8) THEN
+                  WK_LINE_NO8 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 9) THEN
+                  WK_LINE_NO9 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 10) THEN
+                  WK_LINE_NO10 = WK_WORK_DATA;
+            END
+
+            IF (WK_WORK_LABEL = 'EANNumber') THEN
+            BEGIN
+               IF (WK_LAST_LINE_NO = 1) THEN
+                  WK_PROD1 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 2) THEN
+                  WK_PROD2 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 3) THEN
+                  WK_PROD3 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 4) THEN
+                  WK_PROD4 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 5) THEN
+                  WK_PROD5 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 6) THEN
+                  WK_PROD6 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 7) THEN
+                  WK_PROD7 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 8) THEN
+                  WK_PROD8 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 9) THEN
+                  WK_PROD9 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 10) THEN
+                  WK_PROD10 = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'Quantity') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               IF (WK_LAST_LINE_NO = 1) THEN
+                  WK_QTY1 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 2) THEN
+                  WK_QTY2 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 3) THEN
+                  WK_QTY3 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 4) THEN
+                  WK_QTY4 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 5) THEN
+                  WK_QTY5 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 6) THEN
+                  WK_QTY6 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 7) THEN
+                  WK_QTY7 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 8) THEN
+                  WK_QTY8 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 9) THEN
+                  WK_QTY9 = CAST(WK_QTY_X AS INTEGER);
+               ELSE
+               IF (WK_LAST_LINE_NO = 10) THEN
+                  WK_QTY10 = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'EANextension') THEN
+            BEGIN
+               IF (WK_LAST_LINE_NO = 1) THEN
+                  WK_EXTENSION1 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 2) THEN
+                  WK_EXTENSION2 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 3) THEN
+                  WK_EXTENSION3 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 4) THEN
+                  WK_EXTENSION4 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 5) THEN
+                  WK_EXTENSION5 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 6) THEN
+                  WK_EXTENSION6 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 7) THEN
+                  WK_EXTENSION7 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 8) THEN
+                  WK_EXTENSION8 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 9) THEN
+                  WK_EXTENSION9 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_LINE_NO = 10) THEN
+                  WK_EXTENSION10 = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         IF (WK_SUPPLIERLIST = 'true') THEN
+         BEGIN
+            WK_SUPPLIERLIST = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_SUPPLIERLIST = 'F';
+         END
+         IF (WK_SPECIALMAIL = 'true') THEN
+         BEGIN
+            WK_SPECIALMAIL = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_SPECIALMAIL = 'F';
+         END
+         IF (WK_PRIORITY = '') THEN
+         BEGIN
+            SELECT DEFAULT_PICK_PRIORITY 
+            FROM CONTROL
+            INTO :WK_PICK_PRIORITY;
+         END
+         ELSE
+         BEGIN
+            WK_PICK_PRIORITY = CAST(WK_PRIORITY AS INTEGER);
+         END
+/*====================================================================*/
+         /* does order exist */
+         WK_FOUND = 0;
+         SELECT 1, PICK_RETRIEVE_STATUS, PICK_STATUS
+         FROM PICK_ORDER
+         WHERE PICK_ORDER = :WK_ORDER
+         INTO :WK_FOUND, :WK_ORDER_STATUS, :WK_PICK_STATUS;
+         IF (WK_ORDER_STATUS IS NULL) THEN
+         BEGIN
+            WK_ORDER_STATUS = 'F';
+         END
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            IF (WK_STATUS = 'T') THEN
+            BEGIN
+               /* no order  */
+               INSERT INTO PICK_ORDER(PICK_ORDER, 
+                  PICK_STATUS, 
+                  PICK_RETRIEVE_STATUS,
+                  PICK_PRIORITY,
+                  SUPPLIER_LIST,
+                  SPECIAL_INSTRUCTIONS,
+                  CREATE_DATE,
+                  CREATED_BY,
+                  PICK_DUE_DATE,
+                  PICK_ORDER_TYPE,
+                  WH_ID)
+               VALUES (:WK_ORDER, 
+                  'UC', 
+                  :WK_STATUS,
+                  :WK_PICK_PRIORITY,
+                  :WK_SUPPLIERLIST,
+                  :WK_SPECIALMAIL,
+                  NEW.TRN_DATE,
+                  NEW.PERSON_ID,
+                  :WK_ORDER_DATE2,
+                  :WK_ORDER_TYPE,
+                  :WK_WH_ID );
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+            ELSE
+            BEGIN
+               INSERT INTO PICK_ORDER(PICK_ORDER, PICK_STATUS, PICK_RETRIEVE_STATUS, PICK_ORDER_TYPE, CREATE_DATE, CREATED_BY)
+               VALUES (:WK_ORDER, 'HD', :WK_STATUS ,:WK_ORDER_TYPE, NEW.TRN_DATE, NEW.PERSON_ID );
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+         END
+         ELSE
+         BEGIN
+            IF (WK_STATUS = 'F') THEN
+            BEGIN
+               UPDATE PICK_ORDER
+               SET PICK_STATUS='HD',
+                   PICK_RETRIEVE_STATUS = :WK_STATUS
+               WHERE PICK_ORDER = :WK_ORDER;
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+            ELSE
+            BEGIN
+               IF ((WK_PICK_STATUS = 'HD') OR (WK_PICK_STATUS IS NULL)) THEN
+               BEGIN
+                  UPDATE PICK_ORDER
+                  SET PICK_STATUS='UC',
+                      PICK_RETRIEVE_STATUS = :WK_STATUS,
+                      WH_ID = :WK_WH_ID,
+                      PICK_PRIORITY = :WK_PICK_PRIORITY,
+                      SUPPLIER_LIST = :WK_SUPPLIERLIST,
+                      SPECIAL_INSTRUCTIONS = :WK_SPECIALMAIL,
+                      PICK_DUE_DATE = :WK_ORDER_DATE2,
+                      PICK_ORDER_TYPE = :WK_ORDER_TYPE 
+                  WHERE PICK_ORDER = :WK_ORDER;
+               END
+               ELSE
+               BEGIN
+                  UPDATE PICK_ORDER
+                  SET PICK_RETRIEVE_STATUS = :WK_STATUS,
+                      WH_ID = :WK_WH_ID,
+                      PICK_PRIORITY = :WK_PICK_PRIORITY,
+                      SUPPLIER_LIST = :WK_SUPPLIERLIST,
+                      SPECIAL_INSTRUCTIONS = :WK_SPECIALMAIL,
+                      PICK_DUE_DATE = :WK_ORDER_DATE2,
+                      PICK_ORDER_TYPE = :WK_ORDER_TYPE 
+                  WHERE PICK_ORDER = :WK_ORDER;
+               END
+            END
+         END
+
+/*====================================================================*/
+         /* do line stuff */
+         IF (WK_PROD1 = '') THEN
+         BEGIN
+            WK_PROD1 = 'NOPROD';
+            IF (WK_QTY1 = 0) THEN
+            BEGIN
+               WK_QTY1 = 1;
+            END
+         END
+         IF (WK_PROD1 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD1 ,
+               WK_EXTENSION1 ,
+               WK_LINE_NO1 ,
+               WK_QTY1 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD2 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD2 ,
+               WK_EXTENSION2 ,
+               WK_LINE_NO2 ,
+               WK_QTY2 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD3 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD3 ,
+               WK_EXTENSION3 ,
+               WK_LINE_NO3 ,
+               WK_QTY3 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD4 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD4 ,
+               WK_EXTENSION4 ,
+               WK_LINE_NO4 ,
+               WK_QTY4 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD5 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD5 ,
+               WK_EXTENSION5 ,
+               WK_LINE_NO5 ,
+               WK_QTY5 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD6 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD6 ,
+               WK_EXTENSION6 ,
+               WK_LINE_NO6 ,
+               WK_QTY6 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD7 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD7 ,
+               WK_EXTENSION7 ,
+               WK_LINE_NO7 ,
+               WK_QTY7 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD8 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD8 ,
+               WK_EXTENSION8 ,
+               WK_LINE_NO8 ,
+               WK_QTY8 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD9 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD9 ,
+               WK_EXTENSION9 ,
+               WK_LINE_NO9 ,
+               WK_QTY9 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+         IF (WK_PROD10 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_PICK_ITEMS (
+               WK_ORDER ,
+               WK_ORDER_STATUS ,
+               WK_STATUS ,
+               WK_PROD10 ,
+               WK_EXTENSION10 ,
+               WK_LINE_NO10 ,
+               WK_QTY10 ,
+               NEW.TRN_DATE ,
+               NEW.PERSON_ID );
+         END
+/*====================================================================*/
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GCPD FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 8 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_CAMPAIGN VARCHAR(10);
+DECLARE VARIABLE WK_TITLE VARCHAR(100);
+DECLARE VARIABLE WK_FOUND INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GCPD') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the campaign ID
+            field 2 is the campaign Title
+         */
+         WK_STATUS = '';
+         WK_CAMPAIGN = '';
+         WK_TITLE = '';
+
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'CampaignID') THEN
+            BEGIN
+               WK_CAMPAIGN = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'CampaignTitle') THEN
+            BEGIN
+               WK_TITLE = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         /* does owner person type exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM ORDER_GROUP
+         WHERE ORDER_GROUP_ID = :WK_CAMPAIGN
+         INTO :WK_FOUND ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO ORDER_GROUP(ORDER_GROUP_ID, DESCRIPTION, UPDATE_ID, CREATE_DATE, CREATED_BY, PICK_RETRIEVE_STATUS, STATUS)
+            VALUES (:WK_CAMPAIGN, :WK_TITLE, NEW.MESSAGE_ID, 'NOW',NEW.PERSON_ID, 'T', 'OK');
+         END
+         ELSE
+         BEGIN
+            UPDATE ORDER_GROUP
+            SET DESCRIPTION = :WK_TITLE,
+            PICK_RETRIEVE_STATUS = 'T',
+            STATUS = 'OK'
+            WHERE ORDER_GROUP_ID = :WK_CAMPAIGN;
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+      ELSE
+      IF ((NEW.TRN_TYPE = 'GCPD') AND (NEW.TRN_CLASS = 'S')) THEN
+      BEGIN
+         /* do any campaigns exist - */
+         WK_FOUND = 0;
+         SELECT FIRST 1 1  FROM ORDER_GROUP
+         INTO :WK_FOUND ;
+         IF (WK_FOUND = 1) THEN
+         BEGIN
+            /* have old campaigns */
+            /* so must delete them - this also deletes PICK_ORDER_GROUP */
+            UPDATE ORDER_GROUP SET STATUS = 'NC';
+
+            UPDATE PICK_ORDER_GROUP SET STATUS = 'NC';
+
+         END
+      END
+   END
+END ^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GCID FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 9 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_CAMPAIGN VARCHAR(10);
+DECLARE VARIABLE WK_LAST_ORDER INTEGER;
+DECLARE VARIABLE WK_ORDER1 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER2 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER3 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER4 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER5 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER6 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER7 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER8 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER9 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER10 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER11 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER12 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER13 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER14 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER15 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER16 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER17 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER18 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER19 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER20 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER21 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER22 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER23 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER24 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER25 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER26 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER27 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER28 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER29 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER30 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER31 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER32 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER33 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER34 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER35 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER36 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER37 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER38 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER39 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER40 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER41 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER42 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER43 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER44 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER45 VARCHAR(15);
+DECLARE VARIABLE WK_ORDER46 VARCHAR(15);
+DECLARE VARIABLE WK_FOUND INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GCID') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the Campaign ID
+            field 2 is the retrieve status
+            up to 34 Contact Instance IDs (if they are length 8)
+            or to 33 Contact Instance IDs (if they are length 9)
+            or to 46 Contact Instance IDs (if they are length 1)
+            field 3-35 is the ContactInstanceID
+
+         */
+         WK_STATUS = '';
+         WK_CAMPAIGN = '';
+         WK_LAST_ORDER = 0;
+         WK_ORDER1 = '';
+         WK_ORDER2 = '';
+         WK_ORDER3 = '';
+         WK_ORDER4 = '';
+         WK_ORDER5 = '';
+         WK_ORDER6 = '';
+         WK_ORDER7 = '';
+         WK_ORDER8 = '';
+         WK_ORDER9 = '';
+         WK_ORDER10 = '';
+         WK_ORDER11 = '';
+         WK_ORDER12 = '';
+         WK_ORDER13 = '';
+         WK_ORDER14 = '';
+         WK_ORDER15 = '';
+         WK_ORDER16 = '';
+         WK_ORDER17 = '';
+         WK_ORDER18 = '';
+         WK_ORDER19 = '';
+         WK_ORDER20 = '';
+         WK_ORDER21 = '';
+         WK_ORDER22 = '';
+         WK_ORDER23 = '';
+         WK_ORDER24 = '';
+         WK_ORDER25 = '';
+         WK_ORDER26 = '';
+         WK_ORDER27 = '';
+         WK_ORDER28 = '';
+         WK_ORDER29 = '';
+         WK_ORDER30 = '';
+         WK_ORDER31 = '';
+         WK_ORDER32 = '';
+         WK_ORDER33 = '';
+         WK_ORDER34 = '';
+         WK_ORDER35 = '';
+         WK_ORDER36 = '';
+         WK_ORDER37 = '';
+         WK_ORDER38 = '';
+         WK_ORDER39 = '';
+         WK_ORDER40 = '';
+         WK_ORDER41 = '';
+         WK_ORDER42 = '';
+         WK_ORDER43 = '';
+         WK_ORDER44 = '';
+         WK_ORDER45 = '';
+         WK_ORDER46 = '';
+
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'CampaignID') THEN
+            BEGIN
+               WK_CAMPAIGN = WK_WORK_DATA;
+               WK_LAST_ORDER = 0;
+            END
+            IF (WK_WORK_LABEL = 'CampaignContactInstanceRetrieveStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'ContactInstanceID') THEN
+            BEGIN
+               WK_LAST_ORDER = WK_LAST_ORDER + 1;
+               IF (WK_LAST_ORDER = 1) THEN
+                  WK_ORDER1 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 2) THEN
+                  WK_ORDER2 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 3) THEN
+                  WK_ORDER3 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 4) THEN
+                  WK_ORDER4 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 5) THEN
+                  WK_ORDER5 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 6) THEN
+                  WK_ORDER6 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 7) THEN
+                  WK_ORDER7 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 8) THEN
+                  WK_ORDER8 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 9) THEN
+                  WK_ORDER9 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 10) THEN
+                  WK_ORDER10 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 11) THEN
+                  WK_ORDER11 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 12) THEN
+                  WK_ORDER12 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 13) THEN
+                  WK_ORDER13 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 14) THEN
+                  WK_ORDER14 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 15) THEN
+                  WK_ORDER15 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 16) THEN
+                  WK_ORDER16 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 17) THEN
+                  WK_ORDER17 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 18) THEN
+                  WK_ORDER18 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 19) THEN
+                  WK_ORDER19 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 20) THEN
+                  WK_ORDER20 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 21) THEN
+                  WK_ORDER21 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 22) THEN
+                  WK_ORDER22 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 23) THEN
+                  WK_ORDER23 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 24) THEN
+                  WK_ORDER24 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 25) THEN
+                  WK_ORDER25 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 26) THEN
+                  WK_ORDER26 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 27) THEN
+                  WK_ORDER27 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 28) THEN
+                  WK_ORDER28 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 29) THEN
+                  WK_ORDER29 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 30) THEN
+                  WK_ORDER30 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 31) THEN
+                  WK_ORDER31 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 32) THEN
+                  WK_ORDER32 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 33) THEN
+                  WK_ORDER33 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 34) THEN
+                  WK_ORDER34 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 35) THEN
+                  WK_ORDER35 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 36) THEN
+                  WK_ORDER36 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 37) THEN
+                  WK_ORDER37 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 38) THEN
+                  WK_ORDER38 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 39) THEN
+                  WK_ORDER39 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 40) THEN
+                  WK_ORDER40 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 41) THEN
+                  WK_ORDER41 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 42) THEN
+                  WK_ORDER42 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 43) THEN
+                  WK_ORDER43 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 44) THEN
+                  WK_ORDER44 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 45) THEN
+                  WK_ORDER45 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 46) THEN
+                  WK_ORDER46 = WK_WORK_DATA;
+
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         /* do pick campaigns for this campaign */
+         IF (WK_ORDER1 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER1, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER2 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER2, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER3 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER3, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER4 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER4, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER5 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER5, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER6 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER6, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER7 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER7, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER8 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER8, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER9 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER9, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER10 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER10, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER11 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER11, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER12 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER12, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER13 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER13, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER14 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER14, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER15 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER15, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER16 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER16, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER17 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER17, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER18 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER18, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER19 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER19, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER20 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER20, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER21 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER21, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER22 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER22, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER23 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER23, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER24 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER24, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER25 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER25, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER26 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER26, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER27 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER27, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER28 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER28, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER29 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER29, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER30 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER30, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER31 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER31, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER32 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER32, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER33 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER33, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER34 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER34, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER35 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER35, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER36 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER36, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER37 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER37, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER38 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER38, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER39 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER39, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER40 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER40, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER41 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER41, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER42 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER42, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER43 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER43, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER44 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER44, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER45 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER45, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER46 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER46, NEW.PERSON_ID);
+         END
+         /* update the status */
+         UPDATE ORDER_GROUP
+         SET PICK_RETRIEVE_STATUS = :WK_STATUS
+         WHERE ORDER_GROUP_ID = :WK_CAMPAIGN;
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GSMD FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 10 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_INSTRUCTION VARCHAR(255);
+DECLARE VARIABLE WK_FOUND INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GSMD') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the Order No
+            field 2 is the Instruction
+            field 3 is the Retrieve Status
+         */
+         WK_STATUS = '';
+         WK_ORDER = '';
+         WK_INSTRUCTION = '';
+
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'ContactInstanceID') THEN
+            BEGIN
+               WK_ORDER = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'InstructionText') THEN
+            BEGIN
+               WK_INSTRUCTION = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'SpecialMailoutRetrieveStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         /* does owner person type exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM PICK_ORDER
+         WHERE PICK_ORDER = :WK_ORDER
+         INTO :WK_FOUND ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO PICK_ORDER(PICK_ORDER, PICK_STATUS, SPECIAL_INSTRUCTIONS2, CREATE_DATE, CREATED_BY, PICK_RETRIEVE_STATUS)
+            VALUES (:WK_ORDER, 'UC', :WK_INSTRUCTION, 'NOW',NEW.PERSON_ID, :WK_STATUS);
+         END
+         ELSE
+         BEGIN
+            UPDATE PICK_ORDER
+            SET SPECIAL_INSTRUCTIONS2 = :WK_INSTRUCTION,
+            PICK_RETRIEVE_STATUS = :WK_STATUS
+            WHERE PICK_ORDER = :WK_ORDER;
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GCNA FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 11 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_PERSON VARCHAR(10);
+DECLARE VARIABLE WK_TITLE VARCHAR(10);
+DECLARE VARIABLE WK_FIRST_NAME VARCHAR(255);
+DECLARE VARIABLE WK_SHORT_FIRST_NAME VARCHAR(50);
+DECLARE VARIABLE WK_LAST_NAME VARCHAR(50);
+DECLARE VARIABLE WK_LINE1 VARCHAR(100);
+DECLARE VARIABLE WK_LINE2 VARCHAR(50);
+DECLARE VARIABLE WK_LINE3 VARCHAR(50);
+DECLARE VARIABLE WK_LINE4 VARCHAR(50);
+DECLARE VARIABLE WK_4STATE_ID VARCHAR(255);
+DECLARE VARIABLE WK_FOUND INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GCNA') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the Order No
+            field 2 is the Retrieve Status
+            field 3 is the Salutation
+            field 4 is the First Name
+            field 5 is the Last Name
+            field 6 is the Address Line1
+            field 7 is the Address Line2
+            field 8 is the Address Line3
+            field 9 is the Address Line4
+            field 10 is the Australian Post 4 State Code
+         */
+         WK_STATUS = '';
+         WK_ORDER = '';
+         WK_TITLE = '';
+         WK_FIRST_NAME = '';
+         WK_SHORT_FIRST_NAME = '';
+         WK_LAST_NAME = '';
+         WK_LINE1 = '';
+         WK_LINE2 = '';
+         WK_LINE3 = '';
+         WK_LINE4 = '';
+         WK_4STATE_ID = '';
+         WK_PERSON = '';
+
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'ContactInstanceID') THEN
+            BEGIN
+               WK_ORDER = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'ContactInstanceNameAndAddressRetrieveStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'Salutation') THEN
+            BEGIN
+               WK_TITLE = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'FirstName') THEN
+            BEGIN
+               WK_FIRST_NAME = WK_WORK_DATA;
+               IF (STRLEN(WK_FIRST_NAME) < 51) THEN
+               BEGIN
+                  WK_SHORT_FIRST_NAME = WK_FIRST_NAME;
+               END
+               ELSE
+               BEGIN
+                  WK_SHORT_FIRST_NAME = V4SUBSTRING(WK_FIRST_NAME, 1, 50);
+               END
+            END
+            IF (WK_WORK_LABEL = 'LastName') THEN
+            BEGIN
+               WK_LAST_NAME = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'Line1') THEN
+            BEGIN
+               WK_LINE1 = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'Line2') THEN
+            BEGIN
+               WK_LINE2 = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'Line3') THEN
+            BEGIN
+               WK_LINE3 = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'Line4') THEN
+            BEGIN
+               WK_LINE4 = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'AustPost4StateID') THEN
+            BEGIN
+               WK_4STATE_ID = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         /* does order exist */
+         WK_FOUND = 0;
+         SELECT 1, PERSON_ID FROM PICK_ORDER
+         WHERE PICK_ORDER = :WK_ORDER
+         INTO :WK_FOUND, :WK_PERSON ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            WK_PERSON = 'UNKNOWN';
+            INSERT INTO PICK_ORDER(PICK_ORDER, 
+               PICK_STATUS, 
+               PERSON_ID, 
+               P_TITLE, 
+               P_FIRST_NAME, 
+               P_LAST_NAME, 
+               P_ADDRESS_LINE1, 
+               P_ADDRESS_LINE2, 
+               P_ADDRESS_LINE3, 
+               P_ADDRESS_LINE4, 
+               P_AUST_POST_4STATE_ID, 
+               CREATE_DATE, 
+               CREATED_BY, 
+               PICK_RETRIEVE_STATUS)
+            VALUES (:WK_ORDER, 
+               'UC', 
+               :WK_PERSON, 
+               :WK_TITLE, 
+               :WK_SHORT_FIRST_NAME, 
+               :WK_LAST_NAME, 
+               :WK_LINE1, 
+               :WK_LINE2, 
+               :WK_LINE3, 
+               :WK_LINE4, 
+               :WK_4STATE_ID, 
+               'NOW',
+               NEW.PERSON_ID, 
+               :WK_STATUS);
+         END
+         ELSE
+         BEGIN
+            UPDATE PICK_ORDER
+            SET P_TITLE = :WK_TITLE, 
+               P_FIRST_NAME = :WK_SHORT_FIRST_NAME, 
+               P_LAST_NAME = :WK_LAST_NAME, 
+               P_ADDRESS_LINE1 = :WK_LINE1, 
+               P_ADDRESS_LINE2 = :WK_LINE2, 
+               P_ADDRESS_LINE3 = :WK_LINE3, 
+               P_ADDRESS_LINE4 = :WK_LINE4, 
+               P_AUST_POST_4STATE_ID = :WK_4STATE_ID, 
+            PICK_RETRIEVE_STATUS = :WK_STATUS
+            WHERE PICK_ORDER = :WK_ORDER;
+         END
+
+         /* does person exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM PERSON
+         WHERE PERSON_ID = :WK_PERSON
+         INTO :WK_FOUND ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO PERSON(PERSON_ID, 
+               TITLE, 
+               FIRST_NAME, 
+               LAST_NAME, 
+               ADDRESS_LINE1, 
+               ADDRESS_LINE2, 
+               ADDRESS_LINE3, 
+               ADDRESS_LINE4, 
+               AUST_POST_4STATE_ID, 
+               CREATE_DATE, 
+               CREATE_BY )
+            VALUES (:WK_PERSON,
+               :WK_TITLE, 
+               :WK_FIRST_NAME, 
+               :WK_LAST_NAME, 
+               :WK_LINE1, 
+               :WK_LINE2, 
+               :WK_LINE3, 
+               :WK_LINE4, 
+               :WK_4STATE_ID, 
+               'NOW',
+               NEW.PERSON_ID );
+         END
+         ELSE
+         BEGIN
+            UPDATE PERSON
+            SET TITLE = :WK_TITLE, 
+               FIRST_NAME = :WK_FIRST_NAME, 
+               LAST_NAME = :WK_LAST_NAME, 
+               ADDRESS_LINE1 = :WK_LINE1, 
+               ADDRESS_LINE2 = :WK_LINE2, 
+               ADDRESS_LINE3 = :WK_LINE3, 
+               ADDRESS_LINE4 = :WK_LINE4, 
+               AUST_POST_4STATE_ID = :WK_4STATE_ID 
+            WHERE PERSON_ID = :WK_PERSON;
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 

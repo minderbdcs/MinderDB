@@ -1,0 +1,2 @@
+update control set v4_command_no_order = 'c:\python22\pythonw d:\asset.rf\python\script\getpicklines.py ';
+

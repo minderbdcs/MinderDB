@@ -1,0 +1,2 @@
+create index issn_company_idx on issn(wh_id,company_id,ssn_id);
+create index ssn_company_idx on ssn(wh_id,company_id,ssn_id);

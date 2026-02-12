@@ -1,0 +1,2 @@
+alter table person_address add company_id company;
+

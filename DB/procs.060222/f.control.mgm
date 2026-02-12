@@ -1,0 +1,2 @@
+update control set pick_order_max_weight = 15,pick_import_calc_zone_locn = 'T';
+

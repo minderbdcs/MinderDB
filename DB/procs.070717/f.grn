@@ -1,0 +1,7 @@
+alter table control add  DEFAULT_GRN_LABELS INTEGER NOT NULL;
+/* update control set default_grn_labels = 0; */
+alter table grn add   OWNER_ID COMPANY;
+alter table grn add   SHIP_CONTAINER_TYPE CODE_TWO;
+alter table grn add   PACK_CRATE_OWNER PERSON;
+alter table grn add   PACK_CRATE_TYPE CODE_TWO;
+alter table grn add   PACK_CRATE_QTY QTY;

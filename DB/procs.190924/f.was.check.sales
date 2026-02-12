@@ -1,0 +1,53 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+CREATE OR ALTER PROCEDURE CHECK_SALE_ORDER_LINES (PICK_ORDER PICK_ORDER)
+RETURNS (VALID_SO CHAR(1) ,
+INVALID_SSN VARCHAR(255) )
+AS 
+DECLARE VARIABLE SSSN SSN_ID;
+DECLARE VARIABLE SSTATUSSSN STATUS;
+DECLARE VARIABLE ERRCOUNT INTEGER;
+
+BEGIN
+   VALID_SO = 'T';
+   INVALID_SSN = '';
+   ERRCOUNT = 0;
+      FOR 
+         SELECT SSN_ID 
+         FROM PICK_ITEM
+         WHERE PICK_ORDER = :PICK_ORDER               
+         INTO :SSSN
+      DO
+      BEGIN                     
+         IF (LEN(:SSSN) <> 0) THEN
+         BEGIN
+           SELECT STATUS_SSN
+           FROM SSN         
+           WHERE SSN_ID = :SSSN         
+           INTO :SSTATUSSSN;
+         
+           IF (:SSTATUSSSN <> 'PA' AND :SSTATUSSSN <> 'ST' AND :SSTATUSSSN <> 'TS') THEN
+           BEGIN      
+             VALID_SO = 'F';
+             IF (ERRCOUNT <= 7) THEN 
+             BEGIN /* limit error to 7 SSNs because we get an overflow */
+/*             INVALID_SSN = :INVALID_SSN || ALLTRIM(:SSSN) || ', '; */
+               INVALID_SSN = :INVALID_SSN || TRIM(:SSSN) || ', ';
+               ERRCOUNT = ERRCOUNT + 1;
+             END
+           END
+         END
+      END  
+      IF (LEN(INVALID_SSN) <> 0) THEN
+      BEGIN
+/*       INVALID_SSN = SUBSTR(INVALID_SSN, 1, LEN(INVALID_SSN)-2); */
+         INVALID_SSN = SUBSTRING(INVALID_SSN FROM 1 FOR LEN(INVALID_SSN)-2);
+      END   
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

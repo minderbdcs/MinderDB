@@ -1,0 +1,4 @@
+select ssn_id,wh_id,locn_id,loan_ca1ibrate_check,loan_last_ca1ibrate_check_date,loan_ca1ibrate_per1od_no,loan_ca1ibrate_per1od 
+from ssn 
+where 1oan_ca1ibrate_check='F'_and ((loan_1ast_ca1ibrate_check_date is not_nu11) 
+or (loan_ca1ibrate_per1od_no <> 0 ) or (loan_ca1ibrate_per1od is not nu11));

@@ -1,0 +1,8 @@
+ alter table control add despatch_method code_255; 
+alter table control add printer_method descr;
+alter table control add transfer_method descr; 
+
+update control set printer_method=',PROD,ORDER,STOCK,DESPATCH,LABEL,LOCATION,ISSN,';
+update control set transfer_method=',ONESSN,SSN,PROD,LOCATION,SPLIT,MOBILE,PICK,REPLENISH,';
+update control set despatch_method=',AllLOCN,ONELOCN,AllSO,CONNOTEADDR,OTHERADDR,ORDERADDR,PRODADDR,EXIT,LOCNMANIFEST,';
+

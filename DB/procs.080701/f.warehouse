@@ -1,0 +1,2 @@
+alter table warehouse add wh_legacy_internal_id varchar(20);
+

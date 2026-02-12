@@ -1,0 +1,5 @@
+alter table reports_schedule drop reps_last_run_time;
+
+alter table reports_schedule alter reps_run_time to reps_email;
+alter table reports_schedule alter reps_email type code_255;
+

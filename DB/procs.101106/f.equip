@@ -1,0 +1,2 @@
+alter table sys_equip add socket_attempts int default 1;
+alter table sys_equip add socket_pause int default 1;

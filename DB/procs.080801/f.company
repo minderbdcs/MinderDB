@@ -1,0 +1,2 @@
+alter table company add legacy_sys_admin_email descr;
+

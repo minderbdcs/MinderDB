@@ -1,0 +1,2 @@
+update control set movement_trans=movement_trans || 'PKIL,STKA,STPA,';
+

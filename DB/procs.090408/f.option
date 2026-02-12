@@ -1,0 +1,2 @@
+insert into options(group_code,code,description) values ('PICK_STATU','CR','Returned');
+

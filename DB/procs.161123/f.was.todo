@@ -1,0 +1,23 @@
+1 Packing Materials with orders
+add picks procedure for add products to an order
+	want to allow for consumming of the product regardless of what comany that it is
+	for PM prod type
+	so need to add pick_item_detail and split an issn from someware in the warehouse that the order is for
+	might want to take the oldest first
+
+2. locn seq
+	when go to pick menu or change direction create a transactions archive record in picking for report on locn seq to show direction change
+	use transsaction PKLS for this have the next direction and last locn seq
+	note must be added in PKUA and pick get next locn
+	add to the report
+	the do later = PKUP this is for a product - so need to add records for individual orders
+	then cancels PKCA PKCN PKCO
+
+3. in DSOT when passed weight is zero use the max weight for the carrier service passed
+=================================================================================================================
+
+
+For point 2	
+2. locn seq
+	PKAL I dosn't create a PKAL i = Added this
+	

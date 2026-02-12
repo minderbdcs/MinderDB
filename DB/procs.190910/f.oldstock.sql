@@ -1,0 +1,92 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+CREATE OR ALTER PROCEDURE PRODUCT_MOVEMENT_AGE RETURNS (PROD_ID PRODUCT ,
+SHORT_DESC SHORT_DESC ,
+SSN_ID SSN_ID ,
+LAST_MOVEMENT_DATE TIMESTAMP ,
+CURRENT_QTY INTEGER)
+AS 
+ 
+
+DECLARE VARIABLE WK_WH_QTY INTEGER;
+DECLARE VARIABLE WK_UNPICKED_QTY INTEGER;
+DECLARE VARIABLE WK_LAST_DATE TIMESTAMP;
+DECLARE VARIABLE IMPORTSTATUS VARCHAR(40);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_HAVE_SSN CHAR(1);
+BEGIN
+/*
+have a procedure to report 
+by last stockadjust or pick date for the product
+the current ssns
+the total qty for the product in available status 
+first those products with no movements (TRIL or TRLI or PKOL)
+
+*/
+   SELECT PICK_IMPORT_SSN_STATUS, DEFAULT_WH_ID
+   FROM CONTROL
+   INTO :IMPORTSTATUS, :WK_WH_ID; 
+   FOR SELECT PROD_ID ,SHORT_DESC
+   FROM PROD_PROFILE
+   INTO :PROD_ID , :SHORT_DESC
+   DO
+   BEGIN
+      SELECT AVAILABLE_QTY ,UNPICKED_ORDER_QTY
+      FROM PRODUCT_STOCK_STATUS(:PROD_ID) 
+      INTO :WK_WH_QTY, :WK_UNPICKED_QTY;
+      IF (WK_WH_QTY IS NULL) THEN
+      BEGIN
+         WK_WH_QTY = 0;
+      END
+      IF (WK_UNPICKED_QTY IS NULL) THEN
+      BEGIN
+         WK_UNPICKED_QTY = 0;
+      END
+      /* IF (WK_WH_QTY > 0) THEN */
+      BEGIN
+         /* ok have some stock of this prod */
+         CURRENT_QTY = WK_WH_QTY;
+         /* UNPICKED_ORDER_QTY = WK_UNPICKED_QTY; */
+         LAST_MOVEMENT_DATE = NULL;
+         SSN_ID = NULL;
+   
+         SELECT MAX( SSN_HIST.TRN_DATE ) 
+            FROM ISSN
+            JOIN SSN_HIST ON ISSN.SSN_ID = SSN_HIST.SSN_ID
+            WHERE  ISSN.PROD_ID = :PROD_ID
+            AND  ((SSN_HIST.TRN_TYPE IN ('PKOL','STPA'))
+            OR    (SSN_HIST.TRN_TYPE = 'TRIL'
+            AND    SSN_HIST.REFERENCE STARTING 'Completing SSN Adjustment'))
+            INTO :LAST_MOVEMENT_DATE;
+         IF (LAST_MOVEMENT_DATE IS NULL) THEN
+         BEGIN
+            LAST_MOVEMENT_DATE = CAST('01-01-1980' AS TIMESTAMP);
+         END
+         WK_HAVE_SSN = 'F';
+/*          AND (POS(:IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1) */
+         FOR SELECT SSN_ID 
+            FROM ISSN
+            WHERE ISSN.PROD_ID = :PROD_ID
+            AND WH_ID = :WK_WH_ID
+            AND (POSITION(ISSN.ISSN_STATUS, :IMPORTSTATUS,1) > 0)
+            INTO :SSN_ID
+         DO
+         BEGIN
+            WK_HAVE_SSN = 'T';
+            SUSPEND;
+         END
+         IF (WK_HAVE_SSN = 'F') THEN
+         BEGIN
+            SSN_ID = '';
+            SUSPEND;
+         END
+      END
+   END 
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

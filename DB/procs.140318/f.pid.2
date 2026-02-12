@@ -1,0 +1,6 @@
+alter table pick_item_detail alter pick_order type pick_order_25;
+alter table pick_item_detail_dx alter pick_order type pick_order_25;
+
+CREATE INDEX PICK_ITEM_DETAIL_ORDER_IDX ON PICK_ITEM_DETAIL (PICK_ORDER);
+CREATE INDEX PICK_ITEM_DETAIL_DX_ORDER_IDX ON PICK_ITEM_DETAIL_DX (PICK_ORDER);
+

@@ -1,0 +1,4 @@
+commit;
+alter domain SERVICE_TYPE TYPE VARCHAR(50);
+
+alter table carrier alter default_service_type   TYPE  SERVICE_TYPE;

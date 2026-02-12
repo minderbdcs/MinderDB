@@ -1,0 +1,2 @@
+/* create index on pick date and priority */
+CREATE INDEX PICK_ORDER_DUE_IDX ON PICK_ORDER (PICK_DUE_DATE,PICK_PRIORITY);

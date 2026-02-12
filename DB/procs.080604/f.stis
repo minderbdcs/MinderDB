@@ -1,0 +1,301 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+ALTER PROCEDURE PC_STIS (RECORD_ID INTEGER,
+WH_ID CHAR(2) CHARACTER SET NONE,
+LOCN_ID VARCHAR(10) CHARACTER SET NONE,
+OBJECT VARCHAR(30) CHARACTER SET NONE,
+TRN_TYPE VARCHAR(4) CHARACTER SET NONE,
+TRN_CODE CHAR(1) CHARACTER SET NONE,
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(40) CHARACTER SET NONE,
+ISSN_QTY INTEGER)
+AS 
+DECLARE VARIABLE LOCN_EXIST INTEGER;
+  DECLARE VARIABLE WH_EXIST INTEGER;
+  DECLARE VARIABLE COUNT_ISSN INTEGER;
+  DECLARE VARIABLE LOCN_NAME VARCHAR(50);
+  DECLARE VARIABLE LOCN_STAT CHAR(2);
+  DECLARE VARIABLE LOCN_OWNER VARCHAR(10);
+  DECLARE VARIABLE ST_MAX_RECORD_ID INTEGER;
+  DECLARE VARIABLE ST_INITIATE_STIS INTEGER;
+  DECLARE VARIABLE ST_STATUS CHAR(2);
+  DECLARE VARIABLE ST_ACTION CHAR(2);
+  DECLARE VARIABLE ST_VARIANCE INTEGER;
+  DECLARE VARIABLE ISSN_COMPANYID VARCHAR(20);
+  DECLARE VARIABLE ISSN_LOCN_ID VARCHAR(10);
+  DECLARE VARIABLE ISSN_WH_ID VARCHAR(2);
+  DECLARE VARIABLE QTY_ISSN_IN_LOCN INTEGER;
+  DECLARE VARIABLE WK_DEVICE_ID CHAR(2);
+  DECLARE VARIABLE WK_USER VARCHAR(10);
+  DECLARE VARIABLE ST_NEW_RECORD_ID INTEGER;
+  DECLARE VARIABLE WK_NEW_ISSN CHAR(1);
+  DECLARE VARIABLE WK_SUB_LOCN_ID VARCHAR(10);
+
+BEGIN
+
+   /* DATE: 2ND FEB: DO I NEED TO FIRE THIS PROC EVEN WHEN THE LOCATION IS CORRECT */
+   /* I THINK BEFORE FIRING THIS PROC I HAVE TO ESTABLISH WHETHER ST_STATUS OF LOCATION HAS BEEN UPDATED BY STLX (I THINK) ? OTHERWISE THROW ERROR AND EXIT */
+/* I want to change the audit status for any seen issn so that the totals left to see work */
+
+  ST_NEW_RECORD_ID = '0';
+  LOCN_EXIST = 0;
+  WH_EXIST = 0;
+  COUNT_ISSN = 0;
+  QTY_ISSN_IN_LOCN = 0;
+  ST_INITIATE_STIS = 0;
+  ISSN_COMPANYID = '';
+  ISSN_LOCN_ID = '';
+  ISSN_WH_ID = '';
+  ST_ACTION = 'IG'; /* IGNORE */
+  WK_NEW_ISSN = 'F';
+  ST_MAX_RECORD_ID = NULL;
+  /*LOCN_NAME = LEFTS(LOCN_ID || ' Created during audit ' || :TRN_DATE,50);*/
+
+   IF (TRN_CODE NOT IN ('R', 'F', 'A', 'P', 'Q')) THEN
+   BEGIN
+        UPDATE TRANSACTIONS
+        SET COMPLETE = 'F', ERROR_TEXT = 'TRN_CODE HAS TO BE R OR F'
+        WHERE RECORD_ID = :RECORD_ID;
+        EXIT;
+   END
+   
+  SELECT 1,LOCN_STAT,LOCN_OWNER
+  FROM LOCATION
+  WHERE WH_ID = :WH_ID
+  AND LOCN_ID = :LOCN_ID
+  INTO :LOCN_EXIST, :LOCN_STAT, :LOCN_OWNER;
+
+  IF (LOCN_EXIST = 0) THEN
+   BEGIN
+        UPDATE TRANSACTIONS
+        SET COMPLETE = 'F', ERROR_TEXT = 'LOCATION DOES NOT EXIST. STLO TRANSACTION REQUIRED.'
+        WHERE RECORD_ID = :RECORD_ID;
+        EXIT;
+   END
+
+   IF (LOCN_STAT NOT IN ('ST')) THEN
+   BEGIN
+        UPDATE TRANSACTIONS
+        SET COMPLETE = 'F', ERROR_TEXT = 'LOCN_STAT HAS TO BE ST. STLO TRANSACTION REQUIRED.'
+        WHERE RECORD_ID = :RECORD_ID;
+        EXIT;
+   END
+   
+   SELECT COUNT(*) FROM ISSN
+   WHERE SSN_ID = :OBJECT
+   INTO :COUNT_ISSN;
+
+   IF (COUNT_ISSN = 0) THEN
+   BEGIN
+/*
+        UPDATE TRANSACTIONS
+        SET COMPLETE = 'F', ERROR_TEXT = 'ISSN DOES NOT EXIST'
+        WHERE RECORD_ID = :RECORD_ID;
+        EXIT;
+*/
+        WK_NEW_ISSN = 'T';
+   END
+
+   SELECT PERSON_ID, DEVICE_ID, SUB_LOCN_ID
+   FROM TRANSACTIONS
+   WHERE RECORD_ID = :RECORD_ID
+   INTO :WK_USER, :WK_DEVICE_ID, :WK_SUB_LOCN_ID;
+   
+   SELECT SUM(CURRENT_QTY) 
+   FROM ISSN
+   WHERE SSN_ID = :OBJECT
+   AND WH_ID = :WH_ID
+   AND LOCN_ID = :LOCN_ID
+   INTO :QTY_ISSN_IN_LOCN;
+   IF (QTY_ISSN_IN_LOCN IS NULL) THEN
+   BEGIN
+      QTY_ISSN_IN_LOCN = 0;
+   END
+
+   SELECT COMPANY_ID, LOCN_ID, WH_ID 
+   FROM ISSN
+   WHERE SSN_ID = :OBJECT
+/*
+   AND WH_ID = :WH_ID
+   AND LOCN_ID = :LOCN_ID
+*/
+   INTO :ISSN_COMPANYID, :ISSN_LOCN_ID, :ISSN_WH_ID;
+   IF (ISSN_COMPANYID IS NULL) THEN
+   BEGIN
+      ISSN_COMPANYID = '';
+   END
+   IF (ISSN_LOCN_ID IS NULL) THEN
+   BEGIN
+      ISSN_LOCN_ID = '';
+   END
+   IF (ISSN_WH_ID IS NULL) THEN
+   BEGIN
+      ISSN_WH_ID = '';
+   END
+
+  IF (TRN_CODE = 'R') THEN
+  BEGIN
+/*
+       SELECT MAX(RECORD_ID) FROM STOCKTAKE
+       WHERE ST_SSN_ID = :OBJECT
+      INTO :ST_MAX_RECORD_ID;
+*/
+/* why not use the passed record id - cause its limited to 10 bytes */
+/*       ST_MAX_RECORD_ID = WK_SUB_LOCN_ID; */
+       SELECT FIRST 1 RECORD_ID FROM STOCKTAKE
+       WHERE ST_SSN_ID = :OBJECT
+       ORDER BY ST_AUDIT_DATE DESC
+      INTO :ST_MAX_RECORD_ID;
+
+          IF (ST_MAX_RECORD_ID IS NOT NULL) THEN
+          BEGIN
+               ST_INITIATE_STIS = 1;
+               ST_ACTION = 'IR';
+               UPDATE STOCKTAKE
+               SET ST_ACTION = 'IR',
+               ST_APPLIED_DATE = :TRN_DATE,
+               ST_APPLIED_BY = :WK_USER,
+               ST_APPLIED_DEVICE_ID = :WK_DEVICE_ID
+               WHERE RECORD_ID = :ST_MAX_RECORD_ID;
+          END
+          ELSE
+          BEGIN
+              ST_INITIATE_STIS = 0;
+               UPDATE TRANSACTIONS
+               SET COMPLETE = 'F', ERROR_TEXT = 'CANNOT RECOUNT:' + '|' + ' STOCKTAKE NOT INITIATED FOR THIS ISSN'
+               WHERE RECORD_ID = :RECORD_ID;
+               EXIT;
+           END
+            /* if (ST_MAX_RECORD_ID IS NULL) then */
+  END     /* if (TRN_CODE = 'R') then */
+
+  IF (TRN_CODE = 'F') THEN
+  BEGIN
+      ST_INITIATE_STIS = 1;
+  END
+
+  IF (ST_INITIATE_STIS = 1) THEN
+  BEGIN
+           IF (WK_NEW_ISSN = 'T') THEN
+           BEGIN
+               /* must create the issn but whats its company and product */
+               QTY_ISSN_IN_LOCN = ISSN_QTY;
+           END
+            IF (WH_ID || LOCN_ID = ISSN_WH_ID || ISSN_LOCN_ID) THEN
+             /* CORRECT LOCATION */
+            BEGIN
+                IF (QTY_ISSN_IN_LOCN = ISSN_QTY) THEN
+                BEGIN
+                   ST_STATUS = 'CC';
+                   /* want to update the issns audit date audited flag  */
+                   UPDATE ISSN SET AUDITED = 'C', AUDIT_DATE=:TRN_DATE
+                   WHERE SSN_ID = :OBJECT;
+                END
+                ELSE
+                BEGIN
+                   ST_STATUS = 'IC';
+                   ST_ACTION = 'RC';
+                   /* want to update the issns audit date audited flag  */
+                   IF (ST_MAX_RECORD_ID IS NULL) THEN
+                   BEGIN
+                      /* an F trn code */
+                      UPDATE ISSN SET AUDITED = 'R', AUDIT_DATE=:TRN_DATE
+                      WHERE SSN_ID = :OBJECT;
+                   END
+                   ELSE
+                   BEGIN
+                      /* an R trn code */
+                      UPDATE ISSN SET AUDITED = 'C', AUDIT_DATE=:TRN_DATE
+                      WHERE SSN_ID = :OBJECT;
+                      ST_ACTION = 'CC'; /* ???? */
+                      ST_STATUS = 'CC';
+                   END
+                END
+            END
+
+            IF (WH_ID || LOCN_ID <> ISSN_WH_ID || ISSN_LOCN_ID) THEN
+             /* INCORRECT LOCATION */
+
+            BEGIN
+                IF (QTY_ISSN_IN_LOCN = ISSN_QTY) THEN
+                BEGIN
+                   ST_STATUS = 'CL';
+                   /* want to update the issns audit date audited flag and wh and locn */
+                   UPDATE ISSN SET AUDITED = 'D', AUDIT_DATE=:TRN_DATE, WH_ID = :WH_ID, LOCN_ID = :LOCN_ID
+                   WHERE SSN_ID = :OBJECT;
+                END
+                ELSE
+                BEGIN
+                   ST_STATUS = 'IL';
+                   ST_ACTION = 'RC';
+              /* want to update the issns audit date audited flag and wh and locn */
+                   IF (ST_MAX_RECORD_ID IS NULL) THEN
+                   BEGIN
+                      /* an F trn code */
+                      UPDATE ISSN SET AUDITED = 'R', AUDIT_DATE=:TRN_DATE, WH_ID = :WH_ID, LOCN_ID = :LOCN_ID
+                      WHERE SSN_ID = :OBJECT;
+                   END
+                   ELSE
+                   BEGIN
+                      /* an R trn code */
+                      UPDATE ISSN SET AUDITED = 'D', AUDIT_DATE=:TRN_DATE, WH_ID = :WH_ID, LOCN_ID = :LOCN_ID
+                      WHERE SSN_ID = :OBJECT;
+                      ST_STATUS = 'CL';
+                      ST_ACTION = 'CC'; /* ???? */
+                   END
+                END
+
+              /* QTY = 0 FOR TROL TRIL BECAUSE TROL TRIL TAKES CURRENT QTY OF SSN */
+              /* I AM WAITING ON GLEN'S EMAIL ON PC_TROL_TRIL WHETHER WE HAVE TO EXECUTE THIS TWICE ONCE WITH TROL AND THEN WITH TRIL */
+              /* DATE: 2ND FEB: DO I NEED TO FIRE THIS PROC EVEN WHEN THE LOCATION IS CORRECT */
+/*
+              EXECUTE PROCEDURE PC_TROL_TRIL :RECORD_ID, :WH_ID, :LOCN_ID, :OBJECT, 'TROL','A',:TRN_DATE, 'FOUND IN NEW LOCATION DURING STOCKTAKE',:ISSN_QTY,:WK_USER, :WK_DEVICE_ID;
+              EXECUTE PROCEDURE PC_TROL_TRIL :RECORD_ID, :WH_ID, :LOCN_ID, :OBJECT, 'TRIL','A',:TRN_DATE, 'FOUND IN NEW LOCATION DURING STOCKTAKE',0,:WK_USER, :WK_DEVICE_ID;
+*/
+
+            END
+  END
+
+  ST_VARIANCE = ISSN_QTY - QTY_ISSN_IN_LOCN;
+/*
+   EXECUTE PROCEDURE ADD_UPDATE_STOCKTAKE
+  0, :OBJECT, :WH_ID, :LOCN_ID, :ISSN_QTY, :ST_VARIANCE , :TRN_DATE, :WK_USER, :WK_DEVICE_ID, :ST_STATUS, : ST_ACTION, NULL, NULL, NULL,:ISSN_COMPANYID;
+*/
+   SELECT NEW_RECORD_ID FROM ADD_UPDATE_STOCKTAKE (
+  0, :OBJECT, :WH_ID, :LOCN_ID, :ISSN_QTY, :ST_VARIANCE , :TRN_DATE, :WK_USER, :WK_DEVICE_ID, :ST_STATUS, : ST_ACTION, NULL, NULL, NULL,:ISSN_COMPANYID )
+       INTO :ST_NEW_RECORD_ID;
+
+/*
+   SELECT MAX(RECORD_ID) FROM STOCKTAKE
+   WHERE ST_SSN_ID = :OBJECT
+   INTO :ST_NEW_RECORD_ID;
+*/
+/*
+       SELECT FIRST 1 RECORD_ID FROM STOCKTAKE
+       WHERE ST_SSN_ID = :OBJECT
+       ORDER BY ST_AUDIT_DATE DESC
+      INTO :ST_NEW_RECORD_ID;
+*/
+
+  IF (ST_NEW_RECORD_ID IS NULL) THEN
+  BEGIN
+    UPDATE TRANSACTIONS
+    SET COMPLETE = 'F', ERROR_TEXT = 'ERROR IN INSERTING RECORD IN STOCKTAKE.'
+    WHERE RECORD_ID = :RECORD_ID;
+  END
+
+  IF (ST_NEW_RECORD_ID IS NOT NULL) THEN
+  BEGIN
+   UPDATE TRANSACTIONS
+   SET COMPLETE = 'T', ERROR_TEXT = 'Processed successfully' || '|' || :ST_NEW_RECORD_ID || '|' || :ST_ACTION || '|' || CAST(:ST_VARIANCE AS VARCHAR(10)) || '|' || :ST_STATUS || '|'
+   WHERE RECORD_ID = :RECORD_ID;
+  END
+
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

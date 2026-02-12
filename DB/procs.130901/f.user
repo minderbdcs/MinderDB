@@ -1,0 +1,2 @@
+alter table sys_user add SU_ORDER_TYPE CODE_TWO;
+alter table sys_user add SU_ORDER_SUB_TYPE CODE_TWO;

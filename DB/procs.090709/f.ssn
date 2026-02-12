@@ -1,0 +1,3 @@
+alter table ssn add loan_safety_pass value_tf default 'F';
+alter table ssn add loan_calibrate_pass value_tf default 'F';
+

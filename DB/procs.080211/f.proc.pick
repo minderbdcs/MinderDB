@@ -1,0 +1,166 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+CREATE PROCEDURE PICK_ITEM_PROD_SEQ ( WK_WH_ID CHAR(2) ,
+WK_COMPANY VARCHAR(20) ,
+WK_PROD_ID VARCHAR(30) ,
+WK_SSN_ID VARCHAR(20) )
+RETURNS (WK_SEQ VARCHAR(30) )
+AS 
+BEGIN
+   SUSPEND;
+END ^
+
+ALTER PROCEDURE PICK_ITEM_PROD_SEQ ( WK_WH_ID CHAR(2) ,
+WK_COMPANY VARCHAR(20) ,
+WK_PROD_ID VARCHAR(30) ,
+WK_SSN_ID VARCHAR(20) )
+RETURNS (WK_SEQ VARCHAR(30) )
+AS 
+ 
+DECLARE VARIABLE WK_WORK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_WORK_PROD_ID2 VARCHAR(30);
+DECLARE VARIABLE WK_WORK_SSN_ID VARCHAR(20);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_RES INTEGER;
+BEGIN
+   /* initialize */
+   /* add the restriction of issns in the products - so only for wh and company */
+   WK_WORK_PROD_ID = '';
+   WK_WORK_PROD_ID2 = '';
+   WK_WORK_SSN_ID = '';
+   WK_SEQ = '';
+   IF (WK_SSN_ID IS NULL) THEN
+   BEGIN
+      WK_WORK_SSN_ID = '';
+   END
+   ELSE
+   BEGIN
+      WK_WORK_SSN_ID = WK_SSN_ID;
+   END
+   IF (WK_PROD_ID IS NULL) THEN
+   BEGIN
+      WK_WORK_PROD_ID = '';
+   END
+   ELSE
+   BEGIN
+      WK_WORK_PROD_ID = WK_PROD_ID;
+   END
+   /* get the seq */
+   IF (WK_WORK_SSN_ID = '') THEN
+   BEGIN
+      /* product */
+      IF (WK_WH_ID > '') THEN
+      BEGIN
+         IF (WK_COMPANY > '') THEN
+         BEGIN
+            SELECT FIRST 1 WH_ID || LOCN_ID 
+            FROM ISSN 
+            WHERE PROD_ID = :WK_WORK_PROD_ID
+            AND WH_ID = :WK_WH_ID
+            AND COMPANY_ID = :WK_COMPANY
+            ORDER BY CREATE_DATE
+            INTO :WK_SEQ;
+         END
+         ELSE
+         BEGIN
+            SELECT FIRST 1 WH_ID || LOCN_ID 
+            FROM ISSN 
+            WHERE PROD_ID = :WK_WORK_PROD_ID
+            AND WH_ID = :WK_WH_ID
+            ORDER BY CREATE_DATE
+            INTO :WK_SEQ;
+         END
+      END
+      ELSE
+      BEGIN
+         IF (WK_COMPANY > '') THEN
+         BEGIN
+            SELECT FIRST 1 WH_ID || LOCN_ID 
+            FROM ISSN 
+            WHERE PROD_ID = :WK_WORK_PROD_ID
+            AND (WH_ID < 'X' OR WH_ID > 'X~')
+            AND COMPANY_ID = :WK_COMPANY
+            ORDER BY CREATE_DATE
+            INTO :WK_SEQ;
+         END
+         ELSE
+         BEGIN
+            SELECT FIRST 1 WH_ID || LOCN_ID 
+            FROM ISSN 
+            WHERE PROD_ID = :WK_WORK_PROD_ID
+            AND (WH_ID < 'X' OR WH_ID > 'X~')
+            ORDER BY CREATE_DATE
+            INTO :WK_SEQ;
+         END
+      END
+   END
+   ELSE
+   BEGIN
+      /* try the ssn */
+      SELECT PROD_ID FROM ISSN WHERE SSN_ID = :WK_WORK_SSN_ID
+      INTO :WK_WORK_PROD_ID2;
+      IF (WK_WORK_PROD_ID2 IS NULL) THEN
+      BEGIN
+         /* no product for ssn */
+         SELECT WH_ID || LOCN_ID FROM ISSN WHERE SSN_ID = :WK_WORK_SSN_ID
+         INTO :WK_SEQ;
+      END
+      ELSE
+      BEGIN
+         /* use the product from the issn */
+         IF (WK_WH_ID > '') THEN
+         BEGIN
+            IF (WK_COMPANY > '') THEN
+            BEGIN
+               SELECT FIRST 1 WH_ID || LOCN_ID 
+               FROM ISSN 
+               WHERE PROD_ID = :WK_WORK_PROD_ID2
+               AND WH_ID = :WK_WH_ID
+               AND COMPANY_ID = :WK_COMPANY
+               ORDER BY CREATE_DATE
+               INTO :WK_SEQ;
+            END
+            ELSE
+            BEGIN
+               SELECT FIRST 1 WH_ID || LOCN_ID 
+               FROM ISSN 
+               WHERE PROD_ID = :WK_WORK_PROD_ID2
+               AND WH_ID = :WK_WH_ID
+               ORDER BY CREATE_DATE
+               INTO :WK_SEQ;
+            END
+         END
+         ELSE
+         BEGIN
+            IF (WK_COMPANY > '') THEN
+            BEGIN
+               SELECT FIRST 1 WH_ID || LOCN_ID 
+               FROM ISSN 
+               WHERE PROD_ID = :WK_WORK_PROD_ID2
+               AND (WH_ID < 'X' OR WH_ID > 'X~')
+               AND COMPANY_ID = :WK_COMPANY
+               ORDER BY CREATE_DATE
+               INTO :WK_SEQ;
+            END
+            ELSE
+            BEGIN
+               SELECT FIRST 1 WH_ID || LOCN_ID 
+               FROM ISSN 
+               WHERE PROD_ID = :WK_WORK_PROD_ID2
+               AND (WH_ID < 'X' OR WH_ID > 'X~')
+               ORDER BY CREATE_DATE
+               INTO :WK_SEQ;
+            END
+         END
+      END
+   END
+   SUSPEND;
+
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

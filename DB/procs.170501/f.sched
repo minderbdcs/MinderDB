@@ -1,0 +1,83 @@
+/*
+ New Table = REPORTS_SCHEDULE
+REPS_WH_ID* WH_ID NOT NULL, -* Add Constraint WH_ID must exist in the WAREHOUSE Table *-
+ REPS_RUN_TIME is varchar 50 
+-* Holds the crontab style run schedule the Report will be run.  
+REPS_LAST_RUN_TIME CREATE_DATE,
+IF Report required twice per day i.e. each shift then add 2 records. *- 
+REPS_NAME* REPORT_NAME NOT NULL, 
+-* New Domain REPS_NAME AS VARCHAR(80) required. Please add Constraint that REPS_NAME must exist in the REPORTS Table.
+The current REPORTS.NAME does not use a Domain but has VARCHAR(80) 
+please also update both of these fields to use the same Domain name *- 
+REPS_SUBJECT DESCR NOT NULL, -* VARCHAR(75) e.g. ‘Report – Overdue Tools –Roy Hill’ *-
+REPS_OUT_FOLDER FOLDER_NAME NOT NULL, 
+  -* New Domain FOLDER_NAME AS VARCHAR(50) required. Constrain such that Folder name must = WH_ID e.g. ‘-data-minder-reports-RH-’ - where ‘RH’ = Roy Hill. *-
+REPS_OUT_FILE_NAME FILENAME NOT NULL,
+REPS_OUT_FILE_EXT EXTENSION NOT NULL, 
+-* We need to decide how to name the Reports but suggest it starts with WH_ID e.g. ‘RH_’ as prefix followed by REPS_OUT_FILE_NAME e.g. ‘OVERDUE_TOOLS_’ followed by a NOW timestamp followed by REPS_OUT_FILE_EXT. Hence overall File name = e.g. ‘RH_OVERDUE_TOOLS_2017-03-06 12:01:20:000.pdf’ REPS_PARAMETER_1 WH_ID NOT NULL -* Must be constrained to the WAREHOUSE Table. *-
+REPS_PARAMETER_2 COMPANY NOT NULL DEFAULT ‘ALL’, -* Constrained by COMPANY table or ‘ALL’. *-
+REPS_PARAMETER_3 VARCHAR(50), -* Optional – e.g. ’30’ - Days to Expiry of Safety Testing *-
+REPS_PARAMETER_4 VARCHAR(50), -* Optional – spare parameter*-
+REPS_STATUS STATUS NOT NULL DEFAULT ‘CU’, 
+-* ‘CU’ = Current. Allows Admin to stop creating and sending reports as temporary step if required.*-
+REPS_CREATED_DATE CREATE_DATE ,
+REPS_CREATED_BY USER_ID,
+REPS_LAST_UPDATED CREATE_DATE,
+REPS_LAST_UPDATED_BY USER_ID,
+-*
+ REPORTS_SCHEDULE.REPS_RUN_TIME may not be suitable for
+a cron task script to read and interpret whether its time to run the report. 
+My pdf document suggestted using VARCHAR with example '23:15' but I am unsusre how thesystem would know if it has been run
+the next time the cron task is run.
+Therefore I would like to suggest we add another field called REPS_LAST_RUN_TIME and which is a TIMESTAMP. This gets
+updated each time the cron task runs the report but before it is run it looks to see if the current Timestamp is less than
+the REPS_RUN_TIME and if less then the Report is run and a new Timesatmp is inserted.
+
+Better still perhaps we could populate the REPS_RUN_TIME with cron format '15 23 * * *' 
+        ACTION_NOTES NOTES,
+*/
+/*
+=======================================
+*/
+
+CREATE DOMAIN CRON_RUN_TIME VARCHAR(50);
+CREATE DOMAIN REPORT_NAME VARCHAR(80);
+CREATE DOMAIN FOLDER_NAME VARCHAR(50);
+
+alter table REPORTS alter NAME TYPE REPORT_NAME;
+
+CREATE TABLE REPORTS_SCHEDULE (
+REPS_WH_ID WH_ID NOT NULL, 
+REPS_RUN_TIME CRON_RUN_TIME,
+REPS_LAST_RUN_TIME CREATE_DATE ,
+REPS_NAME REPORT_NAME NOT NULL, 
+REPS_SUBJECT DESCR NOT NULL, 
+REPS_OUT_FOLDER FOLDER_NAME NOT NULL , 
+REPS_OUT_FILE_NAME FILENAME NOT NULL,
+REPS_OUT_FILE_EXT FILESYSTEM_EXTENSION NOT NULL, 
+REPS_PARAMETER_2 COMPANY DEFAULT 'ALL' NOT NULL , 
+REPS_PARAMETER_3 VARCHAR(50), 
+REPS_PARAMETER_4 VARCHAR(50), 
+REPS_PARAMETER_5 VARCHAR(50), 
+REPS_PARAMETER_6 VARCHAR(50), 
+REPS_STATUS STATUS DEFAULT 'CU'  NOT NULL , 
+
+REPS_CREATED_DATE CREATE_DATE ,
+REPS_CREATED_BY USER_ID ,
+REPS_LAST_UPDATED CREATE_DATE ,
+REPS_LAST_UPDATED_BY USER_ID,
+
+        REPS_NOTES NOTES,
+RECORD_ID RECORD_ID,
+ PRIMARY KEY (RECORD_ID)); 
+
+
+alter table REPORTS_SCHEDULE add  CONSTRAINT REPS_SCHEDULE_FK_WH_ID foreign key (REPS_WH_ID) references WAREHOUSE(WH_ID);
+
+update reports set name = report_id || ' ' || name;
+commit;
+  
+alter table REPORTS add  CONSTRAINT REPORTS_UK_NAME unique  (NAME) using index REPORTS_NAME_IDX;
+alter table REPORTS_SCHEDULE add  CONSTRAINT REPS_SCHEDULE_FK_NAME_ID foreign key (REPS_NAME) references REPORTS(NAME);
+/* alter table REPORTS_SCHEDULE add  CONSTRAINT REPS_SCHEDULE_CK_OUT_FOLDER CHECK (VALUE LIKE '%/' || REPS_WH_ID || '/'); */
+

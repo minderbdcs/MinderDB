@@ -1,0 +1,7 @@
+alter table pick_invoice add net_total_amount double precision default 0.00;
+alter table pick_invoice add sum_total_amount double precision default 0.00;
+alter table pick_invoice add fees_amounts double precision default 0.00;
+alter table pick_invoice add fees_amounts_tax_amount double precision default 0.00;
+alter table pick_invoice add admin_fee_percent_amount double precision default 0.00;
+alter table pick_invoice add admin_fee_tax_amount double precision default 0.00;
+

@@ -1,0 +1,4 @@
+alter table pick_item_DX alter company_id type company_group;
+
+alter table pick_item_detail_DX alter company_id type company_group;
+

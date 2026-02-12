@@ -1,0 +1,3 @@
+alter table pick_item_detail add from_wh_id wh_id;
+alter table pick_item_detail add from_locn_id locn_id;
+

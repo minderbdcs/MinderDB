@@ -1,0 +1,4 @@
+wanted to use calc_charge_weight in DSOT but dont have dimensions
+cannot do this in DSOL since it doesnt have dimensions or weights only a label
+sergey is directly updating these in
+so use an update trigger to pack_id table

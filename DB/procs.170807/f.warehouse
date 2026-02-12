@@ -1,0 +1,16 @@
+/*
+-36.8484597
+174.7633315
+Pacific/Auckland
++1200
+NZST
+False
+*/
+
+create domain DEGREES NUMERIC (10,7);
+alter table warehouse add WH_LATITUDE DEGREES;
+alter table warehouse add WH_LONGITUDE  DEGREES;
+alter table warehouse add WH_TIMEZONE CODE;
+alter table warehouse add WH_TIMEZONE_SHORT_CODE CODE_6;
+alter table warehouse add WH_UTC_OFFSET  CODE_6;
+alter table warehouse add WH_IN_DAYLIGHT_SAVING  VALUE_TF; 

@@ -1,0 +1,6 @@
+CREATE DOMAIN ADDR_NAME AS VARCHAR(100);
+alter table person_address 
+alter addr_first_name type addr_name;
+alter table person_address 
+alter addr_last_name type addr_name;
+

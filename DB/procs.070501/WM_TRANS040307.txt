@@ -1,0 +1,188 @@
+V3.8 MINDER Transactions are key to the system. They are inserted by Delphi, Java and Hand Held Applications into the TRANSACTIONS Table and stored procedures are used to both update the Database and remain as an Audit trail of each inventory process. Note the character = ‘|’ is a delimiter and is only found inside of some Transaction Fields. All v3.8 Transaction have fixed length and layout. V4.0 has variable lens.
+
+01/05/05 GSN GRNCC - was GRNDC - as advised by Frank GRNVH - Used to record the Net Weight of each new Loading of Non-Product SSN and Print ISSN Labels GRNVQ - Used to record the Net Weight of each new Loading of Product SSN and Print ISSN Labels. NINWA - Used to update the Net_Weight if an SSN Used if not weighed during Receipt Verification STPAP - Stock Adjustment for a Product at Location and ISSN Status STKAP - Creates Kits (Product ) from Components - Uses BSS Rule which must consume from highest qty storage PPPPP - Pallet Stacking Configuration - Each Product Profile has up to 3 Pallet Configurations - Inners, Outers on Std Australian Pallet + Outers on non-standard Australian Pallet.
+
+31/10/05 GSN + FL GRNVP - Altered the Reference Field to handle 6 digit Qty on each ISSN Label -requested by BlueScope. Reduced length of the Load Line number from 5 to 1 bytes. This only applies to LP Reference Data. GRNVQ - Altered the Reference Field to handle 6 digit Qty on each ISSN Label -requested by BlueScope. Reduced length of the Load Line number from 5 to 1 bytes. This only applies to LP Reference Data. 08/12/05 - GSN GRNVQ - Altered the QTY field to be = 0 for 2nd and subsequent Transactions of a multiple Weights Delivery of Product. This is to stop multiple counting in the TRANSACTIONS_ARCHIVE Table for Product Receipts History Report 11/06/06 - GSN GRNDL - Required for APCD, Granville. Requests GRN Labels to be printed. Revised some Pages and changed PLxx Specifications - to be confirmed. 25/06/06 - GSN PKOZ? - Required Magnamail Conveyor Pick Zone - Used to Update each line of an Order from ‘AL’ Status to ‘DS’ Status at the time of starting a Pick
+
+25/7/06 - GSN Send STPZ Transaction to Adjustment of each Product consumed by a Zone Picking process - Magnamail Conveyor Line. This STPZ Transaction must be called for each Product listed in the Order after successful Check Weighing. Picker scans the Sales Order Number to directly/force update either the Order or every Order line to a new Status. PKUS Transaction created to avoid the lengthy development needed for PKOZ above. 04/03/07 - GSN New and modified GRNDB&G added Shipping Crates. New GRNCN -Record Container No. New GRNCL - Assign Lot No to GRN_Group
+[WM_TRANSACTIONS_040307.vsd] Notes 1/7
+
+© 2006 B & DCS Pty Ltd 5/03/2007 1:08:47 AM
+
+MODIFIED Transaction 04/03/07 Glen
+
+CODECYYYYMMDDHHMMSSOBJECT_ID_____________________LOCATION__SUBLOCATINREFERENCE_______________________________QQQQQQQQQQUUUUUUUUDDSSSSSSSSS 123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678 1 2 3 4 5 6 7 8 9 10 11 12 13
+
+GRND = Records How Receipt Delivered to Warehouse Previously Modified 5/10/04 Frank
+
+CodeCYYYYMMDDhhmmssConsignment Note----|ShipDate-Carrier___Veh=SubLocReference_______________________________QTY_______UUUUUUUUDDSSSSSSSSS GRNDG20041005113010CN000123456ABC001---|20040916-AIRROAD---ABC123----PO|P000123---|----|N|C-|--1|C-|FD|100|-1glenn MASSBSSSSSS
+
+Class = ‘G’ or ‘B’ added 5/10/04
+
+OBJECT_ID Field holds: Consignment Note No (20) + ’|’ + Consignment Note Date = Shipped Date =’YYYYMMDD’ (added 16/9/04)
+
+Reference - Delivery Type: Purchase Order = ‘PO’ Load = ‘LD’ Load Product = ‘LP’ Work Order =’WO’ Return Authorised =’RA’ Inter Branch Transfer =’TR’
+
+Reference - Order No + Received Pallet details: ‘P000123---|----|’= Order No (10 bytes) + 4 spaces (was Line No). ‘|N|’ = No Container , NOTE: If Load then leave Order No & Line No empty (10+4 spaces) as system creates Load No. ’|C-|--1’ = Pallet Owner (2 bytes) was 10 bytes+ Pallet Qty (3). Use OPTIONS Table to identify Pallet Owner e.g. ‘C ’ = CHEP. ’|C-|FD|100’ = Shipping Crate Owner (2 bytes) + Shipping Crate Type + Crate Qty(3). Use OPTIONS Table to identify Shipping Crate Owner e.g. ‘C ’ = CHEP Use OPTIONS Table for Shipping Type Code eg ‘FD’ = Fold Down Crate. Using the GRND Transactions allows us to Receipt both or singularly Hire Pallets and Hire Shipping Crates which may not be with any Product or SSN Receipts i.e. no accompanying GRNV Transaction. New GRN Table Fields: CONTAINER_TYPE SHIPPING_CRATE_OWNER SHIPPING_CRATE_TYPE SHIPPING_CRATE_QTY
+
+New Class ‘B’ added 5/10/04 - If Class B means call ‘ADD_TRAN_RESPONSE’ which apart from generating a new GRN, returns the value of the newly created GRN (call ‘RESPONSE_TEXT’ VARCHAR(70)). Whereas the older GRNDG Class=G does not return the GRN. See trigger RUN_TRANSACTION_GRN for return details... = 'GRN:' || WK_GRN_ID || ':LOAD:' || WK_LOADNO || ':message:' || WK_ERROR_TEXT;
+
+CHAR(2) CODE_TWO e.g. ‘40’ = ’40 Foot Container.’ VARCHAR(10) PERSON CHAR(2) CODE_TWO e.g. ‘FD’ = ‘Fold Down Crate’ QTY
+[WM_TRANSACTIONS_040307.vsd] GRN 2/7
+
+© 2006 B & DCS Pty Ltd 5/03/2007 1:08:47 AM
+
+CODECYYYYMMDDHHMMSSOBJECT_ID_____________________LOCATION__SUBLOCATINREFERENCE_______________________________QQQQQQQQQQUUUUUUUUDDSSSSSSSSS 123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678 1 2 3 4 5 6 7 8 9 10 11 12 13
+
+GRND = Records How Receipt Delivered to Warehouse
+
+MODIFIED Transaction 04/03/07 Glen
+
+CodeCYYYYMMDDhhmmssConsignment Note----|ShipDate-Carrier___Veh=SubLocReference_______________________________QTY_______UUUUUUUUDDSSSSSSSSS GRNDG20041005113010CN000123456ABC001---|20040916-AIRROAD---ABC123----PO|P000123---|----|N|C-|--1|C-|FD|100|-1glenn MASSBSSSSSS
+
+Previously Modified Transaction 5/10/04 Frank Was GRNDC 01/05/05 GSN
+
+GRNCC = Records a Comment about Goods Delivered to Warehouse
+
+CodeCYYYYMMDDhhmmssGRN_COMMENTS(40BYTES)-------------------GRN-NO----GRN-COMMENTS(40)------------------------QQQQQQQQQQUUUUUUUUDDSSSSSSSSS GRNCC20030902113010STOCK FOUND - CLEAN UP OF NEW PREMISES AGRN00123--T SMITH ST-----------------------------1glenn MASSBSSSSSS
+
+SUBLOCATIN Field holds: GRN 10 from previous GRNB/G Transaction
+
+OBJECT_ID(30)+LOCATION(10)+Reference(40) Fields holds Comments: ‘STOCK FOUND - CLEANUP OF NEW PREMISES A’----------‘T SMITH ST’
+
+© 2006 B & DCS Pty Ltd 5/03/2007 1:08:47 AM
+
+[WM_TRANSACTIONS_040307.vsd] GRNCC
+
+3/7
+
+GRND - Goods Receival and GRN Label Transactions
+
+CODECYYYYMMDDHHMMSSOBJECT_ID_____________________LOCATION__SUBLOCATINREFERENCE_______________________________QQQQQQQQQQUUUUUUUUDDSSSSSSSSS 123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678 1 2 3 4 5 6 7 8 9 10 11 12 13
+
+GRND = Records How Receipt Delivered to Warehouse
+
+CodeCYYYYMMDDhhmmssConsignment Note----|ShipDate-Carrier___Veh=SubLocReference_______________________________QTY_______UUUUUUUUDDSSSSSSSSS GRNDG20050509101001CN000123456ABC001---|20050508-AIRROAD---ABC123----LD|----------|----|N|C-|--1|C-|FD|100|-10glenn MASSBSSSSSS
+
+Class B calls ‘ADD_TRAN_RESPONSE’ which returns newly created GRN (call ‘RESPONSE_TEXT’ VARCHAR(70)). = 'GRN:' || WK_GRN_ID || ':LOAD:' || WK_LOADNO || ':message:' || WK_ERROR_TEXT; 11/6/06 New Class L - Used to Print GRN Labels. Requires the GRN to be sent
+
+GRNDL = Used to Print GRN Labels - requires GRND to create a GRN
+Total Labels required This may not equal Connote Total
+
+11/6/06 - GRNDL Transaction required to allow APCD, Granville to receipt deliveries and label them before they start to Verify (create SSN’s). Using the GRN Barcode means Deliveries can be moved before they have been Verified. This is needed for ISO 9001 Quality Control Accreditation.
+
+CodeCYYYYMMDDhhmmssGRN-----------------|Spare----OWNER_ID–-SUPPLIERIDReference_______________________________QTY_______UUUUUUUUDDSSSSSSSSS GRNDL20060509101001000123--------------|---------OPTUSCOMMSOPTUSCOMMSLD|OPTUS001--|-------future----------|PA 10glenn MASSBSSSSSS
+
+Class = ‘L’
+
+added 09/05/06
+
+GRN as returned from GRNDG or B above
+
+LOCATION Field holds: OWNER_ID (10), SUB_LOCATION Field holds SUPPLIER_ID (10)
+
+Reference Field holds: ‘LD’ = Load Type Code +’|+ ‘OPTUS001---|’= Load No (10 bytes) + ‘|’ Delimiter + ‘|’ + Printer ID (2)
+
+Database Procedure creates ‘GRN.txt’ Label Data file for use by BarTender to print from e.g. “GRN_LABEL_NO”, ”GRN”, ”GRN_TYPE”, ”LOAD_NO”, ”AWB_CONSIGNMENT_NO”, ”QTY_LABELS”, ”GRN_DATE”, ”PRT_ID” “001030”,”000123”,”LOAD:”,”OPTUS001”,”CN000123456ABC001",”10",”2006/05/09 10:10:01",”PA”
+
+Codabar Barcoded GRN_LABEL_NO Generated by Database
+
+AWB_CONSIGNMENT_NO not printed on current Label Future
+[WM_TRANSACTIONS_040307.vsd] GRNDL 4/7
+
+© 2006 B & DCS Pty Ltd 5/03/2007 1:08:47 AM
+
+CODECYYYYMMDDHHMMSSOBJECT_ID_____________________LOCATION__SUBLOCATINREFERENCE_______________________________QQQQQQQQQQUUUUUUUUDDSSSSSSSSS 123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678 1 2 3 4 5 6 7 8 9 10 11 12 13
+
+GRNDB = Records How Receipt Delivered
+
+MODIFIED Transaction 04/03/07 Glen
+
+CodeCYYYYMMDDhhmmssConsignment Note----|ShipDate-Carrier___Veh=SubLocReference_______________________________QTY_______UUUUUUUUDDSSSSSSSSS GRNDB20041005113010CN000123456ABC001---|20040916-AIRROAD---ABC123----PO|P000123---|----|Y|C-|--1|C-|FD|100|-1glenn MASSBSSSSSS
+
+Pallets & Shipping Crates
+
+GRNCN = Continues any GRNDB - Records Shipping Container No
+
+NEW Transaction 04/03/07 Glen - for FPG
+
+04/03/07 - GRNCN Transaction required to allow record Shipping Container No and update the GRN Table’s CONTAINER_NO Field. If GRND Class B has the Container field = ‘Y’ then it will require Input screen or popup to capture Container Number. This Transaction is similar to GRNCC - accepts Comments about a GRN
+
+CodeCYYYYMMDDhhmmssGRN-----------------|Spare----Spare-----Spare-----Reference_______________________________QTY_______UUUUUUUUDDSSSSSSSSS GRNCN20070304101001000123--------------|-----------------------------001AN2345670123|-----------------------1glenn MASSBSSSSSS
+
+‘000123’ = GRN returned from GRNDB Transaction
+
+‘001AN2345670123’ = Shipping Container No stored in GRN CONTAINER_NO Field max 20 bytes
+
+© 2006 B & DCS Pty Ltd 5/03/2007 1:08:47 AM
+
+[WM_TRANSACTIONS_040307.vsd] GRNCN
+
+5/7
+
+MINDER Series Transactions - Assign Lot Number to a GRN
+CREATED Transaction 03/04/07 Glen
+
+CODECYYYYMMDDHHMMSSOBJECT_ID_____________________LOCATION__SUBLOCATINREFERENCE_______________________________QQQQQQQQQQUUUUUUUUDDSSSSSSSSS 123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678 1 2 3 4 5 6 7 8 9 10 11 12 13
+
+GRNCL = Assigns a Lot Number to a GRN, Create Lot Line No, Update Company or Supplier
+
+CodeCYYYYMMDDhhmmssGRN-----------------|Spare----OWNER_ID–-SUPPLIERIDReference_______________________________QTY_______UUUUUUUUDDSSSSSSSSS GRNCL20070304101001000123--------------|-----------------------------|-|------------------------------------1glenn MASSBSSSSSS
+
+‘L’ Class identifies the Object Id Field as GRN
+
+GRN is generated by previous GRND Transaction
+
+Reference Field details: If Reference empty then Database generates next Lot Number using CONTROL Table Parameters and stores in the GRN_GROUP Table. E.g. ‘7234’ Procedure must check that GRN_GROUP does not already hold a Lot No. If Reference = ‘7234||’ then means create record in GRN_ORDER Table if not already exists and updates LOT_NO_LINE_NO with first number not existing limited by CONTROL TABLE length e.g. 2 bytes The Transaction QTY Field is used to indicate how many new GRN_ORDER Records to be created each with sequential LOT_NO_LINE_NO If Reference = ‘7234|01|’ then means create record in GRN_ORDER Table if not already exists but ignores the QTY value. This maybe also used to update COMPANY_ID and/or SUPPLIER_ID in GRN_ORDER. The Verification screen used to generate SSN’s and ISSN’s must use the GRN_ORDER Table for each Pallet Verified. New GRN_GROUP Table Fields: LOT_NO VARCHAR(10) e.g. ‘7234’ LOT_NO_LINE_NO CHAR(4) e.g. ‘01’ Hence ISSN_ID = ‘723401'+Pallet No ‘01’= ‘72340101'
+
+/* Table: GRN_ORDER, Owner: SYSDBA */ CREATE TABLE GRN_ORDER ( GRN GRN NOT NULL, ORDER_NO ORDER_NO NOT NULL, GRN_LABEL_NO ORDER_NO NOT NULL, COMPANY_ID COMPANY, SUPPLIER_ID PERSON, CREATE_DATE CREATE_DATE, CREATED_BY USER_ID, LOT_NO CHAR(10) /* LOT_NO(4) +LINE_No(2) +PALLET(2) */ LOT_NO_LINE_NO CHAR(4) /* totals = 8 for ISSNs at Fresh Produce. */ PRIMARY KEY (GRN_LABEL_NO) ); /* Index definitions for GRN_ORDER */ CREATE INDEX GRN_ORDER_GRN_IDX ON GRN_ORDER(GRN); CREATE INDEX GRN_ORDER_ORDER_IDX ON GRN_ORDER(ORDER_NO);
+
+Using the GRN_ORDER also allows us to print GRN labels as at APCD if required.
+
+This now allows us to use the FOSS GRNVS & GRNVI Transactions. See following pages
+[WM_TRANSACTIONS_040307.vsd] GRNCL- Lot No 6/7
+
+© 2006 B & DCS Pty Ltd 5/03/2007 1:08:47 AM
+
+MINDER Series Transactions - Goods Receipt - GRN
+
+CODECYYYYMMDDHHMMSSOBJECT_ID_____________________LOCATION__SUBLOCATINREFERENCE_______________________________QQQQQQQQQQUUUUUUUUDDSSSSSSSSS 123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678 1 2 3 4 5 6 7 8 9 10 11 12 13
+
+GRNVP = Verify Product Receipt and Creates SSN’s + ISSN’s GRNVP uses default COMPANY_ID from CONTROL Table
+
+CodeCYYYYMMDDhhmmssProduct_ID____________________Location__GRN=SubLocReference_______________________________QTY_______UUUUUUUUDDSSSSSSSSS GRNVP20041025115020ABC-123-456-XYZ---------------ALRC010101GRN00123--LD|ABCORP----|----|--9|---10|--1|----9|A 99glenn MASSSSSSSSS
+
+Changed Class to ‘P’ from ‘G’ - 21/7/04
+
+‘P’ Class identifies the Object Id Field as Product ID with full 30 bytes v’s SSN Load using 2 parts (Return From+OwnerID’s) GRN is generated by previous GRND Transaction
+
+Reference Field details: MODIFIED Transaction 25/10/04 Frank ‘LP|ABCORP----|----|’Type = LOAD PRODUCT (2 bytes+|) + Return From (10 bytes +|---|) plus (25/10/04 ‘LP’ was ‘LD’ - New Product Profile record created if unknown.) ‘--9|---10|’= Qty of 9 x Labels printed with ‘Product Qty/Label=10‘ plus ’--1|----9|’ = Qty of 1 x Label printed with ‘Product Qty/Label =9’ plus ‘A’ = Use Printer ID ‘A’ for Labels. Transaction creates 1 x SSN + 10 x ISSN’s.
+
+GRNVS = Verify Product Receipt with Supplied SSN’s International EAN 128 Barcode max.18 bytes for SSCC = our SSN/ISSN
+
+CodeCYYYYMMDDhhmmssSupplierIDCompany_IDDivisionIDLocation__GRN=SubLocReference_______________________________QTY_______UUUUUUUUDDSSSSSSSSS GRNVS20030902115020FOSSUSA---FOSSAUS-------------AUINTRANSTGRN00123–-96354281----------|96354281----------|K| 50glenn MASSSSSSSSS
+
+FOSS Import Modification: Class = ‘S’ added 16/9/04
+
+‘S’ Class identifies the Object Id Field as SUPPLIER_ID (=From) COMPANY_ID (=Owner) DIVISION_ID (future)
+
+GRN is generated by previous GRND Transaction
+
+Reference Field details: Holds only SSN (18) +’|’+ ISSN(18) +’|’+that have been created by the SUPPLIER_ID. System to check if SSN exists, if not create SSN + ISSN. If SSN exists then check if ISSN exists if not, create with ORIGINAL_SSN = SSN plus Qty. Note max input =18 bytes as full 20 for SSN/ISSN’s not possible If Transaction Date+Time =SSN Created date then do not add Qty to Original qty. 05/10/04 Byte 108 ‘K|’=Kit, ‘X|’= Not in Kit, ||=NULL ignore - Created by Frank
+
+GRNVI = Verify Product Receipt with Supplied ISSN’s
+
+CodeCYYYYMMDDhhmmssProduct_ID____________________Location__GRN=SubLocReference_______________________________QTY_______UUUUUUUUDDSSSSSSSSS GRNVI20030902115020ABC-123-456-XYZ---------------AUINTRANSTGRN00123–-96354281----------|96354282----------| | 50glenn MASSSSSSSSS
+
+FOSS Import Modification: Class = ‘I’ added 28/9/04
+
+‘I’ Class Object ID holds Product ID when SSN NOT = ISSN in Reference Field
+
+GRN is generated by previous GRND Transaction
+
+Reference Field details: Holds only SSN (18)+’|’+ ISSN(18)+’’ that have been created by the SUPPLIER_ID. System to check if SSN exists, if not create SSN + ISSN. If SSN exists then check if ISSN exists if not, create with ORIGINAL_SSN = SSN plus Qty. Class = “I” means that SSN will NOT = ISSN. If Transaction Date+Time =SSN Created date then do not add Qty to Original qty. 05/10/04 Byte 108 ‘K|’=Kit, ‘X|’= Not in Kit, ‘||’=NULL ignore - Created by Frank
+[WM_TRANSACTIONS_040307.vsd] GRNV 7/7
+
+© 2006 B & DCS Pty Ltd 5/03/2007 1:08:47 AM
+
+

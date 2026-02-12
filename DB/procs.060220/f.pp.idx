@@ -1,0 +1,2 @@
+
+CREATE INDEX prod_profile_prod_type_IDX ON PROD_PROFILE(PROD_TYPE);

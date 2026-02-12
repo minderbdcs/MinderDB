@@ -1,0 +1,12 @@
+alter table control add legacy_name code;
+alter table control add legacy_url descr;
+alter table control add legacy_name2 code;
+alter table control add legacy_url2 descr;
+
+alter table control add save_pick_method code;
+update control set save_pick_method = pick_method;
+alter table control drop pick_method;
+
+alter table control add pick_method code;
+update control set pick_method = save_pick_method;
+alter table control drop save_pick_method;

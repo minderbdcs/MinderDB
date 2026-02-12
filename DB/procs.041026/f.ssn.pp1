@@ -1,0 +1,3 @@
+
+update ssn set purchase_price = (select default_price from control);
+

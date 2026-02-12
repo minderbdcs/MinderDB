@@ -1,0 +1,2 @@
+alter table prod_profile add receive_batch_lot value_tf;
+alter table prod_profile add receive_use_by value_tf;

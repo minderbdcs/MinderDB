@@ -1,0 +1,3 @@
+/* = select description from options where group_code = 'RECEIVE' and code = 'RECEIVE_MENU|RESETLASTGRN'  */
+insert into options(group_code,code,description) values('RECEIVE','RECEIVE_MENU|RESETLASTGRN','T');
+

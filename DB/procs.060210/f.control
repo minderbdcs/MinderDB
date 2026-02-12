@@ -1,0 +1,2 @@
+alter table control add max_pick_lines integer default 1;
+

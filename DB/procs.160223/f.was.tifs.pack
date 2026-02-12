@@ -1,0 +1,2 @@
+update options set description2='CARRIER.PREFIX|%SERIAL_NO'  where group_code='CONNOTE' and code='CONNOTE_TNT';
+update options set description2='CARRIER.PACK_LABEL_PREFIX|%CARRIER_PREFIX|%SERIAL_NO|%PACK_NO_3|0|PICK_DESPATCH.PICKD_POST_CODE|0|' where group_code='PACK_ID' and code='CONNOTE_TNT';

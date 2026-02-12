@@ -1,0 +1,2 @@
+alter table control add check_temperature_zone value_tf;
+update control set check_temperature_zone = 'F';

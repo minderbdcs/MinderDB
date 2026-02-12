@@ -1,0 +1,3 @@
+alter table ssn_type add discount_percent percent_f default 0;
+alter table ssn_type add discount_code  code_two ;
+

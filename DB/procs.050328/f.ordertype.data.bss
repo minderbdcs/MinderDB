@@ -1,0 +1,8 @@
+insert into order_type (order_type, description, outwards) values ('SO','Products','T');
+insert into order_type (order_type, description, outwards) values ('RO','Replenish Order','T');
+insert into order_type (order_type, description, outwards) values ('PP','Pre-Pack Order','T');
+insert into order_type (order_type, description, outwards) values ('TO','Transfer Order','T');
+insert into order_type (order_type, description, outwards) values ('PO','Purchase Order','F');
+insert into order_type (order_type, description, outwards) values ('WO','Work Order','F');
+insert into order_type (order_type, description, outwards) values ('RA','Return Order','F');
+insert into order_type (order_type, description, outwards) values ('TR','Inter Branch Transfer','F');

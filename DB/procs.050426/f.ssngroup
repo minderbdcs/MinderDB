@@ -1,0 +1,6 @@
+alter table ssn_group add FIELD21 FIELD;
+alter table ssn_group add FIELD22 FIELD;
+alter table ssn_group add DD_OTHER21 TRUEFALSE;
+alter table ssn_group add DD_OTHER22 TRUEFALSE;
+alter table ssn_group add RM_OTHER21 TRUEFALSE;
+alter table ssn_group add RM_OTHER22 TRUEFALSE;

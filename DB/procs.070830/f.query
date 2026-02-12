@@ -1,0 +1,1 @@
+insert into query_layout(code,label,sequence,description) select 'mssn',label,sequence,description from query_layout where code = '1ssn' ;

@@ -1,0 +1,33 @@
+CREATE PROCEDURE CANCEL_SALE_ORDER (
+  PICK_ORDER VARCHAR(10)  
+) AS       
+
+DECLARE VARIABLE sSSN VARCHAR(20);
+
+BEGIN
+    /* Update Pick Order status */
+    UPDATE PICK_ORDER
+    SET PICK_STATUS = 'CN'
+    WHERE PICK_ORDER = :PICK_ORDER;
+        
+    /* Update Pick Item Status */
+    UPDATE PICK_ITEM
+    SET PICK_LINE_STATUS = 'CN'
+    WHERE PICK_ORDER = :PICK_ORDER;
+	                   
+    FOR 
+      SELECT SSN_ID 
+      FROM PICK_ITEM
+      WHERE PICK_ORDER = :PICK_ORDER               
+      INTO :sSSN
+    DO
+    BEGIN        
+      IF (LEN(:sSSN) <> 0) THEN
+      BEGIN
+         /* Update status SSN */
+         UPDATE SSN
+         SET STATUS_SSN = 'PA'           
+         WHERE SSN_ID = :sSSN;                  
+      END           
+    END                     
+END^

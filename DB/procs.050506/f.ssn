@@ -1,0 +1,2 @@
+alter table ssn add net_weight_uom code_two;
+

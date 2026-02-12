@@ -1,0 +1,3 @@
+update control set pallet_base_prod_type='CB';
+
+insert into prod_type(code, description) values('CB','Consumable - Pallet Board');

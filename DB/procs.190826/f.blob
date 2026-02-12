@@ -1,0 +1,6 @@
+/*
+108 DECLARE EXTERNAL FUNCTION BLOB_SUBSTR
+111 ENTRY_POINT 'fn_blob_substr' MODULE_NAME 'udflib';
+*/
+
+drop external function blob_substr;

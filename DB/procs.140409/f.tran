@@ -1,0 +1,2 @@
+alter table transaction_types add trn_class code;
+alter table transaction_types add trn_add_procedure code;

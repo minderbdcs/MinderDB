@@ -1,0 +1,2 @@
+alter table company add
+        COMPANY_LOGO COMPANY_LOGO;

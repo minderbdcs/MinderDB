@@ -1,0 +1,4 @@
+alter table control add send_prcl_v4 value_tf;
+alter table control add send_gcna_v4 value_tf;
+update control set send_prcl_v4='F', send_gcna_v4='F';
+

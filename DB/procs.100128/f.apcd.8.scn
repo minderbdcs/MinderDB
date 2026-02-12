@@ -1,0 +1,9 @@
+/*
+web_requests
+*/
+
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table,record_id) values('TRN_VERSION','8','Version','SR','OK','WEB_REQUESTS','WEB_REQUESTS',0);
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table,record_id) values('TRN_PRIORITY','9','Priority','SR','OK','WEB_REQUESTS','WEB_REQUESTS',0);
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table,record_id) values('TRN_REPLY_DATE','10','Reply','SR','OK','WEB_REQUESTS','WEB_REQUESTS',0);
+
+

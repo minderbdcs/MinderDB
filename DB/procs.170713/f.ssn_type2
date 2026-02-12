@@ -1,0 +1,18 @@
+/*
+ insert into ssn_type (code,description )
+ select s1.ssn_type, s1.ssn_type as descr 
+ from ssn_sub_type s1
+ left outer join ssn_type s2 on s2.code     = s1.ssn_type 
+ where s2.code is null
+ and (s1.ssn_type is not null)
+ group by s1.ssn_type, descr
+ ;
+*/
+ insert into ssn_type (code,description )
+ select s1.ssn_type, s1.ssn_type as descr 
+ from generic      s1
+ left outer join ssn_type s2 on s2.code     = s1.ssn_type 
+ where s2.code is null
+ and (s1.ssn_type is not null)
+ group by s1.ssn_type, descr
+ ;

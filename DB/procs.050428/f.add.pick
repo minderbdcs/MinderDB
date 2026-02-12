@@ -1,0 +1,182 @@
+
+ALTER PROCEDURE ADD_PICK_ITEMS (WK_ORDER VARCHAR(15) ,
+WK_ORDER_STATUS CHAR(1) ,
+WK_STATUS VARCHAR(6) ,
+WK_PROD1 VARCHAR(30) ,
+WK_EXTENSION1 VARCHAR(6) ,
+WK_LINE_NO1 VARCHAR(4) ,
+WK_QTY1 INTEGER,
+WK_TRN_DATE TIMESTAMP,
+WK_PERSON_ID VARCHAR(10) )
+AS 
+
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_PICK_LABEL VARCHAR(8);
+DECLARE VARIABLE WK_L_PICK_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+BEGIN
+/*====================================================================*/
+   /* do line stuff */
+   WK_PROD_ID = WK_PROD1 || WK_EXTENSION1;
+   /* does product exist */
+   WK_FOUND = 0;
+/*
+   INSERT INTO LOG(DESCRIPTION) VALUES( 'in add pick lines');
+   INSERT INTO LOG(DESCRIPTION) VALUES( :WK_PROD_ID);
+   INSERT INTO LOG(DESCRIPTION) VALUES( :WK_STATUS);
+*/
+   SELECT 1 FROM PROD_PROFILE
+   WHERE PROD_ID = :WK_PROD_ID
+   INTO :WK_FOUND;
+   IF (WK_FOUND = 0) THEN
+   BEGIN
+      /* no prod profile - so create a dummy */
+      INSERT INTO PROD_PROFILE(PROD_ID, SHORT_DESC)
+      VALUES (:WK_PROD_ID, :WK_PROD_ID);
+   END
+   WK_FOUND = 0;
+   SELECT 1 FROM PROD_EAN
+   WHERE PROD_EAN = :WK_PROD1 AND 
+         PROD_EAN_EXTENSION = :WK_EXTENSION1
+   INTO :WK_FOUND;
+   IF (WK_FOUND = 0) THEN
+   BEGIN
+      /* no prod ean - so create one */
+      INSERT INTO PROD_EAN(PROD_ID, PROD_EAN, PROD_EAN_EXTENSION)
+      VALUES (:WK_PROD_ID, :WK_PROD1, :WK_EXTENSION1);
+   END
+   /* does line for product exist in order */
+   /* WK_STATUS = 'T'; */
+   IF (WK_STATUS = 'T') THEN
+   BEGIN
+      WK_FOUND = 0;
+      SELECT 1, PICK_LABEL_NO FROM PICK_ITEM
+      WHERE PICK_ORDER = :WK_ORDER
+        AND PROD_ID = :WK_PROD_ID
+        AND (PICK_LINE_STATUS IN ('UC','CF','OP')
+        OR PICK_LINE_STATUS IS NULL)
+      INTO :WK_FOUND, :WK_PICK_LABEL;
+      IF (WK_FOUND = 0) THEN
+      BEGIN
+         /* no line - so create one */
+         /* calc the next label and line no */
+         WK_PICK_LABEL = '';
+         SELECT LABEL_NO FROM NEXT_PICK_LABEL
+         INTO :WK_PICK_LABEL;
+         IF ((WK_LINE_NO1 > '') AND (WK_LINE_NO1 <> '0')) THEN
+         BEGIN
+            WK_L_PICK_LINE_NO = WK_LINE_NO1;
+         END
+         ELSE
+         BEGIN
+            SELECT PICK_ORDER_LINE_NO 
+            FROM GET_SALE_LINES_NO(:WK_ORDER) 
+            INTO :WK_L_PICK_LINE_NO;
+         END
+          
+/*
+         INSERT INTO LOG(DESCRIPTION) VALUES( 'insert to pick_item');
+*/
+         INSERT INTO PICK_ITEM(
+            PICK_ORDER, 
+            PICK_LABEL_NO,
+            PICK_ORDER_LINE_NO,
+            PICK_LINE_STATUS, 
+            PICK_ORDER_QTY, 
+            PROD_ID,
+            PICK_RETRIEVE_STATUS,
+            CREATE_DATE,
+            USER_ID,
+            SSN_CONFIRM)
+         VALUES (
+            :WK_ORDER, 
+            :WK_PICK_LABEL,
+            :WK_L_PICK_LINE_NO,
+            'OP',
+            :WK_QTY1,
+            :WK_PROD_ID,
+            :WK_STATUS,
+            :WK_TRN_DATE,
+            :WK_PERSON_ID,
+            'I' );
+      END
+      ELSE
+      BEGIN
+/*
+         INSERT INTO LOG(DESCRIPTION) VALUES( 'update pick_item');
+*/
+         UPDATE PICK_ITEM 
+         SET PICK_ORDER_QTY = :WK_QTY1,
+            PICK_RETRIEVE_STATUS = :WK_STATUS,
+            CREATE_DATE = :WK_TRN_DATE,
+            USER_ID = :WK_PERSON_ID
+         WHERE PICK_LABEL_NO = :WK_PICK_LABEL;
+      END
+   END
+   ELSE
+   BEGIN
+      /* status is false */
+      IF (WK_PROD_ID = 'NOPROD') THEN
+      BEGIN
+         /* whole order is false*/
+/*
+         INSERT INTO LOG(DESCRIPTION) VALUES( 'update pick_item for noprod');
+*/
+         UPDATE PICK_ITEM 
+         SET PICK_RETRIEVE_STATUS = :WK_STATUS,
+            CREATE_DATE = :WK_TRN_DATE,
+            USER_ID = :WK_PERSON_ID
+         WHERE PICK_ORDER = :WK_ORDER;
+      END
+      ELSE
+      BEGIN
+         /* the line is false*/
+         WK_FOUND = 0;
+         SELECT 1, PICK_LABEL_NO FROM PICK_ITEM
+         WHERE PICK_ORDER = :WK_ORDER
+           AND PROD_ID = :WK_PROD_ID
+           AND (PICK_LINE_STATUS IN ('UC','CF','OP')
+           OR PICK_LINE_STATUS IS NULL)
+         INTO :WK_FOUND, :WK_PICK_LABEL;
+         IF (WK_FOUND = 1) THEN
+         BEGIN
+/*
+            INSERT INTO LOG(DESCRIPTION) VALUES( 'update pick_item for status false');
+*/
+            UPDATE PICK_ITEM 
+            SET PICK_RETRIEVE_STATUS = :WK_STATUS,
+               CREATE_DATE = :WK_TRN_DATE,
+               USER_ID = :WK_PERSON_ID
+            WHERE PICK_LABEL_NO = :WK_PICK_LABEL;
+         END
+      END
+   END
+   /* if the status changed to true must recalc the orders retrieve status */
+   IF ((WK_STATUS = 'T') AND (WK_ORDER_STATUS = 'F')) THEN
+   BEGIN
+      WK_FOUND = 0;
+      SELECT FIRST 1 1
+      FROM PICK_ITEM 
+      WHERE PICK_ORDER = :WK_ORDER
+        AND (PICK_LINE_STATUS IN ('UC','CF','OP')
+        OR PICK_LINE_STATUS IS NULL)
+        AND (PICK_RETRIEVE_STATUS = 'F'
+        OR PICK_RETRIEVE_STATUS IS NULL)
+      INTO :WK_FOUND;
+      IF (WK_FOUND = 0) THEN
+      BEGIN
+         /* have no more failures */
+/*
+         INSERT INTO LOG(DESCRIPTION) VALUES( 'update pick_order');
+*/
+         UPDATE PICK_ORDER
+         SET PICK_STATUS='DA',
+             PICK_RETRIEVE_STATUS = :WK_STATUS
+         WHERE PICK_ORDER = :WK_ORDER;
+      END
+   END
+/*
+   INSERT INTO LOG(DESCRIPTION) VALUES( 'end add pick line');
+*/
+END ^
+

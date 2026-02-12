@@ -1,0 +1,3 @@
+alter table location add locn_out_dimension_x  numeric(9,3);
+alter table location add locn_out_dimension_y  numeric(9,3);
+alter table location add locn_out_dimension_z  numeric(9,3);

@@ -1,0 +1,4 @@
+create domain code_128 varchar(128);
+alter table sys_equip add mac_address code;
+alter table sys_equip add ip6_address code_128;
+

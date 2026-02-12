@@ -1,0 +1,9 @@
+alter table pick_item_detail add prod_id product;
+alter table pick_item_detail add company_id company;
+alter table pick_item_detail add zone_c code_two;
+alter table pick_item_detail add pick_order_sub_type code_two;
+
+alter table pick_item_detail_dx add prod_id product;
+alter table pick_item_detail_dx add company_id company;
+alter table pick_item_detail_dx add zone_c code_two;
+alter table pick_item_detail_dx add pick_order_sub_type code_two;

@@ -1,0 +1,21 @@
+/* 
+drop trigger run_transaction_pinv;
+commit;
+*/
+
+alter table pick_invoice alter sub_total_amount  type double precision;
+alter table pick_invoice alter sub_total_tax     type double precision;
+alter table pick_invoice alter freight           type double precision;
+alter table pick_invoice alter freight_tax_amount type double precision;
+alter table pick_invoice alter admin_fee_amount  type double precision;
+alter table pick_invoice alter admin_tax_amount  type double precision; 
+alter table pick_invoice alter tax_amount        type double precision;
+alter table pick_invoice alter due_amount        type double precision;
+alter table pick_invoice alter amount_paid       type double precision;
+/*
+alter table pick_invoice alter sum_std_amount    type double precision;
+alter table pick_invoice alter sum_sale_amount   type double precision;
+alter table pick_invoice alter net_weight        type double precision;
+*/
+alter table pick_invoice alter inv_total_amount   type double precision;
+

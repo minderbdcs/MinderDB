@@ -1,0 +1,6 @@
+alter table prod_ean add gs1_gtin8_100 image;
+alter table prod_ean add gs1_gtin13_80 image;
+alter table prod_ean add gs1_gtin13_100 image;
+alter table prod_ean add gs1_gtin13_other image;
+alter table prod_ean add gs1_code128 image;
+alter table prod_ean add gs1_database image;

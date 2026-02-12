@@ -1,0 +1,2 @@
+alter table pack_sscc add ps_out_sscc  sscc_id;
+update pack_sscc set ps_out_sscc = ps_sscc;

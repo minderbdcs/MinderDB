@@ -1,0 +1,37 @@
+L_DESPATCH_PALLET_NO              (PALLET_NO) VARCHAR(7) Nullable 
+L_PICK_LOCATION                   (LOCN_ID) VARCHAR(10) Nullable 
+L_REASON                          (DESCRIPTION) VARCHAR(50) Nullable 
+L_ORIGINAL_SSN_ID                 (SSN_ID) VARCHAR(20) Nullable 
+L_DESPATCH_LOCATION_GROUP         (LOCN_ID) VARCHAR(10) Nullable 
+L_LAST_UPDATE_DATE                (LAST_UPDATE_DATE) TIMESTAMP Nullable 
+L_OVER_SIZED                      (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+L_ALT_DESPATCH_WH_ID              (WH_ID) CHAR(2) Nullable 
+L_ALT_DESPATCH_LOCN_ID            (LOCN_ID) VARCHAR(10) Nullable 
+L_PICK_LINE_PRIORITY              (PICK_LINE_PRIORITY) INTEGER Nullable 
+L_PICK_PICK_FINISH                TIMESTAMP Nullable 
+L_CANCEL_METHOD                   (CODE_ONE) CHAR(1) Nullable 
+L_PI_LEGACY_ITEM_DESCR            (NOTES) BLOB segment 80, subtype TEXT Nullable 
+L_PI_LEGACY_CLOSED                (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+L_PI_LEGACY_LINENO                INTEGER Nullable 
+L_PI_LEGACY_WH_NAME               (DESCRIPTION) VARCHAR(50) Nullable 
+L_PI_LEGACY_FULFILLED_QTY         (QTY) INTEGER Nullable 
+L_PI_LEGACY_PACKED_QTY            (QTY) INTEGER Nullable 
+L_PI_LEGACY_PICKED_QTY            (QTY) INTEGER Nullable 
+L_PI_LEGACY_RATE                  VARCHAR(15) Nullable 
+L_PI_LEGACY_PICK_UOM              (CODE_TWO) CHAR(2) Nullable 
+L_SO_REVISION_STATUS              (STATUS) CHAR(2) Nullable 
+L_PI_LEGACY_WH_ID                 VARCHAR(2) Nullable 
+L_PI_LOAN_SSN_COST                (PURCHASE_PRICE) FLOAT Nullable 
+L_PICK_TYPE                       (STATUS) CHAR(2) Nullable 
+L_PICK_ID                         VARCHAR(80) Nullable 
+L_EARLIEST_DATE                   (DATETIME) TIMESTAMP Nullable 
+L_LEGACY_LEDGER_SALE_CODE         (CODE) VARCHAR(40) Nullable 
+L_LEGACY_LEDGER_DEPOSIT_CODE      (CODE) VARCHAR(40) Nullable 
+L_LEGACY_LEDGER_PURCHASE_CODE     (CODE) VARCHAR(40) Nullable 
+L_EXPORTED_DESPATCH               (VALUE_TF) CHAR(1) Nullable DEFAULT 'F'
+L_EXPORTED_DESPATCH_QTY           (QTY) INTEGER Nullable 
+L_DISCOUNT                        (DISCOUNT_F) FLOAT Nullable default 0
+L_LINE_TOTAL                      FLOAT Nullable default 0
+L_PI_LOAN_RATE                    (PERCENT_FF) FLOAT Nullable DEFAULT 0
+L_PICK_LOCN_SEQ                   (LOCN_SEQ_F) FLOAT Nullable 
+L_LINE_COST_AMOUNT                FLOAT Nullable 

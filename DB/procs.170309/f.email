@@ -1,0 +1,40 @@
+/*
+Table SYS_EMAIL
+
+SE_MAIL_RELAY_HOST* HOST_NAME NOT NULL,
+-* Unique Email Relay Host Name for MINDER. New Domain HOST_NAME AS VARCHAR(50) required.
+This I understand, is not the MDR Host Server name Please refer to Christo for further details *-
+SE_MAIL_FROM_DOMAIN DOMAIN_NAME NOT NULL,
+-* New DOMAIN = DOMAIN_NAME AS VARCHAR(63) - Please configure a constraint such that it restrict to use of up to 63 
+letters, numbers and hyphen characters and must not start or end with hyphen. 
+The max. 63 chars. applies to number of characters left of the extension. 
+There is debate as to the max. no. of chars allowed. Source https://www.domainregistration.com.au/infocentre/info-domain-length.php
+Example 'from@example.com' This must be a valid URL known to the DNS on the network. *-
+SE_EMAIL_FROM_NAME EMAIL_NAME,
+-* New Domain EMAIL_NAME AS VARCHAR(50) required
+Example 'Your Name' e.g. ‘ToolMinder’ *-
+SE_CREATED_DATE CREATE_DATE ,
+SE_CREATED_BY USER_ID ,
+SE_LAST_UPDATED CREATE_DATE ,
+SE_LAST_UPDATED_BY USER_ID
+*/
+CREATE DOMAIN HOST_NAME VARCHAR(50);
+CREATE DOMAIN DOMAIN_NAME VARCHAR(63)
+CHECK  (VALUE SIMILAR TO '^[A-Za-z0-9][A-Za-z0-9\-\.]*[A-Za-z0-9]$');
+CREATE DOMAIN EMAIL_NAME VARCHAR(50);
+
+CREATE TABLE SYS_EMAIL (
+SE_MAIL_RELAY_HOST HOST_NAME NOT NULL,
+SE_MAIL_FROM_DOMAIN DOMAIN_NAME NOT NULL,
+SE_EMAIL_FROM_NAME EMAIL_NAME NOT NULL,
+SE_CREATED_DATE CREATE_DATE ,
+SE_CREATED_BY USER_ID ,
+SE_LAST_UPDATED CREATE_DATE ,
+SE_LAST_UPDATED_BY USER_ID,
+
+PRIMARY KEY (SE_MAIL_RELAY_HOST));
+
+/*
+ALTER TABLE SYS_EMAIL ADD CONSTRAINT SE_DOMAIN_UNDER CHECK (SE_MAIL_FROM_DOMAIN SIMILAR TO '^[A-Za-z0-9][A-Za-z0-9\-\.]*[A-Za-z0-9]$');
+*/
+

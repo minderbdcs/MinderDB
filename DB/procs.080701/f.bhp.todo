@@ -1,0 +1,33 @@
+report of stock at start of day
+ie get stock at end of day
+get sum of differences during day => at start of day
+
+receipts - yes
+
+despatches - yes
+
+stock adj - no
+
+archived - no
+
+kits made - no
+
+stock at end of day - yes
+
+========================================
+
+archived - status changed to AR
+
+kit make - STKA
+
+
+stock adj
+	via AUOB - shouldn't be used - qty = 1
+	via STPA  ( qty = new qty )
+	via TRIL   and qty <> 0 ( qty = adjustment qty )
+	via STRC  ( qty = new qty )
+	via STOB where qty matches
+	via STOB where issn dosn't exist
+	          creates the issn
+
+

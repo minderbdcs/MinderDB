@@ -1,0 +1,1 @@
+alter table sys_equip add DEFAULT_CARRIER_ID DESPATCH_CARRIER;

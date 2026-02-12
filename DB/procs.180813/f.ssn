@@ -1,0 +1,2 @@
+alter table SSN_DX ADD HOME_WH_ID WH_ID;
+

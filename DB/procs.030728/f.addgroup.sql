@@ -1,0 +1,98 @@
+/*
+ALTER  PROCEDURE ADD_GROUP_DATA (TRN_TYPE VARCHAR(4) ,
+*/
+CREATE PROCEDURE ADD_GROUP_DATA (TRN_TYPE VARCHAR(4) ,
+TRN_DATE TIMESTAMP,
+FIELD_VALUE VARCHAR(30) ,
+TYPE_CODE VARCHAR(40) )
+AS 
+ 
+ 
+  
+
+DECLARE VARIABLE REC_EXIST INTEGER; 
+DECLARE VARIABLE strDESC VARCHAR(50);
+
+BEGIN
+
+   REC_EXIST = 0;
+   /* strDESC = "Created during audit " || :TRN_DATE; */
+   strDESC = FIELD_VALUE;
+   IF (:TRN_TYPE = 'NIO6') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :TYPE_CODE   
+       AND FIELD_CODE = '1'
+       AND DESCRIPTION = :FIELD_VALUE   
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:TYPE_CODE, '1', :FIELD_VALUE); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIO7') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :TYPE_CODE   
+       AND FIELD_CODE = '2'
+       AND DESCRIPTION = :FIELD_VALUE   
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:TYPE_CODE, '2', :FIELD_VALUE); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIO8') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :TYPE_CODE   
+       AND FIELD_CODE = '3'
+       AND DESCRIPTION = :FIELD_VALUE   
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:TYPE_CODE, '3', :FIELD_VALUE); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIO9') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :TYPE_CODE   
+       AND FIELD_CODE = '4'
+       AND DESCRIPTION = :FIELD_VALUE   
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:TYPE_CODE, '4', :FIELD_VALUE); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIOA') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :TYPE_CODE   
+       AND FIELD_CODE = '5'
+       AND DESCRIPTION = :FIELD_VALUE   
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:TYPE_CODE, '5', :FIELD_VALUE); 
+     END
+   END   
+ 
+END ^
+

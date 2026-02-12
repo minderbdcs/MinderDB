@@ -1,0 +1,21 @@
+/*
+373:DECLARE EXTERNAL FUNCTION LTRIMC
+376:ENTRY_POINT 'fudlib_ltrimc' MODULE_NAME 'fudlib';
+508:DECLARE EXTERNAL FUNCTION RTRIMC
+511:ENTRY_POINT 'fudlib_rtrimc' MODULE_NAME 'fudlib';
+623:DECLARE EXTERNAL FUNCTION VLTRIM
+626:ENTRY_POINT 'fudlib_ltrim' MODULE_NAME 'fudlib';
+628:DECLARE EXTERNAL FUNCTION VLTRIMC
+631:ENTRY_POINT 'fudlib_ltrimc' MODULE_NAME 'fudlib';
+648:DECLARE EXTERNAL FUNCTION VRTRIM
+651:ENTRY_POINT 'fudlib_rtrim' MODULE_NAME 'fudlib';
+653:DECLARE EXTERNAL FUNCTION VRTRIMC
+656:ENTRY_POINT 'fudlib_rtrimc' MODULE_NAME 'fudlib';
+*/
+
+drop external function ltrimc;
+drop external function rtrimc;
+drop external function vltrim;
+drop external function vltrimc;
+drop external function vrtrim;
+drop external function vrtrimc;

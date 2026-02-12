@@ -1,0 +1,413 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+/*
+alter table grn    add exported_receipt_date closing_date^
+alter table grn    add exported_receipt_file descr^
+alter table grn_dx add exported_receipt_date closing_date^
+alter table grn_dx add exported_receipt_file descr^
+*/
+/*
+9/8/13 asked to add fields to the exported list
+PO_PALLET_QTY
+PO_CARTON_QTY
+PO_INDIVIDUAL_QTY
+COMPANY_ID
+*/
+
+CREATE OR ALTER PROCEDURE EXPORT_RECEIPT  (
+H_GRN      VARCHAR(15),
+H_ORDER_NO VARCHAR(15),
+IN_ALL VARCHAR(1)) RETURNS (
+GRN_TYPE             VARCHAR(2) ,
+GRN                  VARCHAR(10) ,
+GRN_DATE             TIMESTAMP   ,
+WH_ID                VARCHAR(2) ,
+CARRIER_ID           VARCHAR(10) ,
+AWB_CONSIGNMENT_NO   VARCHAR(20) ,
+COMMENTS             VARCHAR(512) ,
+ORDER_NO             VARCHAR(10) ,
+PO_LINE              VARCHAR(4) ,
+PROD_ID              VARCHAR(30) ,
+PO_LINE_QTY          DOUBLE PRECISION,
+SHORT_DESC           VARCHAR(255) ,
+UOM                  VARCHAR(2) ,
+PO_PALLET_QTY        DOUBLE PRECISION,
+PO_CARTON_QTY        DOUBLE PRECISION,
+PO_INDIVIDUAL_QTY    DOUBLE PRECISION,
+COMPANY_ID           VARCHAR(10) )
+AS 
+DECLARE VARIABLE WK_IN_ALL      VARCHAR(1);
+DECLARE VARIABLE WK_RECORD_ID   INTEGER;
+DECLARE VARIABLE WK_GRN_ID      VARCHAR(10);
+DECLARE VARIABLE WK_FOUND       INTEGER;
+BEGIN 
+   /* start from the pick order 
+      want only despatches not yet exported */
+    WK_IN_ALL = IN_ALL;
+    IF (IN_ALL IS NULL) THEN
+    BEGIN
+       WK_IN_ALL = 'F';
+    END
+    IF (WK_IN_ALL = 'F') THEN
+    BEGIN
+       /* get the next record id */
+       WK_RECORD_ID = GEN_ID(TRANSACTION_ID, 1);    
+       IF (H_GRN IS NULL) THEN
+       BEGIN
+          /* want all grns */
+          IF (H_ORDER_NO IS NULL) THEN
+          BEGIN
+             /* want all orders */
+             FOR SELECT GRN.GRN_TYPE, GRN.GRN, GRN.GRN_DATE, GRN.WH_ID, GRN.CARRIER , GRN.AWB_CONSIGNMENT_NO,
+                 GRN.COMMENTS, GRN.ORDER_NO, GRN.ORDER_LINE_NO, GRN.OTHER_QTY1, GRN.OTHER_QTY2, GRN.OTHER_QTY3
+             FROM GRN  
+             WHERE GRN.EXPORTED_RECEIPT_DATE IS NULL
+             INTO :GRN_TYPE, :GRN, :GRN_DATE, :WH_ID, :CARRIER_ID, :AWB_CONSIGNMENT_NO,
+                  :COMMENTS, :ORDER_NO, :PO_LINE , :PO_PALLET_QTY, :PO_CARTON_QTY, :PO_INDIVIDUAL_QTY 
+             DO
+             BEGIN
+                INSERT INTO TRANSACTIONS_WORK   (RECORD_ID, OBJECT )
+                      VALUES (:WK_RECORD_ID, :GRN);
+                FOR SELECT I1.PROD_ID, SUM(I1.ORIGINAL_QTY) , I1.COMPANY_ID
+                FROM SSN
+                JOIN ISSN I1 ON SSN.SSN_ID = I1.ORIGINAL_SSN
+                WHERE SSN.GRN = :GRN
+                GROUP BY I1.PROD_ID, I1.COMPANY_ID
+                INTO :PROD_ID, :PO_LINE_QTY, :COMPANY_ID
+                DO
+                BEGIN
+                   WK_FOUND = 0;
+                   SELECT 1, SHORT_DESC, ISSUE_UOM
+                   FROM PROD_PROFILE
+                   WHERE PROD_ID = :PROD_ID
+                   AND COMPANY_ID = :COMPANY_ID
+                   INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   IF (WK_FOUND IS NULL) THEN
+                   BEGIN
+                      WK_FOUND = 0;
+                      SELECT 1, SHORT_DESC, ISSUE_UOM
+                      FROM PROD_PROFILE
+                      WHERE PROD_ID = :PROD_ID
+                      AND COMPANY_ID = 'ALL'
+                      INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   END
+                   SUSPEND; 
+                END
+             END
+          END
+          ELSE
+          BEGIN
+             /* want only this order */
+             FOR SELECT GRN.GRN_TYPE, GRN.GRN, GRN.GRN_DATE, GRN.WH_ID, GRN.CARRIER , GRN.AWB_CONSIGNMENT_NO,
+                 GRN.COMMENTS, GRN.ORDER_NO, GRN.ORDER_LINE_NO, GRN.OTHER_QTY1, GRN.OTHER_QTY2, GRN.OTHER_QTY3
+             FROM GRN  
+             WHERE GRN.ORDER_NO   = :H_ORDER_NO 
+             AND   GRN.EXPORTED_RECEIPT_DATE IS NULL
+             INTO :GRN_TYPE, :GRN, :GRN_DATE, :WH_ID, :CARRIER_ID, :AWB_CONSIGNMENT_NO,
+                  :COMMENTS, :ORDER_NO, :PO_LINE , :PO_PALLET_QTY, :PO_CARTON_QTY, :PO_INDIVIDUAL_QTY 
+             DO
+             BEGIN
+                INSERT INTO TRANSACTIONS_WORK   (RECORD_ID, OBJECT )
+                      VALUES (:WK_RECORD_ID, :GRN);
+                FOR SELECT I1.PROD_ID, SUM(I1.ORIGINAL_QTY) , I1.COMPANY_ID
+                FROM SSN
+                JOIN ISSN I1 ON SSN.SSN_ID = I1.ORIGINAL_SSN
+                WHERE SSN.GRN = :GRN
+                GROUP BY I1.PROD_ID, I1.COMPANY_ID
+                INTO :PROD_ID, :PO_LINE_QTY, :COMPANY_ID
+                DO
+                BEGIN
+                   WK_FOUND = 0;
+                   SELECT 1, SHORT_DESC, ISSUE_UOM
+                   FROM PROD_PROFILE
+                   WHERE PROD_ID = :PROD_ID
+                   AND COMPANY_ID = :COMPANY_ID
+                   INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   IF (WK_FOUND IS NULL) THEN
+                   BEGIN
+                      WK_FOUND = 0;
+                      SELECT 1, SHORT_DESC, ISSUE_UOM
+                      FROM PROD_PROFILE
+                      WHERE PROD_ID = :PROD_ID
+                      AND COMPANY_ID = 'ALL'
+                      INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   END
+                   SUSPEND; 
+                END
+             END
+          END
+       END
+       ELSE
+       BEGIN
+          /* want only this grn */
+          IF (H_ORDER_NO IS NULL) THEN
+          BEGIN
+             /* want all orders */
+             FOR SELECT GRN.GRN_TYPE, GRN.GRN, GRN.GRN_DATE, GRN.WH_ID, GRN.CARRIER , GRN.AWB_CONSIGNMENT_NO,
+                 GRN.COMMENTS, GRN.ORDER_NO, GRN.ORDER_LINE_NO, GRN.OTHER_QTY1, GRN.OTHER_QTY2, GRN.OTHER_QTY3
+             FROM GRN  
+             WHERE GRN.GRN  = :H_GRN
+             AND   GRN.EXPORTED_RECEIPT_DATE IS NULL
+             INTO :GRN_TYPE, :GRN, :GRN_DATE, :WH_ID, :CARRIER_ID, :AWB_CONSIGNMENT_NO,
+                  :COMMENTS, :ORDER_NO, :PO_LINE , :PO_PALLET_QTY, :PO_CARTON_QTY, :PO_INDIVIDUAL_QTY 
+             DO
+             BEGIN
+                INSERT INTO TRANSACTIONS_WORK   (RECORD_ID, OBJECT )
+                      VALUES (:WK_RECORD_ID, :GRN);
+                FOR SELECT I1.PROD_ID, SUM(I1.ORIGINAL_QTY) , I1.COMPANY_ID
+                FROM SSN
+                JOIN ISSN I1 ON SSN.SSN_ID = I1.ORIGINAL_SSN
+                WHERE SSN.GRN = :GRN
+                GROUP BY I1.PROD_ID, I1.COMPANY_ID
+                INTO :PROD_ID, :PO_LINE_QTY, :COMPANY_ID
+                DO
+                BEGIN
+                   WK_FOUND = 0;
+                   SELECT 1, SHORT_DESC, ISSUE_UOM
+                   FROM PROD_PROFILE
+                   WHERE PROD_ID = :PROD_ID
+                   AND COMPANY_ID = :COMPANY_ID
+                   INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   IF (WK_FOUND IS NULL) THEN
+                   BEGIN
+                      WK_FOUND = 0;
+                      SELECT 1, SHORT_DESC, ISSUE_UOM
+                      FROM PROD_PROFILE
+                      WHERE PROD_ID = :PROD_ID
+                      AND COMPANY_ID = 'ALL'
+                      INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   END
+                   SUSPEND; 
+                END
+             END
+          END
+          ELSE
+          BEGIN
+             /* want only this order */
+             FOR SELECT GRN.GRN_TYPE, GRN.GRN, GRN.GRN_DATE, GRN.WH_ID, GRN.CARRIER , GRN.AWB_CONSIGNMENT_NO,
+                 GRN.COMMENTS, GRN.ORDER_NO, GRN.ORDER_LINE_NO, GRN.OTHER_QTY1, GRN.OTHER_QTY2, GRN.OTHER_QTY3
+             FROM GRN  
+             WHERE GRN.GRN  = :H_GRN
+             AND   GRN.ORDER_NO   = :H_ORDER_NO 
+             AND   GRN.EXPORTED_RECEIPT_DATE IS NULL
+             INTO :GRN_TYPE, :GRN, :GRN_DATE, :WH_ID, :CARRIER_ID, :AWB_CONSIGNMENT_NO,
+                  :COMMENTS, :ORDER_NO, :PO_LINE , :PO_PALLET_QTY, :PO_CARTON_QTY, :PO_INDIVIDUAL_QTY 
+             DO
+             BEGIN
+                INSERT INTO TRANSACTIONS_WORK   (RECORD_ID, OBJECT )
+                      VALUES (:WK_RECORD_ID, :GRN);
+                FOR SELECT I1.PROD_ID, SUM(I1.ORIGINAL_QTY) , I1.COMPANY_ID
+                FROM SSN
+                JOIN ISSN I1 ON SSN.SSN_ID = I1.ORIGINAL_SSN
+                WHERE SSN.GRN = :GRN
+                GROUP BY I1.PROD_ID, I1.COMPANY_ID
+                INTO :PROD_ID, :PO_LINE_QTY, :COMPANY_ID
+                DO
+                BEGIN
+                   WK_FOUND = 0;
+                   SELECT 1, SHORT_DESC, ISSUE_UOM
+                   FROM PROD_PROFILE
+                   WHERE PROD_ID = :PROD_ID
+                   AND COMPANY_ID = :COMPANY_ID
+                   INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   IF (WK_FOUND IS NULL) THEN
+                   BEGIN
+                      WK_FOUND = 0;
+                      SELECT 1, SHORT_DESC, ISSUE_UOM
+                      FROM PROD_PROFILE
+                      WHERE PROD_ID = :PROD_ID
+                      AND COMPANY_ID = 'ALL'
+                      INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   END
+                   SUSPEND; 
+                END
+             END
+          END
+       END
+       /* now update the grns involved  */
+       /* ================================================================================================ */
+       FOR SELECT OBJECT FROM TRANSACTIONS_WORK
+           WHERE RECORD_ID = :WK_RECORD_ID
+           GROUP BY OBJECT
+           INTO :WK_GRN_ID
+       DO
+       BEGIN
+          UPDATE GRN 
+          SET EXPORTED_RECEIPT_DATE = 'NOW'
+          WHERE GRN  = :WK_GRN_ID;
+       END
+    END
+    ELSE
+    BEGIN
+       /* wk_in_all is T  so want all records */
+       /* ======================================================================================================== */
+       IF (H_GRN IS NULL) THEN
+       BEGIN
+          /* want all grns */
+          IF (H_ORDER_NO IS NULL) THEN
+          BEGIN
+             /* want all orders */
+             FOR SELECT GRN.GRN_TYPE, GRN.GRN, GRN.GRN_DATE, GRN.WH_ID, GRN.CARRIER , GRN.AWB_CONSIGNMENT_NO,
+                 GRN.COMMENTS, GRN.ORDER_NO, GRN.ORDER_LINE_NO, GRN.OTHER_QTY1, GRN.OTHER_QTY2, GRN.OTHER_QTY3
+             FROM GRN  
+             INTO :GRN_TYPE, :GRN, :GRN_DATE, :WH_ID, :CARRIER_ID, :AWB_CONSIGNMENT_NO,
+                  :COMMENTS, :ORDER_NO, :PO_LINE , :PO_PALLET_QTY, :PO_CARTON_QTY, :PO_INDIVIDUAL_QTY 
+             DO
+             BEGIN
+                FOR SELECT I1.PROD_ID, SUM(I1.ORIGINAL_QTY) , I1.COMPANY_ID
+                FROM SSN
+                JOIN ISSN I1 ON SSN.SSN_ID = I1.ORIGINAL_SSN
+                WHERE SSN.GRN = :GRN
+                GROUP BY I1.PROD_ID, I1.COMPANY_ID
+                INTO :PROD_ID, :PO_LINE_QTY, :COMPANY_ID
+                DO
+                BEGIN
+                   WK_FOUND = 0;
+                   SELECT 1, SHORT_DESC, ISSUE_UOM
+                   FROM PROD_PROFILE
+                   WHERE PROD_ID = :PROD_ID
+                   AND COMPANY_ID = :COMPANY_ID
+                   INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   IF (WK_FOUND IS NULL) THEN
+                   BEGIN
+                      WK_FOUND = 0;
+                      SELECT 1, SHORT_DESC, ISSUE_UOM
+                      FROM PROD_PROFILE
+                      WHERE PROD_ID = :PROD_ID
+                      AND COMPANY_ID = 'ALL'
+                      INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   END
+                   SUSPEND; 
+                END
+             END
+          END
+          ELSE
+          BEGIN
+             /* want only this order */
+             FOR SELECT GRN.GRN_TYPE, GRN.GRN, GRN.GRN_DATE, GRN.WH_ID, GRN.CARRIER , GRN.AWB_CONSIGNMENT_NO,
+                 GRN.COMMENTS, GRN.ORDER_NO, GRN.ORDER_LINE_NO, GRN.OTHER_QTY1, GRN.OTHER_QTY2, GRN.OTHER_QTY3
+             FROM GRN  
+             WHERE GRN.ORDER_NO   = :H_ORDER_NO 
+             INTO :GRN_TYPE, :GRN, :GRN_DATE, :WH_ID, :CARRIER_ID, :AWB_CONSIGNMENT_NO,
+                  :COMMENTS, :ORDER_NO, :PO_LINE , :PO_PALLET_QTY, :PO_CARTON_QTY, :PO_INDIVIDUAL_QTY 
+             DO
+             BEGIN
+                FOR SELECT I1.PROD_ID, SUM(I1.ORIGINAL_QTY) , I1.COMPANY_ID
+                FROM SSN
+                JOIN ISSN I1 ON SSN.SSN_ID = I1.ORIGINAL_SSN
+                WHERE SSN.GRN = :GRN
+                GROUP BY I1.PROD_ID, I1.COMPANY_ID
+                INTO :PROD_ID, :PO_LINE_QTY, :COMPANY_ID
+                DO
+                BEGIN
+                   WK_FOUND = 0;
+                   SELECT 1, SHORT_DESC, ISSUE_UOM
+                   FROM PROD_PROFILE
+                   WHERE PROD_ID = :PROD_ID
+                   AND COMPANY_ID = :COMPANY_ID
+                   INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   IF (WK_FOUND IS NULL) THEN
+                   BEGIN
+                      WK_FOUND = 0;
+                      SELECT 1, SHORT_DESC, ISSUE_UOM
+                      FROM PROD_PROFILE
+                      WHERE PROD_ID = :PROD_ID
+                      AND COMPANY_ID = 'ALL'
+                      INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   END
+                   SUSPEND; 
+                END
+             END
+          END
+       END
+       ELSE
+       BEGIN
+          /* want only this grn */
+          IF (H_ORDER_NO IS NULL) THEN
+          BEGIN
+             /* want all orders */
+             FOR SELECT GRN.GRN_TYPE, GRN.GRN, GRN.GRN_DATE, GRN.WH_ID, GRN.CARRIER , GRN.AWB_CONSIGNMENT_NO,
+                 GRN.COMMENTS, GRN.ORDER_NO, GRN.ORDER_LINE_NO, GRN.OTHER_QTY1, GRN.OTHER_QTY2, GRN.OTHER_QTY3
+             FROM GRN  
+             WHERE GRN.GRN  = :H_GRN
+             INTO :GRN_TYPE, :GRN, :GRN_DATE, :WH_ID, :CARRIER_ID, :AWB_CONSIGNMENT_NO,
+                  :COMMENTS, :ORDER_NO, :PO_LINE , :PO_PALLET_QTY, :PO_CARTON_QTY, :PO_INDIVIDUAL_QTY 
+             DO
+             BEGIN
+                FOR SELECT I1.PROD_ID, SUM(I1.ORIGINAL_QTY) , I1.COMPANY_ID
+                FROM SSN
+                JOIN ISSN I1 ON SSN.SSN_ID = I1.ORIGINAL_SSN
+                WHERE SSN.GRN = :GRN
+                GROUP BY I1.PROD_ID, I1.COMPANY_ID
+                INTO :PROD_ID, :PO_LINE_QTY, :COMPANY_ID
+                DO
+                BEGIN
+                   WK_FOUND = 0;
+                   SELECT 1, SHORT_DESC, ISSUE_UOM
+                   FROM PROD_PROFILE
+                   WHERE PROD_ID = :PROD_ID
+                   AND COMPANY_ID = :COMPANY_ID
+                   INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   IF (WK_FOUND IS NULL) THEN
+                   BEGIN
+                      WK_FOUND = 0;
+                      SELECT 1, SHORT_DESC, ISSUE_UOM
+                      FROM PROD_PROFILE
+                      WHERE PROD_ID = :PROD_ID
+                      AND COMPANY_ID = 'ALL'
+                      INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   END
+                   SUSPEND; 
+                END
+             END
+          END
+          ELSE
+          BEGIN
+             /* want only this order */
+             FOR SELECT GRN.GRN_TYPE, GRN.GRN, GRN.GRN_DATE, GRN.WH_ID, GRN.CARRIER , GRN.AWB_CONSIGNMENT_NO,
+                 GRN.COMMENTS, GRN.ORDER_NO, GRN.ORDER_LINE_NO, GRN.OTHER_QTY1, GRN.OTHER_QTY2, GRN.OTHER_QTY3
+             FROM GRN  
+             WHERE GRN.GRN  = :H_GRN
+             AND   GRN.ORDER_NO   = :H_ORDER_NO 
+             INTO :GRN_TYPE, :GRN, :GRN_DATE, :WH_ID, :CARRIER_ID, :AWB_CONSIGNMENT_NO,
+                  :COMMENTS, :ORDER_NO, :PO_LINE , :PO_PALLET_QTY, :PO_CARTON_QTY, :PO_INDIVIDUAL_QTY 
+             DO
+             BEGIN
+                FOR SELECT I1.PROD_ID, SUM(I1.ORIGINAL_QTY) , I1.COMPANY_ID
+                FROM SSN
+                JOIN ISSN I1 ON SSN.SSN_ID = I1.ORIGINAL_SSN
+                WHERE SSN.GRN = :GRN
+                GROUP BY I1.PROD_ID, I1.COMPANY_ID
+                INTO :PROD_ID, :PO_LINE_QTY, :COMPANY_ID
+                DO
+                BEGIN
+                   WK_FOUND = 0;
+                   SELECT 1, SHORT_DESC, ISSUE_UOM
+                   FROM PROD_PROFILE
+                   WHERE PROD_ID = :PROD_ID
+                   AND COMPANY_ID = :COMPANY_ID
+                   INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   IF (WK_FOUND IS NULL) THEN
+                   BEGIN
+                      WK_FOUND = 0;
+                      SELECT 1, SHORT_DESC, ISSUE_UOM
+                      FROM PROD_PROFILE
+                      WHERE PROD_ID = :PROD_ID
+                      AND COMPANY_ID = 'ALL'
+                      INTO :WK_FOUND, :SHORT_DESC, :UOM;
+                   END
+                   SUSPEND; 
+                END
+             END
+          END
+       END
+    END
+END ^
+
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

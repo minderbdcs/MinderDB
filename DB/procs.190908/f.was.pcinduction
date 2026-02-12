@@ -1,0 +1,58 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+/*
+CREATE OR ALTER PROCEDURE PC_INDUCTION_FORM (
+  QTY INTEGER,
+  PERSON_ID VARCHAR(10)
+) RETURNS (
+  RES INTEGER
+) AS        
+*/
+
+CREATE OR ALTER PROCEDURE PC_INDUCTION_FORM (
+  QTY INTEGER,
+  PERSON_ID PERSON
+) RETURNS (
+  RES INTEGER
+) AS        
+  
+  DECLARE VARIABLE iGEN INTEGER;    
+  DECLARE VARIABLE sFilePath VARCHAR(70);  
+  DECLARE VARIABLE sPrinterName CHAR(2);   
+  DECLARE VARIABLE sForm VARCHAR(256);
+  DECLARE VARIABLE sFIRST_FORM_ID VARCHAR(8);  
+       
+BEGIN 
+  
+  sPrinterName = 'PD';
+  
+  /* Need the directory for this label set */
+  SELECT WORKING_DIRECTORY FROM SYS_EQUIP 
+  WHERE DEVICE_ID = :sPrinterName
+  INTO :sFilePath;
+  
+  sFilePath = sFilePath || 'Induction.txt';         
+  
+  /* Get the first Form ID */
+  EXECUTE PROCEDURE GET_FORM_NO RETURNING_VALUES :sFIRST_FORM_ID;
+  
+  /* Resever Form ID with Qty */
+  iGEN = GEN_ID(FORM_NO_GEN, :QTY-1);
+           
+  
+  /* Write data to file */
+  sForm = DQUOTEDSTR(:QTY) || ',' ||
+          DQUOTEDSTR(:sFIRST_FORM_ID) || ',' ||
+          DQUOTEDSTR(:PERSON_ID) || ',' ||
+          DQUOTEDSTR(:sPrinterName);
+  
+  RES = FILE_WRITELN(:sFilePath, :sForm);    
+  
+END^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

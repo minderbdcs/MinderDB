@@ -1,0 +1,23 @@
+
+warehouse add timezone, time from utc, in daylight saving
+needs latitude and longtitude
+use google maps to get the city + country lookup to find the latitude and longitude
+try out pytzwhere
+
+ok this is working
+========================================
+
+glen wants transactions to undo a product_cond_status entry
+nxap nxop nxcp nxdp nxep
+
+done use the NXAP NXOP NXCP NXDP NXEP
+
+========================================
+tifs 
+adding of pick_item_address
+has a primary key on 
+pick_order
+pick_label_no
+addr_type
+in their import of two copys of the same order at the same time get unique constraint errors.
+

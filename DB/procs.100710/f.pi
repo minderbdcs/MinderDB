@@ -1,0 +1,2 @@
+alter domain unit_price type numeric(15,4);
+

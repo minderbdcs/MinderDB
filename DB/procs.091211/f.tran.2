@@ -1,0 +1,27 @@
+update transactions_type set soap_method='PrintCoverLetterSupplierList',soap_procedure='$this->sendPRCL' where trn_type='PRCL';
+update transactions_type set soap_method='GetContactInstanceLiteratureOrderDetail',soap_procedure='$this->sendGCLO' where trn_type='GCLO';
+update transactions_type set soap_method='GetContactInstanceLiteratureOrderDetail',soap_procedure='$this->sendGCLM' where trn_type='GCLM';
+update transactions_type set soap_method='UpdateContactInstanceStatus',soap_procedure='$this->sendUCIS' where trn_type='UCIS';
+update transactions_type set soap_method='UpdateLiteratureAvailableStockLevel',soap_procedure='$this->sendUASL' where trn_type='UASL';
+update transactions_type set soap_method='GetLiteraturePrePackComposition',soap_procedure='$this->sendGLPP' where trn_type='GLPP';
+update transactions_type set soap_method='GetLiteratureDetail',soap_procedure='$this->sendGLTD' where trn_type='GLTD';
+update transactions_type set soap_method='GetPickingListDetail',soap_procedure='$this->sendGPLD' where trn_type='GPLD';
+update transactions_type set soap_method='GetCampaignDetail',soap_procedure='$this->sendGCPD' where trn_type='GCPD';
+update transactions_type set soap_method='GetCampaignContactInstanceDetail',soap_procedure='$this->sendGCID' where trn_type='GCID';
+update transactions_type set soap_method='GetSpecialMailoutDetail',soap_procedure='$this->sendGSMD' where trn_type='GSMD';
+update transactions_type set soap_method='GetContactInstanceNameAndAddressDetail',soap_procedure='$this->sendGCNA' where trn_type='GCNA';
+/*
+PRCL  0 PrintCoverLetterSupplierList
+GCLO  1 GetContactInstanceLiteratureOrderDetail
+GCLM = GCLO but for the revised data
+      1 GetContactInstanceLiteratureOrderDetail
+UCIS  2 UpdateContactInstanceStatus
+UASL  3 UpdateLiteratureAvailableStockLevel
+GLPP  4 GetLiteraturePrePackComposition
+GLTD  5 GetLiteratureDetail
+GPLD  6 GetPickingListDetail
+GCPD  7 GetCampaignDetail
+GCID  8 GetCampaignContactInstanceDetail
+GSMD  9 GetSpecialMailoutDetail
+GCNA 10 GetContactInstanceNameAndAddressDetail
+*/

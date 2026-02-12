@@ -1,0 +1,27 @@
+alter table ssn_group add field23 field;
+alter table ssn_group add field24 field;
+alter table ssn_group add field25 field;
+alter table ssn_group add field26 field;
+alter table ssn_group add field27 field;
+alter table ssn_group add field28 field;
+alter table ssn_group add field29 field;
+alter table ssn_group add field30 field;
+
+alter table ssn_group add dd_other23 truefalse;
+alter table ssn_group add dd_other24 truefalse;
+alter table ssn_group add dd_other25 truefalse;
+alter table ssn_group add dd_other26 truefalse;
+alter table ssn_group add dd_other27 truefalse;
+alter table ssn_group add dd_other28 truefalse;
+alter table ssn_group add dd_other29 truefalse;
+alter table ssn_group add dd_other30 truefalse;
+
+alter table ssn_group add rm_other23 truefalse;
+alter table ssn_group add rm_other24 truefalse;
+alter table ssn_group add rm_other25 truefalse;
+alter table ssn_group add rm_other26 truefalse;
+alter table ssn_group add rm_other27 truefalse;
+alter table ssn_group add rm_other28 truefalse;
+alter table ssn_group add rm_other29 truefalse;
+alter table ssn_group add rm_other30 truefalse;
+

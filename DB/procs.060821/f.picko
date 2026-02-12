@@ -1,0 +1,2 @@
+alter table pick_order add pick_order_started timestamp;
+

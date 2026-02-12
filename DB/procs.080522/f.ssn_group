@@ -1,0 +1,11 @@
+alter table ssn_group add field_ssn_type field;
+alter table ssn_group add field_generic field;
+alter table ssn_group add field_brand field;
+alter table ssn_group add field_model field;
+alter table ssn_group add field_sub_type field;
+
+alter table ssn_type add field_ssn_type field;
+alter table ssn_type add field_generic field;
+alter table ssn_type add field_brand field;
+alter table ssn_type add field_model field;
+alter table ssn_type add field_sub_type field;

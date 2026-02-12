@@ -1,0 +1,2 @@
+alter table pick_order add 
+        LABEL_PRINTED_DATE LABEL_DATE;

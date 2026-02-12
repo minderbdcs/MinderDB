@@ -1,0 +1,11 @@
+update person set company_id=null where company_id='';
+commit;
+alter table person alter company_id position 3;
+
+update person set old_company_id = company_id where company_id not in (select company_id from company);
+
+
+insert into company(company_id,name) select person.company_id,person.company_id from  person  where person.company_id not in (select company2.company_id from company company2) group by person.company_id;
+
+commit;
+alter table PERSON add  CONSTRAINT PERSON_FK_COMPANY foreign key (COMPANY_ID) references COMPANY(COMPANY_ID);

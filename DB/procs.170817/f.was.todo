@@ -1,0 +1,10 @@
+
+========================================
+tifs 
+adding of pick_item_address
+has a primary key on 
+pick_order
+pick_label_no
+addr_type
+in their import of two copys of the same order at the same time get unique constraint errors.
+

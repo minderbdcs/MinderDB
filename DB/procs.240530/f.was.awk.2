@@ -1,0 +1,24 @@
+BEGIN { 
+tc1="update %s set mirror_data=last_update_date where mirror_data is null;";
+tc2="update %s set mirror_data='NOW' where mirror_data is null;";
+}
+{
+    tb = $1;
+
+    printf( tc1 , tb, tb);
+    print "";
+    printf( tc2 , tb, tb);
+    print "";
+    
+
+#CREATE OR ALTER TRIGGER MOD_%s_MIRROR FOR %s
+#ACTIVE BEFORE UPDATE POSITION 4 
+#AS
+#BEGIN
+#   IF ( OLD.MIRROR_DATA IS NOT NULL) THEN
+#   BEGIN
+#      NEW.MIRROR_DATA = NULL;
+#   END
+#
+#END ^
+}

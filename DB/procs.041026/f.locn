@@ -1,0 +1,8 @@
+/*
+select substr(wh_id || ' ' || locn_id || ' ' || locn_name,1,50) from location where len(locn_name) > 35 ;
+select substr(wh_id || ' ' || locn_id || ' ' || locn_name,1,50),
+len(substr(wh_id || ' ' || locn_id || ' ' || locn_name,1,50))
+ from location where len(locn_name) > 35 ;
+*/
+update location set locn_name =  alltrim(substr(wh_id || ' ' || locn_id || ' ' || locn_name,1,50))  where len(locn_name) > 35 ;
+update location set locn_name =  alltrim(wh_id || ' ' || locn_id || ' ' || locn_name)  where len(locn_name) < 36 ;

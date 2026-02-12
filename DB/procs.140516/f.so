@@ -1,0 +1,9 @@
+alter table pick_order add P_EMAIL    EMAIL;
+alter table pick_order add D_EMAIL    EMAIL;
+alter table pick_order add S_EMAIL    EMAIL;
+alter table pick_order_dx add P_EMAIL    EMAIL;
+alter table pick_order_dx add D_EMAIL    EMAIL;
+alter table pick_order_dx add S_EMAIL    EMAIL;
+alter table pick_order_item_temp add H_P_EMAIL    EMAIL;
+alter table pick_order_item_temp add H_D_EMAIL    EMAIL;
+alter table pick_order_item_temp add H_S_EMAIL    EMAIL;

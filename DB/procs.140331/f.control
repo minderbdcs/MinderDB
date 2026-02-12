@@ -1,0 +1,3 @@
+alter table control add RETURN_SSN_STATUS STATUS;
+alter table control add RETURN_PROD_STATUS STATUS;
+update control set return_prod_status='TS';

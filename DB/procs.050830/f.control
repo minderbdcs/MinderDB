@@ -1,0 +1,3 @@
+alter table control add PICK_CANCEL_SSN_STATUS CHAR(2);
+update control set PICK_CANCEL_SSN_STATUS='PA';
+

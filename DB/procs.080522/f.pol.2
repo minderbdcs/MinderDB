@@ -1,0 +1,20 @@
+/*
+CREATE DOMAIN PO_LINE_QTY_F AS DOUBLE PRECISION;
+*/
+
+/*
+alter table purchase_order_line add po_line_customer person;
+alter table purchase_order_line add po_line_description notes ;
+alter table purchase_order_line add po_line_legacy_status value_tf default 'T';
+alter table purchase_order_line add po_line_options  code_255;
+alter table purchase_order_line add po_line_qty_f po_line_qty_f;
+alter table purchase_order_line add po_line_lotno_list notes;
+*/
+
+alter table purchase_order_line drop po_line_legacy_status ;
+alter table purchase_order_line add po_line_status_tf value_tf default 'T';
+
+alter table purchase_order_line drop po_line_customer ;
+alter table purchase_order_line add po_line_customer_id person;
+alter table purchase_order_line add po_line_customer_name varchar(40);
+

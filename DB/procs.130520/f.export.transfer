@@ -1,0 +1,356 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+/* want summary by wh_id of prod_id transferred given a start date time and end date time  a null end date will mean until now
+or a starting  ending record nos a null ending record id will mean until end
+allow restriction by user , device
+   ie 1	to putaway - this is not a change of WH_ID but a change in LOCATION.MOVE_STAT
+      2    despatch exit XD
+      3    disposal ie XX
+      4    must ignore items in SY as there are transactions part way done
+for putaway either use 
+TROL A or W and location has move_stat RC
+TRIL A or W  location has move_stat ST
+direct delivery
+PKOL and from location have move_stat RC
+
+Glen suggested using the transactions_archive table
+in TROL we have the ISSN SSN_ID
+   TRIL we have the ISSN SSN_ID
+   PKOL we have the parent ISSN SSN_ID
+   TRLO we do not - currently writing to ssn_hist
+   TRLI we do not - currently writing to ssn_hist
+   DSDX we do not - currently writing to ssn_hist and issn
+20-05-2013
+passed back fields become record date trn type trn code wh locn company prod qty errortext
+
+*/
+/* Glen wants to have the trn_code, trn_type in the passed back values */
+
+CREATE OR ALTER PROCEDURE EXPORT_TRANSFER  (
+IN_START_DATE      TIMESTAMP  ,
+IN_END_DATE        TIMESTAMP  ,
+IN_START_RECORD_ID INTEGER  ,
+IN_END_RECORD_ID   INTEGER  ) RETURNS (
+RECORD_ID            INTEGER ,
+TRN_DATE             TIMESTAMP ,
+TRN_TYPE             VARCHAR(4),
+TRN_CODE             CHAR(1),
+WH_ID                VARCHAR(2) ,
+LOCN_ID              VARCHAR(10) ,
+COMPANY_ID           VARCHAR(10),
+PROD_ID              VARCHAR(30) ,
+QTY                  INTEGER     ,
+ERROR_TEXT           VARCHAR(255) )
+AS 
+DECLARE VARIABLE WK_RECORD_ID   INTEGER;
+BEGIN 
+   /* =================================================================================================== */
+   /* start with dsdx transactions */
+    IF (IN_START_DATE IS NULL) THEN
+    BEGIN
+       IF (IN_START_RECORD_ID IS NULL) THEN
+       BEGIN
+          WH_ID = NULL;
+          PROD_ID = NULL;
+          COMPANY_ID = NULL;
+          QTY = NULL;
+          ERROR_TEXT = 'No Start Record ID or Start Date specified';
+          SUSPEND;
+       END
+       ELSE
+       BEGIN
+          IF (IN_END_RECORD_ID IS NULL) THEN
+          BEGIN
+             IN_END_RECORD_ID = GEN_ID(TRANSACTION_ID, 0);
+          END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE = 'GRNV' AND TRN_CODE = 'i'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE = 'GRNV' AND TRN_CODE = 'i'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                SUSPEND;
+             END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE IN ('TRLO')  AND TRN_CODE = 'I'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE IN ('TRLO')  AND TRN_CODE = 'I'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                QTY = 0 - QTY;
+                SUSPEND;
+             END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE IN ('TROL')  AND TRN_CODE = 'I'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE IN ('TROL')  AND TRN_CODE = 'I'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                QTY = 0 - QTY;
+                SUSPEND;
+             END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE IN ('TRIL')  AND TRN_CODE = 'I'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE IN ('TRIL')  AND TRN_CODE = 'I'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                SUSPEND;
+             END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE IN ('TRLI')  AND TRN_CODE = 'I'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE IN ('TRLI')  AND TRN_CODE = 'I'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                SUSPEND;
+             END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE = 'PKOL' AND TRN_CODE = 'i'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE = 'PKOL' AND TRN_CODE = 'i'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                QTY = 0 - QTY;
+                SUSPEND;
+             END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE = 'DSDX' AND TRN_CODE = 'I'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.RECORD_ID BETWEEN :IN_START_RECORD_ID AND :IN_END_RECORD_ID
+             AND T1.TRN_TYPE = 'DSDX' AND TRN_CODE = 'I'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                SUSPEND;
+             END
+       END
+    END
+    ELSE
+    BEGIN
+       IF (IN_END_DATE IS NULL) THEN
+       BEGIN
+          IN_END_DATE = MAXTIME('TODAY');
+       END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE = 'GRNV' AND TRN_CODE = 'i'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE = 'GRNV' AND TRN_CODE = 'i'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                SUSPEND;
+             END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE IN ('TRLO')  AND TRN_CODE = 'I'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE IN ('TRLO')  AND TRN_CODE = 'I'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                QTY = 0 - QTY;
+                SUSPEND;
+             END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE IN ('TROL')  AND TRN_CODE = 'I'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE IN ('TROL')  AND TRN_CODE = 'I'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                QTY = 0 - QTY;
+                SUSPEND;
+             END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE IN ('TRIL')  AND TRN_CODE = 'I'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE IN ('TRIL')  AND TRN_CODE = 'I'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                SUSPEND;
+             END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE IN ('TRLI')  AND TRN_CODE = 'I'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE IN ('TRLI')  AND TRN_CODE = 'I'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                SUSPEND;
+             END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE = 'PKOL' AND TRN_CODE = 'i'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE = 'PKOL' AND TRN_CODE = 'i'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                QTY = 0 - QTY;
+                SUSPEND;
+             END
+/*
+             FOR SELECT T1.WH_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE = 'DSDX' AND TRN_CODE = 'I'
+             GROUP BY T1.WH_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :WH_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+*/
+             FOR SELECT T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID , T1.COMPANY_ID, SUM(T1.QTY) , T1.TRN_TYPE, T1.TRN_CODE 
+             FROM TRANSACTIONS_ARCHIVE T1  
+             WHERE T1.TRN_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.TRN_TYPE = 'DSDX' AND TRN_CODE = 'I'
+             GROUP BY T1.RECORD_ID, T1.TRN_DATE, T1.WH_ID, T1.LOCN_ID, T1.PROD_ID, T1.COMPANY_ID, T1.TRN_TYPE, T1.TRN_CODE
+             INTO :RECORD_ID, :TRN_DATE, :WH_ID, :LOCN_ID, :PROD_ID, :COMPANY_ID, :QTY , :TRN_TYPE, :TRN_CODE
+             DO
+             BEGIN
+                ERROR_TEXT = '';
+                SUSPEND;
+             END
+    END
+
+END ^
+
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

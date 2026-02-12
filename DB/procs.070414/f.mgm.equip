@@ -1,0 +1,2 @@
+insert into sys_equip(device_id,device_type,ip_address,equipment_description_code,operating_zone) values('R2','LR','UNKNOWN','2nd Scanner for Conveyor','LS');
+insert into sys_equip(device_id,device_type,ip_address,equipment_description_code,operating_zone) values('R3','LR','UNKNOWN','2nd Scanner for Conveyor','LL');

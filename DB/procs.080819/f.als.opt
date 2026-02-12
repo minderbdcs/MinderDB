@@ -1,0 +1,7 @@
+select * from options where group_code starting 'LOAN_DA';
+update options set code='D' where group_code='LOAN_DAYS' and code='1';
+update options set code='W' where group_code='LOAN_DAYS' and code='7';
+update options set code='M' where group_code='LOAN_DAYS' and code='31';
+update options set code='Q' where group_code='LOAN_DAYS' and code='90';
+update options set code='Y' where group_code='LOAN_DAYS' and code='365';
+select * from options where group_code starting 'LOAN_DA';

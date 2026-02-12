@@ -1,0 +1,6 @@
+/*
+773:DECLARE EXTERNAL FUNCTION VPAD
+776 ENTRY_POINT 'fudlib_pad' MODULE_NAME 'fudlib';
+*/
+
+drop external function vpad;

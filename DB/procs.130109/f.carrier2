@@ -1,0 +1,1 @@
+alter table carrier alter ftp_ip_address type descr;

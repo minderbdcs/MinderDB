@@ -1,0 +1,4 @@
+
+update options set description='OP' where group_code = 'CMPPKHELD' and code = 'MM|AU';
+update options set description='OP' where group_code = 'CMPPKHELD' and code = 'MM|NZ';
+update options set description='OP' where group_code = 'CMPPKHELD' and code = 'BW|NZ';

@@ -1,0 +1,21 @@
+
+/*
+archive method is 'DT' a date based archival using the archival field
+                  'AR' take all - eg the log table
+                  'DQ' using a date query and the query in the archive query 
+archive status is 'OP' for do the archive
+archive field is the field in the table to compare for the archiving
+archive days is the number of days to keep
+*/
+
+DROP TABLE ARCHIVE_LAYOUT;
+
+CREATE TABLE ARCHIVE_LAYOUT (
+        SEQUENCE INTEGER DEFAULT 1,
+        ARCHIVE_TABLE CODE NOT NULL,
+        ARCHIVE_FIELD CODE,
+        ARCHIVE_METHOD STATUS,
+        ARCHIVE_STATUS STATUS,
+        ARCHIVE_QUERY VARCHAR(1024),
+        ARCHIVE_DAYS INTEGER);
+

@@ -1,0 +1,65 @@
+        IF (WK_DO_SALE_CHANNEL = 'T') THEN
+        BEGIN
+                          FOR   SELECT PI.PROD_ID ,SUM(PI.PICK_ORDER_QTY - COALESCE(PI.PICKED_QTY,0)), PO.OTHER2, PO.WH_ID
+                                FROM PICK_ORDER PO 
+                                JOIN PICK_ITEM PI ON PI.PICK_ORDER = PO.PICK_ORDER
+                                WHERE PO.PICK_ORDER = :WK_ORDER 
+                                AND PI.PICK_LINE_STATUS = 'AL'
+                                AND PI.DEVICE_ID = :WK_DEVICE 
+                                AND (PI.PROD_ID IS NOT NULL)
+                                GROUP BY PI.PROD_ID, PO.OTHER2, PO.WH_ID
+                                INTO :WK_PI_PROD_ID, :WK_PI_QTY, :WK_PO_SALE_CHANNEL, :WK_PO_WH_ID
+                          DO
+                          BEGIN
+                             IF (WK_PI_QTY IS NULL) THEN
+                             BEGIN
+                                WK_PI_QTY = 0;
+                             END
+                             IF (WK_PI_PROD_ID = '') THEN
+                             BEGIN
+                                WK_PI_PROD_ID = NULL;
+                             END
+                             IF (WK_PO_SALE_CHANNEL = '') THEN
+                             BEGIN
+                                WK_PO_SALE_CHANNEL = NULL;
+                             END
+                             IF ((WK_PI_QTY > 0) AND (WK_PI_PROD_ID IS NOT NULL) AND (WK_PO_SALE_CHANNEL IS NOT NULL)) THEN
+                             BEGIN
+                                WK_PR_RECORD_ID = NULL;
+                                SELECT RECORD_ID
+                                FROM PROD_RESERVATION
+                                WHERE PR_PROD_ID = :WK_PI_PROD_ID
+                                AND   PR_SALE_CHANNEL_CODE = :WK_PO_SALE_CHANNEL
+                                AND   PR_RESERVATION_STATUS = 'OP'
+                                INTO :WK_PR_RECORD_ID;
+                                IF (WK_PR_RECORD_ID IS NOT NULL) THEN
+                                BEGIN
+                                   WK_PSUR_REFERENCE = WK_PO_SALE_CHANNEL || '|' || WK_PR_RECORD_ID || '|';
+                                   WK_PSUR_QTY = 0 - WK_PI_QTY;
+                                   EXECUTE PROCEDURE ADD_TRAN(
+                                      :WK_PO_WH_ID,
+                                      '',
+                                      :WK_PI_PROD_ID,
+                                      'PSUR',
+                                      'A',
+                                      :WK_DATE,
+                                      :WK_PSUR_REFERENCE,
+                                      :WK_PSUR_QTY,
+                                      'F',
+                                      '',
+                                      'MASTER',
+                                      0,
+                                      '',
+                                      'SSSSSSSSS',
+                                      :WK_USER,
+                                      :WK_DEVICE);
+                                      /* have the adjustment qty passed in the qty field */
+                                      /* have the product in the object field */
+                                      /* have the channel code in the reference field */
+                                      /* have the record_id passed in the reference field */
+                                END
+                             END
+                          END
+                       END
+                       /* ================================================================== */
+        END

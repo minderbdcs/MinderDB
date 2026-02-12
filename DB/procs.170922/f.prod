@@ -1,0 +1,2 @@
+alter table prod_profile add PP_RECORD_SERIAL_NO VALUE_TF;
+

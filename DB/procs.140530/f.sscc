@@ -1,0 +1,80 @@
+
+/*
+
+        MANIFEST_ID ASN_NO ,
+        CREATE_DATE CREATE_DATE,
+        LAST_UPDATE_DATE LAST_UPDATE_DATE,
+        PACKM_STATUS STATUS,
+        PACKM_PICK_ORDER PICK_ORDER_25,
+        PACKM_DESPATCH_ID DESPATCH_ID,
+        COMPANY_ID COMPANY,
+        PACKM_AWB_CONSIGNMENT_NO AWB_CONSIGNMENT_NO,
+        PACKM_CARRIER_ID SHIP_VIA,
+        PS_DEL_TO_DC_IN_HOUSE_NO EDI_LOCN_NO,
+        PS_CUSTOMER_EDI_NO EDI_NO
+*/
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER UPD_PACK_SSCC_TIME FOR PACK_SSCC
+ACTIVE BEFORE UPDATE POSITION 20 
+AS
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_SO_COMPANY_ID VARCHAR(20);
+BEGIN
+   IF (NEW.PS_EDI_ASN IS NOT NULL) THEN
+   BEGIN
+      IF (NEW.PS_EDI_ASN <> '') THEN
+      BEGIN
+         WK_FOUND = 0;
+         SELECT 1 FROM PACK_MANIFEST
+         WHERE MANIFEST_ID = NEW.PS_EDI_ASN
+         INTO :WK_FOUND;
+         IF (WK_FOUND IS NULL) THEN
+         BEGIN
+            WK_FOUND = 0;
+         END
+         IF (WK_FOUND = 0 ) THEN
+         BEGIN
+            SELECT COMPANY_ID FROM PICK_ORDER WHERE PICK_ORDER = NEW.PS_PICK_ORDER INTO :WK_SO_COMPANY_ID;
+            INSERT INTO PACK_MANIFEST (MANIFEST_ID, 
+                   CREATE_DATE,
+                   LAST_UPDATE_DATE,
+                   PACKM_STATUS,
+                   PACKM_CARRIER_ID,
+                   PACKM_PICK_ORDER ,
+                   PACKM_DESPATCH_ID ,
+                   COMPANY_ID ,
+                   PACKM_AWB_CONSIGNMENT_NO ,
+                   PS_DEL_TO_DC_IN_HOUSE_NO ,
+                   PS_CUSTOMER_EDI_NO )
+            VALUES (NEW.PS_EDI_ASN,
+                    'NOW',
+                    'NOW',
+                    NEW.PS_SSCC_STATUS,
+                    NEW.PS_OUT_CARRIER_ID,
+                    NEW.PS_PICK_ORDER,
+                    NEW.PS_OUT_DESPATCH_ID,
+                    :WK_SO_COMPANY_ID,
+                    NEW.PS_OUT_AWB_CONSIGNMENT_NO,
+                    NEW.PS_DEL_TO_DC_IN_HOUSE_NO,
+                    NEW.PS_CUSTOMER_EDI_NO);
+         END
+         ELSE
+         BEGIN
+            UPDATE PACK_MANIFEST SET PACKM_STATUS = NEW.PS_SSCC_STATUS,
+                   LAST_UPDATE_DATE = 'NOW',
+                   PACKM_CARRIER_ID = NEW.PS_OUT_CARRIER_ID  
+            WHERE MANIFEST_ID = NEW.PS_EDI_ASN; 
+         END
+      END
+   END
+END^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+

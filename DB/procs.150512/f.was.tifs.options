@@ -1,0 +1,11 @@
+insert into options(group_code,code,description) values('PO_SUBTYPE','GO|SN','Serial Checking');
+insert into options(group_code,code,description) values('PO_SUBTYPE','SA|SN','EDI Serial Checking');
+insert into options(group_code,code,description) values('PO_SUBTYPE','AZ|SN','Bleach Serial Checking - All Zones');
+
+/*
+GROUP_CODE = 'PROMPTS' and CODE = 'ORDERCHECK|21' and DESCRIPTION = 'Scan Serial Number %left% of %total%' plus
+GROUP_CODE = 'PROMPTS' and CODE = 'ORDERCHECK|29' and DESCRIPTION = 'Suspend Serail No. Scanning? ACCEPT or
+CANCEL' 
+*/
+insert into options(group_code,code,description) values('PROMPTS','ORDERCHECK|21','Scan Serial Number %left% of %total%');
+insert into options(group_code,code,description) values('PROMPTS','ORDERCHECK|29','Suspend Serial No. Scanning? ACCEPT or CANCEL');

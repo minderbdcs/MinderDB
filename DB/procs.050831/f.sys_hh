@@ -1,0 +1,2 @@
+update sys_hh set user_modules = user_modules || 'QI;QL;QT;',
+batch_modules = batch_modules || 'QI;QL;';

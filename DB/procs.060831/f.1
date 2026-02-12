@@ -1,0 +1,10 @@
+select po.pick_order ,pi.wh_id, pi.pick_location, o1.description
+from pick_order po
+join options o1 on o1.group_code = 'CMPPKPR' and o1.code = (po.company_id || '|' || po.p_country) 
+join pick_item_line_no pl on po.pick_order = pl.pick_order
+join pick_item pi on po.pick_order = pi.pick_order
+where po.pick_status in ('OP','DA')
+and po.label_printed_date is null
+and pl.last_line_no = 2
+and o1.description <> 'NONE'
+order by po.pick_order;

@@ -1,0 +1,53 @@
+=====================================================================================
+Database:  als, User: sysdba
+DESPATCH_ID                     (DESPATCH_ID) INTEGER Not Null 
+AWB_CONSIGNMENT_NO              (AWB_CONSIGNMENT_NO) VARCHAR(20) Nullable 
+PICKD_CARRIER_ID                (DESPATCH_CARRIER) VARCHAR(10) Nullable 
+PICKD_SERVICE_TYPE              (SERVICE_TYPE) VARCHAR(4) Nullable 
+PICKD_CHARGE_TO                 (CODE_ONE) CHAR(1) Nullable 
+SENDER_ACCOUNT                  (CARRIER_ACCOUNT_NO) VARCHAR(10) Nullable 
+RECEIVER_ACCOUNT                (CARRIER_ACCOUNT_NO) VARCHAR(10) Nullable 
+PICKD_POST_CODE                 (DESPATCH_POST_CODE) VARCHAR(10) Nullable 
+PICKD_SUBURB                    (DESCRIPTION) VARCHAR(50) Nullable 
+PICKD_PALLET_QTY                (QTY) INTEGER Nullable 
+PICKD_CARTON_QTY                (QTY) INTEGER Nullable 
+PICKD_SATCHEL_QTY               (QTY) INTEGER Nullable 
+PICKD_WT_CALC                   (WEIGHT) INTEGER Nullable 
+PICKD_WT_ACTUAL                 (WEIGHT) INTEGER Nullable 
+PICKD_VOL_ACTUAL                (DESPATCHED_VOL) INTEGER Nullable 
+PICKD_PALLET_OWNER              (PALLET_OWNER) VARCHAR(10) Nullable 
+PICKD_ADDRESS_QTY               (QTY) INTEGER Nullable 
+PICKD_LABEL_START               (DESPATCH_LABEL_NO) VARCHAR(40) Nullable 
+PICKD_LABEL_TYPE                (CODE_ONE) CHAR(1) Nullable 
+PICKD_EXIT                      (DESPATCH_FINISH) TIMESTAMP Nullable 
+USER_ID                         (USER_ID) VARCHAR(10) Nullable 
+DEVICE_ID                       (DEVICE_ID) CHAR(2) Nullable 
+CREATE_DATE                     (CREATE_DATE) TIMESTAMP Nullable 
+DESPATCH_STATUS                 (STATUS) CHAR(2) Nullable 
+LAST_UPDATE_DATE                (LAST_UPDATE_DATE) TIMESTAMP Nullable 
+PACK_TYPE                       (CODE_ONE) CHAR(1) Nullable 
+PICK_LABEL_NO                   (DESPATCH_ID) INTEGER Nullable 
+DESPATCHED_QTY                  (QTY) INTEGER Nullable 
+DESPATCHED_WEIGHT_CALC          (WEIGHT) INTEGER Nullable 
+DESPATCHED_WEIGHT_ACTUAL        (WEIGHT) INTEGER Nullable 
+DESPATCH_CARRIER                (DESPATCH_CARRIER) VARCHAR(10) Nullable 
+CARRIER_ACCOUNT_NO              VARCHAR(12) Nullable 
+DESPATCHED_CARTON_QTY           (QTY) INTEGER Nullable 
+DESPATCHED_VOL                  (DESPATCHED_VOL) INTEGER Nullable 
+DESPATCHED_PALLET_QTY           (QTY) INTEGER Nullable 
+PALLET_OWNER                    (PALLET_OWNER) VARCHAR(10) Nullable 
+DESPATCH_POST_CODE              (DESPATCH_POST_CODE) VARCHAR(10) Nullable 
+ADDRESS_LABEL_DATE              TIMESTAMP Nullable 
+DESPATCH_FINISH                 (DESPATCH_FINISH) TIMESTAMP Nullable 
+INVOICE_ID                      (INVOICE_ID) INTEGER Nullable 
+INVOICE_NO                      (INVOICE_NO) VARCHAR(10) Nullable 
+INVOICE_TYPE                    (CODE_TWO) CHAR(2) Nullable 
+PICKD_SERVICE_CHARGE_TO         (PERSON) VARCHAR(10) Nullable 
+PICKD_SERVICE_RECORD_ID         (RECORD_ID) INTEGER Nullable 
+PICKD_MANIFEST_ID               VARCHAR(24) Nullable 
+CONSTRAINT INTEG_109:
+  Primary key (DESPATCH_ID)
+
+Triggers on Table PICK_DESPATCH:
+ADD_PICK_DESPATCH_TIME, Sequence: 20, Type: BEFORE INSERT, Active
+UPD_PICK_DESPATCH_TIME, Sequence: 20, Type: BEFORE UPDATE, Active

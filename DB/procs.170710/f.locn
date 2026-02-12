@@ -1,0 +1,3 @@
+alter table location add parent_wh_id wh_id;
+alter table location alter parent_wh_id position 6;
+

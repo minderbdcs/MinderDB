@@ -1,0 +1,9 @@
+update or insert into generic(code, description, ssn_type) values('ULTRASLIM DOCKING STATION
+HP','ULTRASLIM DOCKING STATION
+HP','DOCKING STATION')^                                                
+update or insert into generic(code, description, ssn_type) values('ELITEDISPLAY E221
+HP','ELITEDISPLAY E221
+HP','MONITOR')^                                                                        
+update or insert into generic(code, description, ssn_type) values('IP PHONE
+IP PHONE','IP PHONE
+IP PHONE','TELEPHONE EQUIPMENT')^                                                                  

@@ -1,0 +1,1 @@
+alter table pick_despatch add pickd_service_record_id record_id;

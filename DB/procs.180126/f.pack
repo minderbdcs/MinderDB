@@ -1,0 +1,3 @@
+/* CREATE DOMAIN IP_ADDRESS VARCHAR(40); */
+alter table pack_id add PRN_IP_ADDRESS IP_ADDRESS;
+alter table pack_id_dx add PRN_IP_ADDRESS IP_ADDRESS;

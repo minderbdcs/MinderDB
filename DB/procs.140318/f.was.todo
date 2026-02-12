@@ -1,0 +1,22 @@
+want proc to calc the next awn for a despatch
+
+need for this the carrier service to use.
+It has a Cs_label_type
+lookup in options table with group-code='CONNOTE'
+code = CS_LABEL_TYPE
+description2 has layout of awk_consignment_no
+
+ CARRIER.PREFIX|CARRIER.CUSTOMER_CODE|%CONNOTE_TYPE|%SERIAL_NO
+ CARRIER.PREFIX|CARRIER.CUSTOMER_CODE|%LABEL_TYPE|%PACK_LABEL_NUMBER_7
+allow any field from carrier or carrier_service table referenced as
+CARRIER.field
+CARRIER_SERVICE.field
+%CONNOTE_TYPE is PICK_DESPATCH.PICKD_CONNOTE_TYPE or CARRIER.DEFAULT_CONNOTE_TYPE if no PICK_DESPATCH.PICKD_CONNOTE_TYPE is set.
+%SERIAL_NO is next value of Connote Generator defined by CARRIER.CONNOTE_GENERATOR field this value is always between CARRIER.CONNOTE_START_NO and CARRIER.CONNOTE_END_NO (or between 0 and 9999999 if no limits been set)
+%LABEL_TYPE is PACK_ID.PACK_LABEL_TYPE or empty string if no PACK_ID.PACK_LABEL_TYPE value is set
+%PACK_LABEL_NUMBER_7 is next value of Pack Label generator defined by CARRIER.PACK_LABEL_GENERATOR it is between CARRIER.PACK_LABEL_START_NO and CARRIER.PACK_LABEL_END_NO (or between 0 and 9999999), 7 means pad left with zeros up to 7 characters.
+thus need carrier_id , carrier_service record_id
+pickd_connote_type to use
+
+%CHECK_DIGIT = check digit from  bdcs_check_digit proc
+%PACK_LABEL_NUMBER and %PACK_SERIAL_NO_7 - same as %PACK_LABEL_NUMBER_7.

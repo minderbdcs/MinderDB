@@ -1,0 +1,803 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP TRIGGER RUN_TRANSACTION_PKAL ^
+COMMIT^
+
+CREATE TRIGGER RUN_TRANSACTION_PKAL FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 49 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_PICK_QTY INTEGER;
+DECLARE VARIABLE WK_PICK_CNT INTEGER;
+DECLARE VARIABLE WK_LABEL VARCHAR(7);
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_ORDER VARCHAR(30);
+DECLARE VARIABLE WK_ORDER_STATUS CHAR(2);
+DECLARE VARIABLE WK_ORDER_START TIMESTAMP;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_PI_LABEL VARCHAR(7);
+DECLARE VARIABLE WK_PI_SSN VARCHAR(20);
+DECLARE VARIABLE WK_PI_PROD VARCHAR(30);
+DECLARE VARIABLE WK_PI_WH CHAR(2);
+DECLARE VARIABLE WK_PI_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_PI_LASTLOCN VARCHAR(10);
+DECLARE VARIABLE WK_PI_QTY INTEGER;
+DECLARE VARIABLE WK_PI_STATUS CHAR(2);
+DECLARE VARIABLE WK_PI_STATUS_2 CHAR(2);
+DECLARE VARIABLE WK_PI_DESCRIPTION VARCHAR(40);
+DECLARE VARIABLE WK_PI_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_PI_ORDER_QTY INTEGER;
+DECLARE VARIABLE WK_PI_DESPATCH_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_DIRECTORY VARCHAR(80);
+DECLARE VARIABLE WK_FILENAME VARCHAR(80);
+DECLARE VARIABLE WK_LABEL_LINE VARCHAR(330);
+DECLARE VARIABLE WK_RESULT INTEGER;
+DECLARE VARIABLE WK_PROD_SSN VARCHAR(20);
+DECLARE VARIABLE WK_UOM CHAR(2);
+DECLARE VARIABLE WK_PICK_TYPE CHAR(1);
+DECLARE VARIABLE WK_FOUND_PICK INTEGER;
+DECLARE VARIABLE WK_SEQ INTEGER;
+DECLARE VARIABLE WK_DESPATCH_GROUP VARCHAR(10);
+DECLARE VARIABLE WK_TOT_GROUP_LOCNS INTEGER;
+DECLARE VARIABLE WK_TOT_GROUP_PRODUCTS_USED INTEGER;
+DECLARE VARIABLE WK_TOT_GROUPS_PRODUCTS_USED INTEGER;
+DECLARE VARIABLE WK_TOT_GROUP_EMPTY INTEGER;
+DECLARE VARIABLE WK_TOT_ORDER_PRODUCTS INTEGER;
+DECLARE VARIABLE WK_MAX_ORDERS INTEGER;
+DECLARE VARIABLE WK_MAX_PRODUCTS INTEGER;
+DECLARE VARIABLE WK_TOT_GROUPS_ORDERS INTEGER;
+DECLARE VARIABLE WK_WHO_FOR VARCHAR(40);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_GM_MESSAGE VARCHAR(10);
+DECLARE VARIABLE WK_T4_DELIM CHAR(1);
+DECLARE VARIABLE WK_T4_TRAN_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_T4_SOURCE VARCHAR(512);
+DECLARE VARIABLE WK_NEW_RECORD INTEGER;
+DECLARE VARIABLE WK_CN_PRIORITY SMALLINT;
+DECLARE VARIABLE WK_DO_UCIS CHAR(1);
+DECLARE VARIABLE WK_DO_GSMD CHAR(1);
+DECLARE VARIABLE WK_PROD_OK VARCHAR(80);
+DECLARE VARIABLE WK_BUFFER VARCHAR(80);
+DECLARE VARIABLE WK_WORK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_WORK_TOPICK_QTY INTEGER;
+DECLARE VARIABLE WK_WORK_PICKED_QTY INTEGER;
+DECLARE VARIABLE WK_WORK_ORDER_QTY INTEGER;
+DECLARE VARIABLE WK_AVAILABLE_QTY INTEGER;
+DECLARE VARIABLE WK_ALLOC_ORDER_QTY INTEGER;
+DECLARE VARIABLE WK_ORDER_QTY INTEGER;
+DECLARE VARIABLE WK_PICKED_QTY INTEGER;
+DECLARE VARIABLE WK_IMPORTSTATUS VARCHAR(40); 
+DECLARE VARIABLE WK_TOT_ORDER_PRODUCTS_GROUP INTEGER;
+DECLARE VARIABLE WK_MOVE_PRIORITY INTEGER;
+DECLARE VARIABLE WK_HELD_STATUS VARCHAR(2); 
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKAL') THEN
+  BEGIN
+     IF ((NEW.TRN_CODE = 'D') OR
+         (NEW.TRN_CODE = 'E')) THEN
+     BEGIN
+        /* get qty to allocate */
+        WK_PICK_QTY = 0;
+        IF (NEW.QTY = 0) THEN
+        BEGIN
+           SELECT PICK_ALLOCATE_QTY
+               FROM CONTROL
+               INTO :WK_PICK_QTY;
+        END
+        ELSE
+        BEGIN
+           WK_PICK_QTY = NEW.QTY;
+        END
+        WK_DEVICE = NEW.WH_ID;
+        WK_USER = NEW.PERSON_ID;
+        WK_RECORD = NEW.RECORD_ID;
+        WK_PICK_TYPE = NEW.TRN_CODE;
+        WK_DATE = NEW.TRN_DATE;
+        /* want to do wk_qty picks */
+        WK_PICK_CNT = 0;
+        WK_FOUND_PICK = 1;
+        WHILE ((WK_PICK_CNT < WK_PICK_QTY) AND (WK_FOUND_PICK = 1))
+        DO
+        BEGIN
+           WK_FOUND_PICK = 0;
+           /*   WHERE P1.PICK_LINE_STATUS IN ('OP','CN') */
+           /*   WHERE P1.PICK_LINE_STATUS IN ('OP') */
+           FOR 
+              SELECT FIRST 5 P1.PICK_LABEL_NO, 
+                  P1.PICK_ORDER, 
+                  P2.PICK_STARTED,
+                  P1.PICK_ORDER_QTY   
+              FROM PICK_ITEM P1 
+                  JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+                  LEFT OUTER JOIN ISSN P3 ON P3.SSN_ID = P1.SSN_ID 
+              WHERE P1.PICK_LINE_STATUS IN ('OP','UP') 
+                AND P2.PICK_STATUS IN ('OP','DA')
+                ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P3.LOCN_ID, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+              INTO :WK_LABEL, :WK_ORDER, :WK_ORDER_START, :WK_PI_ORDER_QTY
+           DO
+           BEGIN
+              WK_FOUND_PICK = 1;
+              IF (WK_PICK_CNT < WK_PICK_QTY) THEN
+              BEGIN
+                 IF (WK_PI_ORDER_QTY > 0)
+                 THEN
+                 BEGIN
+                    WK_PICK_CNT = WK_PICK_CNT + 1;
+                    UPDATE PICK_ITEM 
+                       SET USER_ID = :WK_USER, 
+                           DEVICE_ID = :WK_DEVICE, 
+                           PICK_LINE_STATUS = 'AL', 
+                           PICK_STARTED = 'NOW'
+                        WHERE PICK_LABEL_NO = :WK_LABEL;
+                    IF (WK_ORDER_START IS NULL) THEN
+                    BEGIN
+                       /*     PICK_STATUS = 'PG' */ 
+                       UPDATE PICK_ORDER
+                          SET PICK_STARTED = 'NOW'
+                           WHERE PICK_ORDER = :WK_ORDER;
+                    END
+                 END
+                 ELSE
+                 BEGIN
+                    UPDATE PICK_ITEM 
+                       SET PICK_LINE_STATUS = 'NP' 
+                        WHERE PICK_LABEL_NO = :WK_LABEL;
+                 END
+              END
+           END
+        END
+        IF (WK_PICK_TYPE = 'E') THEN
+        BEGIN
+            /* from a browser */
+           WK_DIRECTORY = '';
+        END
+        ELSE
+        BEGIN
+            /* from -code is D - vb - require ftp files */
+           WK_DIRECTORY = '';
+           SELECT FTP_DIRECTORY
+               FROM CONTROL
+               INTO :WK_DIRECTORY;
+            WK_FILENAME = WK_DIRECTORY || WK_DEVICE || '.pk';
+           /* clear devices file */
+            WK_RESULT = FILE_DELETE(WK_FILENAME);
+            WK_RESULT = FILE_WRITELN(WK_FILENAME, 'DELETE FROM PICK_LOCATIONS');
+            WK_RESULT = FILE_WRITELN(WK_FILENAME, 'DELETE FROM PICK_QTYS');
+            WK_SEQ = 0;
+           FOR 
+              SELECT P1.PICK_LABEL_NO, 
+                     P1.PROD_ID,
+                     P1.SSN_ID,
+                     P1.PICK_ORDER,
+                     P1.PICK_ORDER_QTY,
+                     P1.DESPATCH_LOCATION,
+                     P1.PICK_LINE_STATUS
+                     FROM PICK_ITEM P1
+                        JOIN PICK_ORDER P2 ON P2.PICK_ORDER = P1.PICK_ORDER 
+                        LEFT OUTER JOIN ISSN P3 ON P3.SSN_ID = P1.SSN_ID 
+                     WHERE P1.PICK_LINE_STATUS IN ('AL','PG','PL')
+                       AND P1.DEVICE_ID = :WK_DEVICE
+                       ORDER BY P2.PICK_PRIORITY, P2.WIP_ORDERING, P1.WIP_PRELOCN_ORDERING, P3.LOCN_ID, P1.PICK_LOCATION, P1.WIP_POSTLOCN_ORDERING 
+                     INTO :WK_PI_LABEL, :WK_PI_PROD, :WK_PI_SSN, :WK_PI_ORDER, :WK_PI_ORDER_QTY, :WK_PI_DESPATCH_LOCN, :WK_PI_STATUS_2
+           DO
+           BEGIN
+      /*
+       must get for pick_locations
+                     WH_ID,
+                     LOCN_ID,
+                     QTY_AVAIL,
+                     ISSN_STATUS
+       must get for pick_qtys
+                     DESCRIPTION
+                     UOM
+      */
+              WK_SEQ = WK_SEQ + 1;
+              WK_PI_WH = '';
+              WK_PI_LOCN = '';
+              WK_PI_LASTLOCN = '';
+              WK_PI_QTY = 0;
+              WK_PI_STATUS = '';
+              WK_PI_DESCRIPTION = '';
+              IF (WK_PI_SSN IS NULL) THEN
+              BEGIN
+                 /* a product */
+                 FOR
+                 SELECT ISSN.WH_ID, ISSN.LOCN_ID, ISSN.CURRENT_QTY, ISSN.ISSN_STATUS, PROD_PROFILE.SHORT_DESC, ISSN.SSN_ID, PROD_PROFILE.UOM 
+                 FROM ISSN 
+                      JOIN PROD_PROFILE ON PROD_PROFILE.PROD_ID = ISSN.PROD_ID
+                 WHERE ISSN.PROD_ID = :WK_PI_PROD 
+                   AND (ISSN.WH_ID < 'X' OR ISSN.WH_ID > 'X~') AND ISSN.ISSN_STATUS IN ('ST','PA','AL','PG','PL')
+                 INTO :WK_PI_WH, :WK_PI_LOCN, :WK_PI_QTY, :WK_PI_STATUS, :WK_PI_DESCRIPTION, :WK_PROD_SSN, :WK_UOM
+                 DO
+                 BEGIN
+                    /* update status */
+                    /* UPDATE ISSN SET ISSN_STATUS = 'AL' WHERE SSN_ID = :WK_PROD_SSN; */
+                     IF (WK_PI_LASTLOCN = '') THEN
+                     BEGIN
+                        UPDATE PICK_ITEM SET PICK_LOCATION = :WK_PI_LOCN 
+                        WHERE PICK_LABEL_NO = :WK_PI_LABEL; 
+                        WK_PI_LASTLOCN = WK_PI_LOCN;
+                     END
+                    /* add to devices file */
+                    WK_LABEL_LINE = 'INSERT INTO PICK_LOCATIONS (PICK_LABEL_NO, PROD_ID , SSN_ID , WH_ID , LOCN_ID , QTY_AVAILABLE , ISSN_STATUS )  VALUES (' ||
+                      SQUOTEDSTR(WK_PI_LABEL ) || ',' ||
+                      SQUOTEDSTR(WK_PI_PROD ) || ',' ||
+                      SQUOTEDSTR(WK_PROD_SSN ) || ',' ||
+                      SQUOTEDSTR(WK_PI_WH ) || ',' ||
+                      SQUOTEDSTR(WK_PI_LOCN ) || ',' ||
+                      SQUOTEDSTR(ALLTRIM(CAST(WK_PI_QTY AS CHAR(6)))) || ',' ||
+                      SQUOTEDSTR(WK_PI_STATUS_2 ) || ')';
+                    WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+                 END
+              END
+              ELSE
+              BEGIN
+                 /* an ssn */
+                    /* update status */
+                 UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS_2 WHERE SSN_ID = :WK_PI_SSN;
+                 SELECT ISSN.WH_ID, ISSN.LOCN_ID, ISSN.CURRENT_QTY, ISSN.ISSN_STATUS, SSN.SSN_TYPE, 'EA'
+                 FROM ISSN 
+                      JOIN SSN ON SSN.SSN_ID = ISSN.ORIGINAL_SSN
+                 WHERE ISSN.SSN_ID = :WK_PI_SSN 
+                 INTO :WK_PI_WH, :WK_PI_LOCN, :WK_PI_QTY, :WK_PI_STATUS, :WK_PI_DESCRIPTION, :WK_UOM;
+                 UPDATE PICK_ITEM SET PICK_LOCATION = :WK_PI_LOCN 
+                 WHERE PICK_LABEL_NO = :WK_PI_LABEL; 
+                 /* add to devices file */
+                 WK_LABEL_LINE = 'INSERT INTO PICK_LOCATIONS (PICK_LABEL_NO, PROD_ID , SSN_ID , WH_ID , LOCN_ID , QTY_AVAILABLE , ISSN_STATUS )  VALUES (' ||
+                   SQUOTEDSTR(WK_PI_LABEL ) || ',' ||
+                   SQUOTEDSTR(WK_PI_PROD ) || ',' ||
+                   SQUOTEDSTR(WK_PI_SSN ) || ',' ||
+                   SQUOTEDSTR(WK_PI_WH ) || ',' ||
+                   SQUOTEDSTR(WK_PI_LOCN ) || ',' ||
+                   SQUOTEDSTR(ALLTRIM(CAST(WK_PI_QTY AS CHAR(6)))) || ',' ||
+                   SQUOTEDSTR(WK_PI_STATUS ) || ')';
+                 WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+              END
+              /* add to devices file */
+              WK_LABEL_LINE = 'INSERT INTO PICK_QTYS (PICK_LABEL_NO, PROD_ID , SSN_ID , DESCRIPTION, PICK_ORDER, PICK_ORDER_QTY, UOM, PICK_LINE_STATUS, DESPATCH_LOCATION, SEQ )  VALUES (' ||
+                      SQUOTEDSTR(WK_PI_LABEL ) || ',' ||
+                      SQUOTEDSTR(WK_PI_PROD ) || ',' ||
+                      SQUOTEDSTR(WK_PI_SSN ) || ',' ||
+                      SQUOTEDSTR(WK_PI_DESCRIPTION ) || ',' ||
+                      SQUOTEDSTR(WK_PI_ORDER ) || ',' ||
+                      SQUOTEDSTR(ALLTRIM(CAST(WK_PI_ORDER_QTY AS CHAR(6)))) || ',' ||
+                      SQUOTEDSTR(WK_UOM ) || ',' ||
+                      SQUOTEDSTR(WK_PI_STATUS_2 ) || ',' ||
+                      SQUOTEDSTR(WK_PI_DESPATCH_LOCN ) || ',' ||
+                      SQUOTEDSTR(ALLTRIM(CAST(WK_SEQ AS CHAR(4)))) || ')';
+              WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+           END /* for */
+        END /* code D ftp files */
+
+        EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+        /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+     END /* code D or E */
+     IF (NEW.TRN_CODE = 'G') THEN
+     BEGIN
+        WK_ORDER = NEW.OBJECT;
+        WK_DEVICE = NEW.WH_ID;
+        IF (WK_DEVICE IS NULL) THEN
+        BEGIN
+           WK_DEVICE = '';
+        END
+        IF (WK_DEVICE = '') THEN
+        BEGIN
+           WK_DEVICE = NEW.DEVICE_ID;
+        END
+        WK_DESPATCH_GROUP = NEW.SUB_LOCN_ID; /* trolley */
+        WK_USER = NEW.PERSON_ID;
+        WK_WHO_FOR = NEW.REFERENCE;
+        WK_RECORD = NEW.RECORD_ID;
+        WK_CN_PRIORITY = 0;
+        SELECT DEFAULT_PICK_PRIORITY, SEND_UCIS_V4, PICK_IMPORT_SSN_STATUS , WARN_PICK_PRIORITY
+        FROM CONTROL 
+        INTO :WK_CN_PRIORITY, :WK_DO_UCIS , :WK_IMPORTSTATUS, :WK_MOVE_PRIORITY;
+/*
+=====================================================================
+ get # of locns in trolley  => a
+ get # prods on trolley => f
+  sum # products from pick items for trolley (new field)
+  (status AL PG PL) gives the # of used locns
+ get # of empty locns in trolley  => b = a - f
+ calc # prods on order => e
+ check (e <= b)
+ else error and exit
+ check (f + e) <= max from control
+ else error and exit
+ get # orders on trolley => g
+ check (g + 1) <= max from control
+ else error and exit
+
+ then allocate to device all lines on order
+
+====================================================================
+*/
+ /* get # of locns in trolley  => a */
+        WK_TOT_GROUP_LOCNS = 0; /* field a */
+        IF (WK_DESPATCH_GROUP <> '') THEN
+        BEGIN
+           SELECT COUNT(*) 
+           FROM LOCATION
+           WHERE LOCN_ID STARTING :WK_DESPATCH_GROUP
+           AND MOVEABLE_LOCN = 'T'
+           AND LOCN_STAT = 'OK'
+           INTO :WK_TOT_GROUP_LOCNS;
+        END
+        ELSE
+        BEGIN
+           WK_TOT_GROUP_LOCNS = 1000000000;
+        END
+ /* get # prods on trolley => f */
+        WK_TOT_GROUP_PRODUCTS_USED = 0; /* field f */
+        IF (WK_DESPATCH_GROUP <> '') THEN
+        BEGIN
+           SELECT COUNT(DISTINCT PROD_ID)
+           FROM PICK_ITEM
+           WHERE DESPATCH_LOCATION_GROUP = :WK_DESPATCH_GROUP
+           AND PICK_LINE_STATUS IN ('AL','PG','PL')
+           INTO WK_TOT_GROUP_PRODUCTS_USED;
+        END
+ /* get # of empty locns in trolley  => b = a - f */
+        WK_TOT_GROUP_EMPTY = WK_TOT_GROUP_LOCNS - WK_TOT_GROUP_PRODUCTS_USED; /* field b */
+ /* get # prods on order => e */
+        WK_TOT_ORDER_PRODUCTS = 0; /* field e */
+        SELECT COUNT(DISTINCT PROD_ID)
+        FROM PICK_ITEM
+        WHERE PICK_ORDER = :WK_ORDER
+           AND PICK_LINE_STATUS IN ('OP')
+        INTO WK_TOT_ORDER_PRODUCTS;
+ /* get # prods on order with prod already in trolley  */
+        WK_TOT_ORDER_PRODUCTS_GROUP = 0; /*  */
+        SELECT COUNT(DISTINCT P1.PROD_ID)
+        FROM PICK_ITEM P1
+        JOIN PICK_ITEM P2
+           ON P2.PROD_ID = P1.PROD_ID
+           AND P2.DESPATCH_LOCATION_GROUP = :WK_DESPATCH_GROUP
+        WHERE P1.PICK_ORDER = :WK_ORDER
+           AND P1.PICK_LINE_STATUS IN ('OP')
+           AND P2.PICK_LINE_STATUS IN ('AL','PG','PL')
+           AND P2.PICK_ORDER <> :WK_ORDER
+        INTO WK_TOT_ORDER_PRODUCTS_GROUP;
+        IF (WK_TOT_ORDER_PRODUCTS > (WK_TOT_GROUP_EMPTY + WK_TOT_ORDER_PRODUCTS_GROUP)) THEN
+        BEGIN
+           EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F','More Products on Order than Free Locations');
+/*
+-- need to reduce this by products already in trolley
+*/
+           UPDATE PICK_ORDER SET PICK_PRIORITY = :WK_MOVE_PRIORITY
+           WHERE PICK_ORDER = :WK_ORDER;
+        END
+        ELSE
+        BEGIN
+/*
+           -* get max qtys from control *-
+           WK_MAX_ORDERS = 0;
+           WK_MAX_PRODUCTS = 0;
+           SELECT MAX_PICK_ORDERS, MAX_PICK_PRODUCTS
+           FROM CONTROL
+           INTO :WK_MAX_ORDERS, :WK_MAX_PRODUCTS;
+           WK_TOT_GROUPS_PRODUCTS_USED = 0; 
+           SELECT COUNT(DISTINCT PROD_ID)
+           FROM PICK_ITEM
+           WHERE PICK_LINE_STATUS IN ('AL','PG','PL')
+           INTO WK_TOT_GROUPS_PRODUCTS_USED;
+           IF (WK_MAX_PRODUCTS < (WK_TOT_ORDER_PRODUCTS + WK_TOT_GROUPS_PRODUCTS_USED )) THEN
+           BEGIN
+              EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F','More Products Required for Order than Allowed at the Moment');
+              UPDATE PICK_ORDER SET PICK_PRIORITY = :WK_MOVE_PRIORITY
+              WHERE PICK_ORDER = :WK_ORDER;
+           END
+           ELSE
+           BEGIN
+       -* get # orders on all trolleys => g *-
+              WK_TOT_GROUPS_ORDERS = 0; -* field g *-
+              SELECT COUNT(DISTINCT PICK_ORDER)
+              FROM PICK_ITEM
+              WHERE PICK_LINE_STATUS IN ('AL','PG','PL')
+              INTO WK_TOT_GROUPS_ORDERS;
+              IF ( WK_MAX_ORDERS < (WK_TOT_GROUPS_ORDERS + 1)) THEN
+              BEGIN
+         EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F','More Orders than Allowed at the Moment');
+         UPDATE PICK_ORDER SET PICK_PRIORITY = :WK_MOVE_PRIORITY
+         WHERE PICK_ORDER = :WK_ORDER;
+              END
+              ELSE
+*/
+              WK_PROD_OK = '';
+              FOR SELECT PROD_ID, 
+                  SUM( PICK_ITEM.PICK_ORDER_QTY ), 
+                  SUM( PICK_ITEM.PICKED_QTY ) 
+                  FROM PICK_ITEM
+                  WHERE PICK_ORDER = :WK_ORDER
+                  AND PICK_LINE_STATUS IN ('OP','UP')
+                  GROUP BY PROD_ID
+                  INTO :WK_WORK_PROD, :WK_WORK_ORDER_QTY, :WK_WORK_PICKED_QTY
+              DO
+              BEGIN
+                 IF (WK_WORK_ORDER_QTY IS NULL) THEN
+                 BEGIN
+                    WK_WORK_ORDER_QTY = 0;
+                 END
+                 IF (WK_WORK_PICKED_QTY IS NULL) THEN
+                 BEGIN
+                    WK_WORK_PICKED_QTY = 0;
+                 END
+                 WK_WORK_TOPICK_QTY = WK_WORK_ORDER_QTY - WK_WORK_PICKED_QTY;
+                 SELECT SUM( ISSN.CURRENT_QTY ) 
+                       FROM ISSN
+                       WHERE ISSN.PROD_ID = :WK_WORK_PROD
+                       AND (POS(:WK_IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1)
+                       GROUP BY ISSN.PROD_ID
+                    INTO :WK_AVAILABLE_QTY;
+                 IF (WK_AVAILABLE_QTY IS NULL) THEN
+                 BEGIN
+                    WK_AVAILABLE_QTY = 0;
+                 END
+                 /* now must get qty allocated on order not picked */
+                 WK_PICKED_QTY = 0;
+                 WK_ORDER_QTY = 0;
+                 SELECT SUM( PICK_ITEM.PICK_ORDER_QTY ), 
+                        SUM( PICK_ITEM.PICKED_QTY ) 
+                         FROM PICK_ITEM
+                         WHERE PICK_ITEM.PROD_ID = :WK_WORK_PROD
+                         AND ('AL' = PICK_ITEM.PICK_LINE_STATUS)
+                         GROUP BY PICK_ITEM.PROD_ID
+                      INTO :WK_ORDER_QTY, :WK_PICKED_QTY;
+                 IF (WK_ORDER_QTY IS NULL) THEN
+                 BEGIN
+                    WK_ORDER_QTY = 0;
+                 END
+                 IF (WK_PICKED_QTY IS NULL) THEN
+                 BEGIN
+                    WK_PICKED_QTY = 0;
+                 END
+                 WK_ALLOC_ORDER_QTY = WK_ORDER_QTY - WK_PICKED_QTY;
+                 WK_AVAILABLE_QTY = WK_AVAILABLE_QTY - WK_ALLOC_ORDER_QTY;
+                 IF (WK_AVAILABLE_QTY < WK_WORK_TOPICK_QTY ) THEN
+                 BEGIN
+                    IF (LEN(WK_PROD_OK) < 53) THEN
+                    BEGIN
+                       WK_PROD_OK = WK_PROD_OK || ' ' || WK_WORK_PROD;
+                    END
+                 END
+              END /* end of for */
+              IF (WK_PROD_OK <> '') THEN
+              BEGIN
+                 WK_BUFFER = 'Not enough Stock ' || :WK_PROD_OK;
+                 EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F',:WK_BUFFER );
+                 UPDATE PICK_ORDER SET PICK_PRIORITY = :WK_MOVE_PRIORITY
+                 WHERE PICK_ORDER = :WK_ORDER;
+              END
+              ELSE
+              BEGIN
+                 WK_FOUND = 0;
+                 SELECT FIRST 1 1
+                 FROM PICK_ITEM
+                 WHERE PICK_ORDER = :WK_ORDER
+                 AND PICK_LINE_STATUS IN ('OP','UP')
+                 INTO :WK_FOUND;
+                 IF (WK_FOUND = 1) THEN
+                 BEGIN
+                    /* ok we can allocate this */
+                    UPDATE PICK_ITEM 
+                       SET USER_ID = :WK_WHO_FOR, 
+                           DEVICE_ID = NULL, 
+                           PICK_LINE_STATUS = 'CN' 
+                        WHERE PICK_ORDER = :WK_ORDER
+                        AND PICK_LINE_STATUS IN ('OP','UP')
+                        AND PICK_ORDER_QTY = 0;
+                    UPDATE PICK_ITEM 
+                       SET USER_ID = :WK_WHO_FOR, 
+                           DEVICE_ID = :WK_DEVICE, 
+                           DESPATCH_LOCATION_GROUP = :WK_DESPATCH_GROUP, 
+                           PICK_LINE_STATUS = 'AL', 
+                           PICK_STARTED = 'NOW'
+                        WHERE PICK_ORDER = :WK_ORDER
+                        AND PICK_LINE_STATUS IN ('OP','UP');
+                    /*     PICK_STATUS = 'PG' */ 
+                    UPDATE PICK_ORDER
+                       SET PICK_STARTED = 'NOW'
+                        WHERE PICK_ORDER = :WK_ORDER
+                        AND PICK_STARTED IS NULL;
+
+                    /* now send of trans to update address */
+                    WK_GM_MESSAGE = '';
+                    SELECT MESSAGE_ID 
+                    FROM GET_NEXT_MESSAGE 
+                    INTO :WK_GM_MESSAGE;
+                    WK_T4_DELIM = '|';
+                    WK_T4_TRAN_DATA = WK_USER || WK_T4_DELIM ;
+                    WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || WK_DEVICE || WK_T4_DELIM ;
+                    WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || WK_GM_MESSAGE || WK_T4_DELIM ;
+                    WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<ContactInstanceID>' || WK_ORDER || WK_T4_DELIM ;
+                    WK_T4_SOURCE = 'SSSS' ;
+                    SELECT REC_ID FROM ADD_TRAN_V4 ( 'V4', 'GCNA','S',
+                       NEW.TRN_DATE,
+                       :WK_T4_DELIM,
+                       NEW.PERSON_ID,
+                       NEW.DEVICE_ID,
+                       :WK_GM_MESSAGE,
+                       :WK_T4_TRAN_DATA,
+                       'F','','MASTER',0,
+                       :WK_T4_SOURCE)
+                    INTO :WK_NEW_RECORD;
+                    EXECUTE PROCEDURE ADD_MESSAGE_V4 ( 
+                       :WK_GM_MESSAGE,
+                      'V4', 'GCNA','S',
+                       NEW.TRN_DATE,
+                       NEW.PERSON_ID,
+                       NEW.DEVICE_ID,
+                       :WK_CN_PRIORITY,
+                       'WS','',NULL);
+
+                    WK_DO_GSMD = 'F';
+                    SELECT SPECIAL_INSTRUCTIONS
+                    FROM PICK_ORDER 
+                    WHERE PICK_ORDER = :WK_ORDER
+                    INTO :WK_DO_GSMD;
+                    IF (WK_DO_GSMD = 'T') THEN
+                    BEGIN
+                       /* now send of trans to update special instructions */
+                       WK_GM_MESSAGE = '';
+                       SELECT MESSAGE_ID 
+                       FROM GET_NEXT_MESSAGE 
+                       INTO :WK_GM_MESSAGE;
+                       WK_T4_DELIM = '|';
+                       WK_T4_TRAN_DATA = WK_USER || WK_T4_DELIM ;
+                       WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || WK_DEVICE || WK_T4_DELIM ;
+                       WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || WK_GM_MESSAGE || WK_T4_DELIM ;
+                       WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<ContactInstanceID>' || WK_ORDER || WK_T4_DELIM ;
+                       WK_T4_SOURCE = 'SSSS' ;
+                       SELECT REC_ID FROM ADD_TRAN_V4 ( 'V4', 'GSMD','S',
+                          NEW.TRN_DATE,
+                          :WK_T4_DELIM,
+                          NEW.PERSON_ID,
+                          NEW.DEVICE_ID,
+                          :WK_GM_MESSAGE,
+                          :WK_T4_TRAN_DATA,
+                          'F','','MASTER',0,
+                          :WK_T4_SOURCE)
+                       INTO :WK_NEW_RECORD;
+                       EXECUTE PROCEDURE ADD_MESSAGE_V4 ( 
+                          :WK_GM_MESSAGE,
+                         'V4', 'GSMD','S',
+                          NEW.TRN_DATE,
+                          NEW.PERSON_ID,
+                          NEW.DEVICE_ID,
+                          :WK_CN_PRIORITY,
+                          'WS','',NULL);
+                    END
+
+                    IF (WK_DO_UCIS = 'T') THEN
+                    BEGIN
+                       /* now send of trans to update remote status */
+                       WK_GM_MESSAGE = '';
+                       SELECT MESSAGE_ID 
+                       FROM GET_NEXT_MESSAGE 
+                       INTO :WK_GM_MESSAGE;
+                       WK_T4_DELIM = '|';
+                       WK_T4_TRAN_DATA = WK_USER || WK_T4_DELIM ;
+                       WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || WK_DEVICE || WK_T4_DELIM ;
+                       WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || WK_GM_MESSAGE || WK_T4_DELIM ;
+                       WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<ContactInstanceID>' || WK_ORDER || WK_T4_DELIM ;
+                       WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<ContactInstanceStatusCode>AL' || WK_T4_DELIM ;
+                       WK_T4_TRAN_DATA = WK_T4_TRAN_DATA || '<UpdateDateTime>' || MER_YEAR('NOW') || '-' || LPAD(MER_MONTH('NOW'),'0',2) || '-' || LPAD(MER_DAY('NOW'),'0',2) || 'T' || LPAD(MER_HOUR('NOW'),'0',2) || ':' || LPAD(MER_MINUTE('NOW'),'0',2) || ':' || LPAD(SEC('NOW'),'0',2) || WK_T4_DELIM ;
+                       WK_T4_SOURCE = 'SSSSSS' ;
+                       SELECT REC_ID FROM ADD_TRAN_V4 ( 'V4', 'UCIS','S',
+                          NEW.TRN_DATE,
+                          :WK_T4_DELIM,
+                          NEW.PERSON_ID,
+                          NEW.DEVICE_ID,
+                          :WK_GM_MESSAGE,
+                          :WK_T4_TRAN_DATA,
+                          'F','','MASTER',0,
+                          :WK_T4_SOURCE)
+                       INTO :WK_NEW_RECORD;
+                       EXECUTE PROCEDURE ADD_MESSAGE_V4 ( 
+                          :WK_GM_MESSAGE,
+                         'V4', 'UCIS','S',
+                          NEW.TRN_DATE,
+                          NEW.PERSON_ID,
+                          NEW.DEVICE_ID,
+                          :WK_CN_PRIORITY,
+                          'WS','',NULL);
+                    END 
+                    EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+                    /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+                 END
+                 ELSE
+                 BEGIN
+             EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F','No Allocatable Lines on Order');
+             UPDATE PICK_ORDER SET PICK_PRIORITY = :WK_MOVE_PRIORITY
+             WHERE PICK_ORDER = :WK_ORDER;
+                 END
+              END
+/*
+           END
+*/
+        END
+     END /* code G */
+     IF (NEW.TRN_CODE = 'H') THEN
+     BEGIN
+        WK_USER = NEW.PERSON_ID;
+        WK_WHO_FOR = NEW.REFERENCE;
+        WK_RECORD = NEW.RECORD_ID;
+        WK_CN_PRIORITY = 0;
+        WK_BUFFER = '';
+        SELECT DEFAULT_PICK_PRIORITY, PICK_IMPORT_SSN_STATUS , WARN_PICK_PRIORITY
+        FROM CONTROL 
+        INTO :WK_CN_PRIORITY, :WK_IMPORTSTATUS, :WK_MOVE_PRIORITY;
+/*
+=====================================================================
+ for all unallocated orders of today
+
+ product from pick_item
+ device from the zone 
+        if the product is specified in a location within a zone
+        otherwise use the zone for the company of the order
+ then allocate to device 
+====================================================================
+*/
+        WK_ORDER = '';
+        FOR SELECT PI.PICK_ORDER 
+            FROM PICK_ITEM PI
+            JOIN PICK_ORDER PO ON PO.PICK_ORDER = PI.PICK_ORDER
+            WHERE 
+            PI.PICK_LINE_STATUS IN ('OP','UP')
+            GROUP BY PO.PICK_PRIORITY, PI.PICK_ORDER
+            INTO :WK_ORDER 
+        DO
+        BEGIN
+           WK_HELD_STATUS = 'HD';
+           SELECT OPTIONS.DESCRIPTION
+           FROM PICK_ORDER
+           JOIN OPTIONS ON OPTIONS.GROUP_CODE = 'CMPPKHELD' AND OPTIONS.CODE = PICK_ORDER.COMPANY_ID
+           WHERE PICK_ORDER.PICK_ORDER = :WK_ORDER
+           INTO :WK_HELD_STATUS;
+           IF (WK_HELD_STATUS IS NULL) THEN
+           BEGIN
+              WK_HELD_STATUS = 'HD';
+           END
+           WK_PROD_OK = '';
+           BEGIN
+              FOR SELECT PROD_ID, 
+                  SUM( PICK_ITEM.PICK_ORDER_QTY ), 
+                  SUM( PICK_ITEM.PICKED_QTY )
+                  FROM PICK_ITEM
+                  WHERE PICK_ORDER = :WK_ORDER
+                  AND PICK_LINE_STATUS IN ('OP','UP')
+                  GROUP BY PROD_ID
+                  INTO :WK_WORK_PROD, :WK_WORK_ORDER_QTY, :WK_WORK_PICKED_QTY
+              DO
+              BEGIN
+                 IF (WK_WORK_ORDER_QTY IS NULL) THEN
+                 BEGIN
+                    WK_WORK_ORDER_QTY = 0;
+                 END
+                 IF (WK_WORK_PICKED_QTY IS NULL) THEN
+                 BEGIN
+                    WK_WORK_PICKED_QTY = 0;
+                 END
+                 WK_WORK_TOPICK_QTY = WK_WORK_ORDER_QTY - WK_WORK_PICKED_QTY;
+                 SELECT SUM( ISSN.CURRENT_QTY ) 
+                       FROM ISSN
+                       WHERE ISSN.PROD_ID = :WK_WORK_PROD
+                       AND (POS(:WK_IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1)
+                       GROUP BY ISSN.PROD_ID
+                    INTO :WK_AVAILABLE_QTY;
+                 IF (WK_AVAILABLE_QTY IS NULL) THEN
+                 BEGIN
+                    WK_AVAILABLE_QTY = 0;
+                 END
+                 /* now must get qty allocated on order not picked */
+                 WK_PICKED_QTY = 0;
+                 WK_ORDER_QTY = 0;
+                 SELECT SUM( PICK_ITEM.PICK_ORDER_QTY ), 
+                        SUM( PICK_ITEM.PICKED_QTY ) 
+                         FROM PICK_ITEM
+                         WHERE PICK_ITEM.PROD_ID = :WK_WORK_PROD
+                         AND ('AL' = PICK_ITEM.PICK_LINE_STATUS)
+                         GROUP BY PICK_ITEM.PROD_ID
+                      INTO :WK_ORDER_QTY, :WK_PICKED_QTY;
+                 IF (WK_ORDER_QTY IS NULL) THEN
+                 BEGIN
+                    WK_ORDER_QTY = 0;
+                 END
+                 IF (WK_PICKED_QTY IS NULL) THEN
+                 BEGIN
+                    WK_PICKED_QTY = 0;
+                 END
+                 WK_ALLOC_ORDER_QTY = WK_ORDER_QTY - WK_PICKED_QTY;
+                 WK_AVAILABLE_QTY = WK_AVAILABLE_QTY - WK_ALLOC_ORDER_QTY;
+                 IF (WK_AVAILABLE_QTY < WK_WORK_TOPICK_QTY ) THEN
+                 BEGIN
+                    IF (LEN(WK_PROD_OK) < 53) THEN
+                    BEGIN
+                       WK_PROD_OK = WK_PROD_OK || ' ' || WK_WORK_PROD;
+                    END
+                    IF (WK_HELD_STATUS = 'HD') THEN
+                    BEGIN
+                       UPDATE PICK_ITEM 
+                       SET PICK_LINE_STATUS = :WK_HELD_STATUS,
+                       REASON = 'NOT ENOUGH STOCK'
+                       WHERE PROD_ID = :WK_WORK_PROD
+                       AND PICK_ORDER = :WK_ORDER
+                       AND PICK_LINE_STATUS IN ('OP','UP');
+                    END
+                    ELSE
+                    BEGIN
+                       UPDATE PICK_ITEM 
+                       SET REASON = 'NOT ENOUGH STOCK'
+                       WHERE PROD_ID = :WK_WORK_PROD
+                       AND PICK_ORDER = :WK_ORDER
+                       AND PICK_LINE_STATUS IN ('OP','UP');
+                    END
+                 END
+              END /* end of for */
+              BEGIN
+                 IF (WK_PROD_OK <> '') THEN
+                 BEGIN
+                    UPDATE PICK_ORDER SET PICK_PRIORITY = :WK_MOVE_PRIORITY 
+                    WHERE PICK_ORDER = :WK_ORDER;
+                 END
+                 WK_FOUND = 0;
+                 SELECT FIRST 1 1
+                 FROM PICK_ITEM
+                 WHERE PICK_ORDER = :WK_ORDER
+                 AND PICK_LINE_STATUS IN ('OP','UP')
+                 INTO :WK_FOUND;
+                 IF (WK_FOUND = 1) THEN
+                 BEGIN
+                    /* ok we can allocate this */
+                    UPDATE PICK_ITEM 
+                       SET USER_ID = :WK_WHO_FOR, 
+                           DEVICE_ID = NULL, 
+                           PICK_LINE_STATUS = 'CN' 
+                        WHERE PICK_ORDER = :WK_ORDER
+                        AND PICK_LINE_STATUS IN ('OP','UP')
+                        AND PICK_ORDER_QTY = 0;
+                    UPDATE PICK_ITEM 
+                       SET USER_ID = :WK_WHO_FOR, 
+                           DEVICE_ID = (SELECT ZONE.DEFAULT_DEVICE_ID
+                              FROM LOCATION
+                              JOIN ZONE ON ZONE.CODE = LOCATION.ZONE_C
+                              WHERE LOCATION.WH_ID = PICK_ITEM.WH_ID
+                              AND LOCATION.LOCN_ID = PICK_ITEM.PICK_LOCATION), 
+                           PICK_LINE_STATUS = 'AL', 
+                           PICK_STARTED = 'NOW'
+                        WHERE PICK_ORDER = :WK_ORDER
+                        AND PICK_LINE_STATUS IN ('OP','UP');
+                    /*     PICK_STATUS = 'PG' */ 
+                    UPDATE PICK_ORDER
+                       SET PICK_STARTED = 'NOW'
+                        WHERE PICK_ORDER = :WK_ORDER
+                        AND PICK_STARTED IS NULL;
+
+                 END
+                 ELSE
+                 BEGIN
+                    /* no lines left to allocate */
+             UPDATE PICK_ORDER SET PICK_PRIORITY = :WK_MOVE_PRIORITY,PICK_STATUS = 'HD'
+             WHERE PICK_ORDER = :WK_ORDER;
+                 END
+              END
+           END
+        END
+        EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+        /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+
+     END /* code H */
+  END /* PKAL */
+ END /* autorun */
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

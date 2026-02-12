@@ -1,0 +1,109 @@
+Database:  minder, User: sysdba
+H_PICK_ORDER                    (PICK_ORDER) VARCHAR(15) Not Null 
+H_PICK_ORDER_TYPE               (CODE_TWO) CHAR(2) Nullable 
+H_PERSON_ID                     (PERSON) VARCHAR(10) Nullable 
+H_CONTACT_NAME                  (CONTACT_NAME) VARCHAR(50) Nullable 
+H_CUSTOMER_PO_WO                (CUSTOMER_PO_WO) VARCHAR(20) Nullable 
+H_COST_CENTER                   (COST_CENTER) VARCHAR(40) Nullable 
+H_COMPANY_ID                    (COMPANY) VARCHAR(20) Nullable 
+H_DIVISION_ID                   (DIVISION) VARCHAR(20) Nullable 
+H_PICK_PRIORITY                 (PICK_PRIORITY) SMALLINT Nullable 
+H_DELIVERY_RUN_NO               (DELIVERY_RUN_NO) VARCHAR(10) Nullable 
+H_PICK_DUE_DATE                 (PICK_DUE_DATE) TIMESTAMP Nullable 
+H_SPECIAL_INSTRUCTIONS1         (SPECIAL_INSTRUCTIONS1) VARCHAR(8192) Nullable 
+H_SPECIAL_INSTRUCTIONS2         (SPECIAL_INSTRUCTIONS2) VARCHAR(255) Nullable 
+H_INV_WITH_GOODS                (INV_WITH_GOODS) CHAR(1) Nullable 
+H_SHIP_VIA                      (SHIP_VIA) VARCHAR(10) Nullable 
+H_DESPATCH_LOCATION             (DESPATCH_LOCATION) VARCHAR(10) Nullable 
+H_CREATE_DATE                   (CREATE_DATE) TIMESTAMP Nullable 
+H_CREATED_BY                    (USER_ID) VARCHAR(10) Nullable 
+H_PICK_STARTED                  (PICK_STARTED) TIMESTAMP Nullable 
+H_PICK_STATUS                   (STATUS) CHAR(2) Nullable 
+H_PARTIAL_PICK_ALLOWED          (PARTIAL_PICK_ALLOWED) CHAR(1) Nullable 
+L_PICK_ORDER                    (PICK_ORDER) VARCHAR(15) Nullable 
+L_PICK_ORDER_LINE_NO            (PICK_ORDER_LINE_NO) CHAR(4) Nullable 
+L_CONTACT_NAME                  (CONTACT_NAME) VARCHAR(50) Nullable 
+L_PROD_ID                       (PRODUCT) VARCHAR(30) Nullable 
+L_SSN_ID                        (SSN_ID) VARCHAR(20) Nullable 
+L_WARRANTY_TERM                 (WARRANTY_TERM) VARCHAR(50) Nullable 
+L_PICK_LABEL_DATE               (LABEL_DATE) TIMESTAMP Nullable 
+L_SPECIAL_INSTRUCTIONS1         (SPECIAL_INSTRUCTIONS1) VARCHAR(8192) Nullable 
+L_SPECIAL_INSTRUCTIONS2         (SPECIAL_INSTRUCTIONS2) VARCHAR(255) Nullable 
+L_SHIP_VIA                      (SHIP_VIA) VARCHAR(10) Nullable 
+L_PICK_ORDER_QTY                (QTY) INTEGER Nullable 
+L_PICK_ALLOCATED_QTY            (QTY) INTEGER Nullable 
+L_PICKED_QTY                    (QTY) INTEGER Nullable 
+L_PICK_LINE_DUE_DATE            (PICK_LINE_DUE_DATE) TIMESTAMP Nullable 
+L_PICK_STARTED                  (PICK_STARTED) TIMESTAMP Nullable 
+L_DESPATCH_TS                   (DESPATCH_TS) TIMESTAMP Nullable 
+L_DESPATCH_LOCATION             (DESPATCH_LOCATION) VARCHAR(10) Nullable 
+L_CREATE_DATE                   (CREATE_DATE) TIMESTAMP Nullable 
+L_USER_ID                       (USER_ID) VARCHAR(10) Nullable 
+L_DEVICE_ID                     (DEVICE_ID) CHAR(2) Nullable 
+L_CHECKIN_START                 (CHECKIN_START) TIMESTAMP Nullable 
+L_CHECKIN_FINISH                (CHECKIN_FINISH) TIMESTAMP Nullable 
+L_CHECKIN_USER_ID               (USER_ID) VARCHAR(10) Nullable 
+L_PICK_LINE_STATUS              (STATUS) CHAR(2) Nullable 
+L_PARTIAL_PICK_ALLOWED          (PARTIAL_PICK_ALLOWED) CHAR(1) Nullable 
+P_PERSON_TYPE                   (CODE_TWO) CHAR(2) Nullable 
+P_FIRST_NAME                    (FIRST_NAME) VARCHAR(50) Nullable 
+P_LAST_NAME                     (LAST_NAME) VARCHAR(50) Nullable 
+P_ADDRESS_LINE2                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+P_CITY                          (CITY) VARCHAR(25) Nullable 
+P_STATE                         (STATE) VARCHAR(15) Nullable 
+P_POST_CODE                     (POST_CODE) VARCHAR(10) Nullable 
+P_COUNTRY                       (COUNTRY) VARCHAR(25) Nullable 
+L_SALE_PRICE                    (UNIT_PRICE) DOUBLE PRECISION Nullable 
+L_ALLOW_SSN_SUBSTITUTE          (CODE_ONE) CHAR(1) Nullable 
+H_RETURN_DATE                   (DATETIME) TIMESTAMP Nullable 
+L_RETURN_DATE                   (DATETIME) TIMESTAMP Nullable 
+P_ADDRESS_LINE1                 VARCHAR(100) Nullable 
+P_ADDRESS_LINE3                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+P_ADDRESS_LINE4                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+P_ADDRESS_LINE5                 (ADDRESS_LINE) VARCHAR(50) Nullable 
+H_OTHER1                        (OTHER_CHAR) VARCHAR(50) Nullable 
+H_OTHER2                        (OTHER_CHAR) VARCHAR(50) Nullable 
+H_OTHER3                        (OTHER_CHAR) VARCHAR(50) Nullable 
+H_OTHER4                        (OTHER_CHAR) VARCHAR(50) Nullable 
+H_OTHER5                        (OTHER_CHAR) VARCHAR(50) Nullable 
+H_OTHER6                        (OTHER_CHAR) VARCHAR(50) Nullable 
+H_OTHER7                        (OTHER_CHAR) VARCHAR(50) Nullable 
+H_OTHER8                        (OTHER_CHAR) VARCHAR(50) Nullable 
+H_OTHER9                        (OTHER_CHAR) VARCHAR(50) Nullable 
+L_OTHER1                        (OTHER_CHAR) VARCHAR(50) Nullable 
+L_OTHER2                        (OTHER_CHAR) VARCHAR(50) Nullable 
+L_OTHER3                        (OTHER_CHAR) VARCHAR(50) Nullable 
+L_OTHER4                        (OTHER_CHAR) VARCHAR(50) Nullable 
+L_OTHER5                        (OTHER_CHAR) VARCHAR(50) Nullable 
+L_OTHER6                        (OTHER_CHAR) VARCHAR(50) Nullable 
+L_OTHER7                        (OTHER_CHAR) VARCHAR(50) Nullable 
+L_OTHER8                        (OTHER_CHAR) VARCHAR(50) Nullable 
+L_OTHER9                        (OTHER_CHAR) VARCHAR(50) Nullable 
+L_TAX_RATE                      DOUBLE PRECISION Nullable 
+L_TAX_AMOUNT                    NUMERIC(9, 2) Nullable 
+H_FREIGHT                       NUMERIC(9, 2) Nullable 
+H_TERMS                         VARCHAR(20) Nullable 
+H_AMOUNT_PAID                   NUMERIC(9, 2) Nullable 
+H_PAYMENT_METHOD                VARCHAR(40) Nullable 
+L_BATCH_LINE                    INTEGER Nullable 
+H_OTHER_NUM1                    (STANDARD_COST) DOUBLE PRECISION Nullable 
+H_OTHER_NUM2                    (STANDARD_COST) DOUBLE PRECISION Nullable 
+L_OTHER_QTY1                    (QTY) INTEGER Nullable 
+L_OTHER_QTY2                    (QTY) INTEGER Nullable 
+L_SPECIAL_INSTRUCTIONS3         (COMMENTS) VARCHAR(512) Nullable 
+H_REMARKS1                      (DESCR) VARCHAR(75) Nullable 
+H_REMARKS2                      (DESCR) VARCHAR(75) Nullable 
+H_REMARKS3                      (DESCR) VARCHAR(75) Nullable 
+H_REMARKS4                      (DESCR) VARCHAR(75) Nullable 
+H_REMARKS5                      (DESCR) VARCHAR(75) Nullable 
+H_REMARKS6                      (DESCR) VARCHAR(75) Nullable 
+H_FOOTER1                       (DESCR) VARCHAR(75) Nullable 
+H_FOOTER2                       (DESCR) VARCHAR(75) Nullable 
+H_FOOTER3                       (DESCR) VARCHAR(75) Nullable 
+H_FOOTER4                       (DESCR) VARCHAR(75) Nullable 
+H_FOOTER5                       (DESCR) VARCHAR(75) Nullable 
+P_AUST_POST_4STATE_ID           VARCHAR(255) Nullable 
+P_NO_PERSON_UPD                 CHAR(1) Nullable 
+H_WH_ID                         (WH_ID) CHAR(2) Nullable 
+RECORD_ID                       INTEGER Not Null 
+

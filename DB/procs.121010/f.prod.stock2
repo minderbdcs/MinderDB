@@ -1,0 +1,2 @@
+alter table prod_reservation add   pr_reserved_start_qty qty;
+

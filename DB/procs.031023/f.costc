@@ -1,0 +1,18 @@
+insert into cost_centre(code,description) values('BU1','Community Relations - C011/72');    
+insert into cost_centre(code,description) values('BU2','Engineering (Project Controls) - C011/01');    
+insert into cost_centre(code,description) values('BU3','Special Contracts - C011/020');    
+insert into cost_centre(code,description) values('BU4','CJV Construction Manager');    
+insert into cost_centre(code,description) values('BU5','Design - C011/51');    
+insert into cost_centre(code,description) values('BU6','Quality - C011/48');    
+insert into cost_centre(code,description) values('BU7','Environmental - C011/75');    
+insert into cost_centre(code,description) values('BU8','Workplace Initiatives - C011/81');    
+insert into cost_centre(code,description) values('C021','Northern Earthworks - C021/06/002');    
+insert into cost_centre(code,description) values('C032','Southern Earthworks 0k - 10k -C032/06/002');    
+insert into cost_centre(code,description) values('C033','Southern Earthworks 10k - 21k -C033/06/002');    
+insert into cost_centre(code,description) values('C041','Paving - C041/06');    
+insert into cost_centre(code,description) values('C052','Northern Local Roads - C052/06');    
+insert into cost_centre(code,description) values('C053','Southern Local Roads - C053/06');    
+insert into cost_centre(code,description) values('C062','Northern Bridges -C062/06');    
+insert into cost_centre(code,description) values('C063','Southern Bridges - C063/06');    
+insert into cost_centre(code,description) values('C064','Segmental Bridges (Casting) - C064/06');    
+insert into cost_centre(code,description) values('C065','Segmental Bridges (Installation) - C065/06');    

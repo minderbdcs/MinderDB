@@ -1,0 +1,3 @@
+alter table control add default_shipping_method carrier_account_no;
+alter table control add purchase_shipping_method carrier_account_no;
+

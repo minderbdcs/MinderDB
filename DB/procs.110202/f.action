@@ -1,0 +1,4 @@
+alter table sys_screen_button add ssb_minder_execute code_255;
+/* eg reportQuery(reportid,(list of parameters)) */
+
+

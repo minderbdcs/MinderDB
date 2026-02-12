@@ -1,0 +1,18 @@
+set echo;
+set stats;
+update issn set issn.prod_id = (select case when prod_profile.other1 is null then prod_profile.prod_id else prod_profile.other1 end as new_prod from prod_profile where prod_profile.prod_id = issn.prod_id)
+where issn.issn_status in ('AS','ST','PA','QR') and 
+exists(select other1 from prod_profile p1 where p1.prod_id = issn.prod_id);
+/* ============================================================================== */
+update ssn set ssn.prod_id = (select case when prod_profile.other1 is null then prod_profile.prod_id else prod_profile.other1 end as new_prod from prod_profile where prod_profile.prod_id = ssn.prod_id)
+where ssn.status_ssn in ('AS','ST','PA','QR') and
+exists(select p1.other1 from prod_profile p1 where p1.prod_id = ssn.prod_id);
+/* ============================================================================== */
+update purchase_order_line set purchase_order_line.prod_id = (select case when prod_profile.other1 is null then prod_profile.prod_id else prod_profile.other1 end as new_prod from prod_profile where prod_profile.prod_id = purchase_order_line.prod_id)
+where purchase_order_line.po__line_status in ('OP') and
+exists(select p1.other1 from prod_profile p1 where p1.prod_id = purchase_order_line.prod_id);
+/* ============================================================================== */
+update pick_item  set pick_item.prod_id = (select case when prod_profile.other1 is null then prod_profile.prod_id else prod_profile.other1 end as new_prod from prod_profile where prod_profile.prod_id = pick_item.prod_id)
+where pick_item.pick_line_status  in ('AS','OP','UP','HD') and
+exists(select p1.other1 from prod_profile p1 where p1.prod_id = pick_item.prod_id);
+/* ============================================================================== */

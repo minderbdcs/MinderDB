@@ -1,0 +1,44 @@
+1 Packing Materials with orders
+add picks procedure for add products to an order
+	want to allow for consumming of the product regardless of what comany that it is
+	for PM prod type
+	so need to add pick_item_detail and split an issn from someware in the warehouse that the order is for
+	might want to take the oldest first
+
+2. Adjust ssn_id's created so that uses the warehouse.ssn_prefix for the original ssn_id created
+	when the field is non null
+
+	note add_issn procedure use
+	add grnv
+3. locn seq
+	when go to pick menu or change direction create a transactions archive record in picking for report on locn seq to show direction change
+	note must be added in PKUA and pick get next locn
+	add to the report
+	the do later = PKUP this is for a product - so need to add records for individual orders
+	the unallocate = PKUL this is for a whole order
+	then cancels PKCA PKCN PKCO
+4. in DSOT when passed weight is zero use the max weight for the carrier service passed
+=================================================================================================================
+
+for point 2.
+ok in 181116 did the table additons for point 2.
+	have done  procedure changes
+		add_issn get_issn_barcode 
+		add_ssn_issn_grnv add_ssn_issn_grnv add_ssn_issn_grnv_set add_ssn_issn_grnv_weight
+		get_next_ssn 
+		pc_auob pc_label_split pc_stis pc_tris update_issn
+	that leaves 10 triggers to change
+	note 
+	isil has no company
+	isiz has no warehouse or company
+	stka is for a 1 level of kit
+	stpz uses the wh_id passed and the first company for the product
+
+	have done 
+	isil  isiz stka stpz dsss stpa 
+	pksn pktl pktr pkol
+	
+=================================================================================================================
+
+	
+	

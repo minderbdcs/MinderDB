@@ -1,0 +1,2 @@
+alter table archive_layout add archive_to_table code;
+

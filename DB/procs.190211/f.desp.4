@@ -1,0 +1,6 @@
+CREATE DOMAIN CREATE_DATE_STR VARCHAR(12);
+
+alter table pick_despatch drop pd_created_date ;
+commit;
+
+alter table pick_despatch add pd_created_date CREATE_DATE_STR;

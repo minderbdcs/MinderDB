@@ -1,0 +1,3 @@
+alter domain unit_price type numeric(9,4);
+alter domain standard_cost  type numeric(9,4);
+

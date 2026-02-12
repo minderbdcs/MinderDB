@@ -1,0 +1,2 @@
+/* alter table company alter  import_pick_zone to import_pick_sub_type; */
+alter table company add  import_pick_zone  code_two;

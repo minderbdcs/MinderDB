@@ -1,0 +1,2 @@
+update control set export_despatch='T';
+update control set export_despatch_printer='PG';

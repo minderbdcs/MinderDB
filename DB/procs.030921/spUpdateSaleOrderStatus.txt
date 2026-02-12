@@ -1,0 +1,49 @@
+CREATE PROCEDURE UPDATE_SALE_ORDER_STATUS (
+  PICK_ORDER VARCHAR(10),
+  STATUS_SSN CHAR(2),
+  PICK_STATUS CHAR(2)
+) RETURNS (
+  VALID_SO CHAR(1)
+) AS     
+
+DECLARE VARIABLE sSSN VARCHAR(20);
+DECLARE VARIABLE iCount INTEGER;
+
+BEGIN
+    iCount = 0;
+    VALID_SO = 'T';    
+    
+    /* Check Sale Order Lines first */
+    SELECT COUNT(*)
+    FROM PICK_ITEM
+    WHERE PICK_ORDER = :PICK_ORDER               
+    INTO :iCount;
+    
+    IF (:iCount = 0) THEN
+    BEGIN
+       VALID_SO = 'F';
+       EXIT;
+    END
+      
+    FOR 
+      SELECT SSN_ID 
+      FROM PICK_ITEM
+      WHERE PICK_ORDER = :PICK_ORDER               
+      INTO :sSSN
+    DO
+    BEGIN  
+      /* Update status SSN */
+      IF (LEN(:sSSN) <> 0) THEN
+      BEGIN
+         UPDATE SSN
+         SET STATUS_SSN = :STATUS_SSN           
+         WHERE SSN_ID = :sSSN;                                   
+      END
+    END  
+    
+    /* Update Pick Order status */
+    UPDATE PICK_ORDER
+    SET PICK_STATUS = :PICK_STATUS
+    WHERE PICK_ORDER = :PICK_ORDER;
+   
+END^

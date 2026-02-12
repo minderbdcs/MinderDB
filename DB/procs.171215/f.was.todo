@@ -1,0 +1,10 @@
+add post events for inserts and updates to pick_order,pick_despatch,pack_id
+only do if control.external_despatch is true
+Done
+=========================================================================
+
+note also have to check tifs dopfmail updates only those connotes in the manifest
+rather than all
+ie like pinpoints
+for a new manifest
+

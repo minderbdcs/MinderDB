@@ -1,0 +1,8 @@
+alter table pick_mode add pick_param_getallbtnvisible value_tf;
+alter table pick_mode add pick_param_acceptbtnvisible value_tf;
+alter table pick_mode add pick_param_devicepc value_tf;
+alter table pick_mode add pick_param_use_trolley value_tf;
+update pick_mode set pick_param_getallbtnvisible = 'T',
+pick_param_acceptbtnvisible = 'T',
+pick_param_devicepc = 'F',
+pick_param_use_trolley = 'T';

@@ -1,0 +1,6 @@
+drop trigger run_transaction_gltd;
+drop trigger run_transaction_pppk;
+drop trigger add_prod_profile_temp;
+drop procedure import_prod_profile;
+drop procedure export_prod_profile;
+

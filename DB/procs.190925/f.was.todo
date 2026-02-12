@@ -1,0 +1,7 @@
+change  to use get_issn_barcode in the 3 procedures
+add_ssn_issn_grci
+add_ssn_issn_label
+pc_label_load
+
+then change get_issn_barcode to use new field data_suffix_check_digit to append a check digit to the ssn_id
+

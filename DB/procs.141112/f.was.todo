@@ -1,0 +1,8 @@
+add to pick_order_sub_type whether to include in replenish
+add company_id to transfer_requests
+
+devices that can do replenish are forklifts
+
+if the device doing the replenish is a forklift then they can replenish from forklift locations
+if the device doing the replenish is not a forklift then they can replenish from non forklift locations
+

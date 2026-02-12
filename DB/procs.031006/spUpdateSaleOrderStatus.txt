@@ -1,0 +1,84 @@
+ALTER PROCEDURE UPDATE_SALE_ORDER_STATUS (
+  PICK_ORDER VARCHAR(10),
+  STATUS_SSN CHAR(2),
+  PICK_STATUS CHAR(2),
+  APPROVED_BY VARCHAR(10)
+) RETURNS (
+  VALID_SO CHAR(1)
+) AS       
+
+DECLARE VARIABLE sSSN VARCHAR(20);
+DECLARE VARIABLE iCount INTEGER;
+DECLARE VARIABLE sWH CHAR(2);
+DECLARE VARIABLE sLOCN VARCHAR(10);
+DECLARE VARIABLE sPickLabelNo VARCHAR(7);
+
+BEGIN
+    iCount = 0;
+    VALID_SO = 'T';    
+    
+    /* Check Sale Order Lines first */
+    SELECT COUNT(*)
+    FROM PICK_ITEM
+    WHERE PICK_ORDER = :PICK_ORDER               
+    INTO :iCount;
+    
+    IF (:iCount = 0) THEN
+    BEGIN
+       VALID_SO = 'F';
+       EXIT;
+    END
+    
+    /* Update Pick Item Status */
+    UPDATE PICK_ITEM
+    SET PICK_LINE_STATUS = :STATUS_SSN
+    WHERE PICK_ORDER = :PICK_ORDER; 
+      
+    FOR 
+      SELECT PICK_LABEL_NO, SSN_ID 
+      FROM PICK_ITEM
+      WHERE PICK_ORDER = :PICK_ORDER               
+      INTO :sPickLabelNo, :sSSN
+    DO
+    BEGIN  
+      /* Update status SSN */
+      IF (LEN(:sSSN) <> 0) THEN
+      BEGIN
+         UPDATE SSN
+         SET STATUS_SSN = :STATUS_SSN           
+         WHERE SSN_ID = :sSSN;  
+         
+         IF (:PICK_STATUS = 'OP') THEN
+         BEGIN
+           /* Get WH, Location from SSN */
+           SELECT WH_ID, LOCN_ID
+           FROM SSN
+           WHERE SSN_ID = :sSSN
+           INTO :sWH, :sLOCN;
+         
+           /* Update WH, Location in Pick Item */         
+           UPDATE PICK_ITEM
+           SET WH_ID = :sWH,
+               PICK_LOCATION = :sLOCN
+           WHERE PICK_LABEL_NO = :sPickLabelNo;
+         END         
+      END           
+    END  
+    
+    /* Update Pick Order status */
+    IF (:PICK_STATUS = 'OP') THEN
+    BEGIN
+      UPDATE PICK_ORDER
+      SET PICK_STATUS = :PICK_STATUS,
+          APPROVED_DATE = 'NOW',
+          APPROVED_BY = :APPROVED_BY
+      WHERE PICK_ORDER = :PICK_ORDER;
+    END
+    ELSE
+    BEGIN
+      UPDATE PICK_ORDER
+      SET PICK_STATUS = :PICK_STATUS
+      WHERE PICK_ORDER = :PICK_ORDER;
+    END
+   
+END^

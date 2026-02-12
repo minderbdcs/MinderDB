@@ -1,0 +1,43 @@
+/* want 10 generators */
+create generator carrier_connote_id_gen1;
+create generator carrier_connote_id_gen2;
+create generator carrier_connote_id_gen3;
+create generator carrier_connote_id_gen4;
+create generator carrier_connote_id_gen5;
+create generator carrier_connote_id_gen6;
+create generator carrier_connote_id_gen7;
+create generator carrier_connote_id_gen8;
+create generator carrier_connote_id_gen9;
+create generator carrier_connote_id_gen10;
+create generator carrier_connote_id_gen11;
+create generator carrier_connote_id_gen12;
+create generator carrier_connote_id_gen13;
+create generator carrier_connote_id_gen14;
+create generator carrier_connote_id_gen15;
+
+/* carrier table */
+alter table carrier add connote_PREFIX VARCHAR(15);
+alter table carrier add connote_suffix VARCHAR(15);
+alter table carrier add connote_ACCOUNT CARRIER_ACCOUNT_NO;
+alter table carrier add connote_START_NO START_NO;
+alter table carrier add connote_END_NO END_NO;
+alter table carrier add connote_NUMBER_BASE INTEGER default 10;
+alter table carrier add connote_PRN_TYPE CODE;
+alter table carrier add connote_generator CODE;
+alter table carrier add connote_param_id CODE;
+alter table carrier add connote_check_digit_method CODE;
+/* carrier_service table */
+alter table carrier_service add service_service_code person;
+alter table carrier_service add cs_label_name        CODE;
+alter table carrier_service add service_reqd value_tf ;
+alter table carrier_service add service_multipart_consignment  value_tf ;
+alter table carrier_service add service_partial_delivery value_tf ;
+alter table carrier_service add service_cash_to_collect value_tf ;
+alter table carrier_service add service_profile_id person ;
+alter table carrier_service add service_charge_codes person ;
+alter table carrier_service add service_location_id  locn_id;
+
+
+/* procedure for check digits */
+
+/* procedure to calc the next connote */

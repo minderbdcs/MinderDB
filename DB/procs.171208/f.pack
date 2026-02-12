@@ -1,0 +1,1 @@
+ALTER  DOMAIN WEIGHT_DECIMAL3                 TYPE  NUMERIC ( 9, 3) ;

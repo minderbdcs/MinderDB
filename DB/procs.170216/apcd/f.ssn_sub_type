@@ -1,0 +1,2 @@
+alter table ssn drop 
+CONSTRAINT SSN_FK_SSN_SUB_TYPE;

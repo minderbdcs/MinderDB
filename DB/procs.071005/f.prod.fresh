@@ -1,0 +1,2 @@
+update prod_profile set ssn_type = substr(prod_id,1,3);
+

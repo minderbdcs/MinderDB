@@ -1,0 +1,13 @@
+/*
+
+turn trigger update_pick_item_time off
+
+for pick items with DX pick_line_status and exported_despatch = 'K'
+then this line is the kit line.
+So read from prod_kit the lines for this kit
+then update the lines for this order and the component product to have this parents label no
+
+then turn the update_pick_item_time back on
+
+*/
+

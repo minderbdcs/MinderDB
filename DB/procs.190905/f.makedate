@@ -1,0 +1,7 @@
+/*
+403:DECLARE EXTERNAL FUNCTION MAKEDATE
+406:ENTRY_POINT 'fudlib_makedate' MODULE_NAME 'fudlib';
+
+*/
+
+drop external function makedate;

@@ -1,0 +1,21 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP   PROCEDURE NONULLP ^
+
+CREATE PROCEDURE NONULLP (
+    L_VALOR VARCHAR(1024))
+RETURNS (
+    R_VALOR VARCHAR(1024))
+ AS
+begin
+    r_valor=:l_valor;
+    if (l_valor is null) then r_valor='';
+ suspend;
+end ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

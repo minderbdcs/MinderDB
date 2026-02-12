@@ -1,0 +1,5 @@
+alter table param add menu_name code;
+alter table param add table_name code;
+alter table param add field_name code;
+alter table param add menu_url code_255 ;
+

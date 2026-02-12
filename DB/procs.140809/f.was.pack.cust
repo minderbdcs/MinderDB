@@ -1,0 +1,1 @@
+insert into pack_customer (pc_customer_edi_no,company_id,pc_populate_out_sscc_method,last_update_by) values('9377777134179','PSGROUP','ORDER DELIVER TO','frankl');

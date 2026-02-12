@@ -1,0 +1,2 @@
+alter table control add db_event_directory descr;
+

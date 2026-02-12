@@ -1,0 +1,2 @@
+alter table grn add last_lot_no serial_number;
+

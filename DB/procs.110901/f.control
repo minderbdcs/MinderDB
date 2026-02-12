@@ -1,0 +1,3 @@
+alter table control add SSN_GENERATE_LEGACY_ID value_tf;
+update control set ssn_generate_legacy_id = 'F';
+

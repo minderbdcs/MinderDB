@@ -1,0 +1,36 @@
+drop trigger add_pick_from_temp3;
+drop trigger add_prod_profile_temp;
+drop trigger run_transaction_stka;
+drop trigger run_transaction_stpz;
+drop trigger run_transaction_gltd;
+drop trigger run_transaction_stpa;
+drop trigger run_transaction_ppa2;
+drop trigger run_transaction_tris;
+drop trigger run_transaction_stob;
+drop trigger run_transaction_grnv;
+drop trigger run_transaction_grci;
+drop trigger run_transaction_pkol;
+drop trigger run_transaction_pkao;
+drop trigger run_transaction_trol;
+drop trigger run_transaction_tril;
+drop trigger run_transaction_ppcp;
+drop trigger run_transaction_rtal;
+
+
+drop procedure pc_trol_tril;
+drop procedure pc_qty_trol_tril_p;
+
+drop procedure rpt_business_monthly_1_data;
+drop procedure rpt_business_monthly_2_data;
+drop procedure rpt_business_monthly_3_data;
+drop procedure product_qtys;
+drop procedure pc_tris;
+drop procedure pc_stob;
+drop procedure add_ssn_issn_grnv_weight;
+drop procedure add_ssn_issn_grnv;
+drop procedure add_ssn_issn_grnv_set   ;
+drop procedure add_product_cost        ;
+drop procedure add_ssn_issn_grci;
+drop procedure add_issn;
+
+

@@ -1,0 +1,2 @@
+alter trigger update_ssn_po_price inactive;
+

@@ -1,0 +1,4 @@
+insert into options(group_code,code,description) values('PLAO-QUE','MM|AU','T');
+insert into options(group_code,code,description) values('PLAO-QUE','MM|NZ','T');
+insert into options(group_code,code,description) values('PLAO-QUE','BW|AU','F');
+insert into options(group_code,code,description) values('PLAO-QUE','BW|NZ','T');

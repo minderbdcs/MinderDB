@@ -1,0 +1,2 @@
+update control set stocktake_method = ',ssn,prod,adjprod,adjssn,addkit,export,prodstk,ISSNSTK,,,,';
+

@@ -1,0 +1,10 @@
+execute procedure add_tran_response('AM','RC000000',(select first 1 i1.ssn_id from issn i1 where i1.current_qty > 1),'DSSS','I','NOW','|split for qty 1',1,'F','','MASTER    ',0,'ST','SSSSSSSSS','me','me');
+execute procedure add_tran_response('AM','RC000000',(select first 1 i1.ssn_id from issn i1 where i1.current_qty > 1),'DSSS','I','NOW','|split for qty 1',1,'F','','MASTER    ',0,'ST','SSSSSSSSS','me','me');
+execute procedure add_tran_response('AM','RC000000',(select first 1 i1.ssn_id from issn i1 where i1.current_qty > 1),'DSSS','I','NOW','|split for qty 1',1,'F','','MASTER    ',0,'ST','SSSSSSSSS','me','me');
+execute procedure add_tran_response('AM','RC000000',(select first 1 i1.ssn_id from issn i1 where i1.current_qty > 1),'DSSS','I','NOW','|split for qty 1',1,'F','','MASTER    ',0,'ST','SSSSSSSSS','me','me');
+execute procedure add_tran_response('AM','RC000000',(select first 1 i1.ssn_id from issn i1 where i1.current_qty > 1),'DSSS','I','NOW','|split for qty 1',1,'F','','MASTER    ',0,'ST','SSSSSSSSS','me','me');
+execute procedure add_tran_response('AM','RC000000',(select first 1 i1.ssn_id from issn i1 where i1.current_qty > 1),'DSSS','I','NOW','|split for qty 1',1,'F','','MASTER    ',0,'ST','SSSSSSSSS','me','me');
+execute procedure add_tran_response('AM','RC000000',(select first 1 i1.ssn_id from issn i1 where i1.current_qty > 1),'DSSS','I','NOW','|split for qty 1',1,'F','','MASTER    ',0,'ST','SSSSSSSSS','me','me');
+execute procedure add_tran_response('AM','RC000000',(select first 1 i1.ssn_id from issn i1 where i1.current_qty > 1),'DSSS','I','NOW','|split for qty 1',1,'F','','MASTER    ',0,'ST','SSSSSSSSS','me','me');
+execute procedure add_tran_response('AM','RC000000',(select first 1 i1.ssn_id from issn i1 where i1.current_qty > 1),'DSSS','I','NOW','|split for qty 1',1,'F','','MASTER    ',0,'ST','SSSSSSSSS','me','me');
+execute procedure add_tran_response('AM','RC000000',(select first 1 i1.ssn_id from issn i1 where i1.current_qty > 1),'DSSS','I','NOW','|split for qty 1',1,'F','','MASTER    ',0,'ST','SSSSSSSSS','me','me');

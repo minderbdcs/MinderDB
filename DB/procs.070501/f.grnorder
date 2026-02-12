@@ -1,0 +1,6 @@
+create domain lot_no as varchar(10);
+create domain lot_line_no as varchar(4);
+
+alter table grn_order add lot_no lot_no;
+alter table grn_order add lot_line_no lot_line_no;
+

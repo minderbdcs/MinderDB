@@ -1,0 +1,2 @@
+alter table issn add despatched_date timestamp;
+

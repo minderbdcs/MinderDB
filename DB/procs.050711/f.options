@@ -1,0 +1,4 @@
+insert into options(group_code, code, description) values('CANORDER','No Stock','No Stock');
+insert into options(group_code, code, description) values('CANORDER','Damaged Stock','Damaged Stock');
+insert into options(group_code, code, description) values('CANORDER','Wrong Stock','Wrong Stock');
+insert into options(group_code, code, description) values('CANORDER','None','None');

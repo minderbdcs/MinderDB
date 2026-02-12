@@ -1,0 +1,198 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+ALTER PROCEDURE UPDATE_SALE_ORDER_STATUS (PICK_ORDER VARCHAR(10) CHARACTER SET NONE,
+STATUS_SSN CHAR(2) CHARACTER SET NONE,
+PICK_STATUS CHAR(2) CHARACTER SET NONE,
+APPROVED_BY VARCHAR(10) CHARACTER SET NONE)
+RETURNS (VALID_SO CHAR(1) CHARACTER SET NONE)
+AS 
+       
+
+DECLARE VARIABLE SSSN VARCHAR(20);
+DECLARE VARIABLE SPROD_ID VARCHAR(30);
+DECLARE VARIABLE ICOUNT INTEGER;
+DECLARE VARIABLE SWH CHAR(2);
+DECLARE VARIABLE SLOCN VARCHAR(10);
+DECLARE VARIABLE SPICKLABELNO VARCHAR(7);
+DECLARE VARIABLE IMPORTSTATUS VARCHAR(40);
+DECLARE VARIABLE RESERVEDSTATUS VARCHAR(40);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_SSNID VARCHAR(20);
+DECLARE VARIABLE WK_NOCONFIRM CHAR(1);
+BEGIN
+    ICOUNT = 0;
+    VALID_SO = 'T';    
+    WK_NOCONFIRM = 'F';    
+    
+    /* CHECK SALE ORDER LINES FIRST */
+    SELECT COUNT(*)
+    FROM PICK_ITEM
+    WHERE PICK_ORDER = :PICK_ORDER               
+    INTO :ICOUNT;
+    
+    IF (:ICOUNT = 0) THEN
+    BEGIN
+        VALID_SO = 'F';
+        SUSPEND;
+        EXIT;
+    END
+    /* GET VALID STATUSES */
+    SELECT CONTROL.PICK_IMPORT_SSN_STATUS,CONTROL.PICK_RESERVED_SSN_STATUS,CONFIRM_WITH_NO_PROD
+    FROM CONTROL
+    INTO :IMPORTSTATUS, :RESERVEDSTATUS, :WK_NOCONFIRM;
+
+    IF (WK_NOCONFIRM IS NULL) THEN
+    BEGIN
+       WK_NOCONFIRM = 'F';
+    END
+    IF (PICK_STATUS = 'HD') THEN
+    BEGIN
+       /* hold lines */
+       UPDATE PICK_ITEM
+              SET PICK_LINE_STATUS = :PICK_STATUS
+              WHERE PICK_ORDER = :PICK_ORDER
+              AND PICK_LINE_STATUS IN ('OP','UP','UC');
+    END
+    ELSE
+    BEGIN
+       IF (PICK_STATUS = 'UC' ) THEN
+       BEGIN
+          /* unhold lines */
+          UPDATE PICK_ITEM
+                 SET PICK_LINE_STATUS = :PICK_STATUS
+                 WHERE PICK_ORDER = :PICK_ORDER
+                 AND PICK_LINE_STATUS = 'HD';
+       END
+       ELSE
+       BEGIN
+
+          /* UPDATE PICK ITEM STATUS */
+          FOR 
+            SELECT PICK_LABEL_NO, SSN_ID, PROD_ID
+            FROM PICK_ITEM
+            WHERE PICK_ORDER = :PICK_ORDER
+            AND ((PICK_ITEM.PICK_LINE_STATUS IS NULL) OR (PICK_ITEM.PICK_LINE_STATUS = 'UC'))
+      
+            INTO :SPICKLABELNO, :SSSN, :SPROD_ID
+          DO
+          BEGIN
+            IF (:SSSN IS NOT NULL) THEN 
+            BEGIN
+                    WK_FOUND = 0;
+                    /* CHECK TO FIND AN ISSN THAT CAN BE RESERVED */
+                    /* WHERE ISSN.ORIGINAL_SSN = :SSSN */
+                    SELECT FIRST 1 1, ORIGINAL_SSN, WH_ID, LOCN_ID 
+                    FROM ISSN
+                    WHERE ISSN.SSN_ID = :SSSN
+                    AND (POS(:IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1)
+                    INTO :WK_FOUND, :WK_SSNID, :SWH, :SLOCN;
+                    IF (WK_FOUND = 1) THEN 
+                    BEGIN
+                       /* UPDATE ISSN STATUS*/
+                       /* WHERE SSN_ID = :WK_SSNID */
+                       UPDATE ISSN
+                       SET ISSN_STATUS = :STATUS_SSN,
+                           PICK_ORDER = :SPICKLABELNO
+                       WHERE SSN_ID = :SSSN;
+                       /* UPDATE SSN STATUS*/
+                       IF (SSSN = WK_SSNID) THEN
+                       BEGIN
+                          UPDATE SSN
+                          SET STATUS_SSN = :STATUS_SSN
+                          WHERE SSN_ID = :SSSN;
+                       END
+                       
+                       IF (:PICK_STATUS = 'CF') THEN
+                       BEGIN
+                         /* UPDATE WH, LOCATION IN PICK ITEM */
+                         UPDATE PICK_ITEM
+                         SET WH_ID = :SWH,
+                             PICK_LOCATION = :SLOCN,
+                             PICK_LINE_STATUS = :PICK_STATUS,
+                             PICK_ITEM.REASON = ''
+                         WHERE PICK_LABEL_NO = :SPICKLABELNO;
+                       END
+                    END
+                    ELSE 
+                    BEGIN
+                      VALID_SO = 'F';
+                      UPDATE PICK_ITEM
+                      SET PICK_ITEM.REASON = 'NO ITEM FOUND TO RESERVE'
+                      WHERE PICK_LABEL_NO = :SPICKLABELNO;
+                    END
+            END
+            ELSE 
+            BEGIN
+               WK_FOUND = 0;
+               IF (WK_NOCONFIRM = 'F') THEN
+               BEGIN
+                  /* CHECK TO FIND AN ISSN THAT CAN BE RESERVED */
+                  SELECT FIRST 1 1, SSN_ID, WH_ID, LOCN_ID FROM ISSN
+                  WHERE ISSN.PROD_ID = :SPROD_ID
+                  AND (POS(:IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1)
+                  INTO :WK_FOUND, :WK_SSNID, :SWH, :SLOCN;
+                  IF (WK_FOUND = 1) THEN 
+                  BEGIN
+                     IF (:PICK_STATUS = 'CF') THEN
+                     BEGIN
+                       /* UPDATE WH, LOCATION IN PICK ITEM */
+                       UPDATE PICK_ITEM
+                       SET WH_ID = :SWH,
+                           PICK_LOCATION = :SLOCN,
+                           PICK_LINE_STATUS = :PICK_STATUS,
+                           PICK_ITEM.REASON = ''
+                       WHERE PICK_LABEL_NO = :SPICKLABELNO;
+                     END
+                  END
+                  ELSE 
+                  BEGIN
+                     VALID_SO = 'F';
+                     UPDATE PICK_ITEM
+                     SET PICK_ITEM.REASON = 'NO PRODUCT ITEM FOUND TO RESERVE'
+                     WHERE PICK_LABEL_NO = :SPICKLABELNO;
+                  END
+               END
+               ELSE
+               BEGIN
+                  IF (:PICK_STATUS = 'CF') THEN
+                  BEGIN
+                    /* UPDATE WH, LOCATION IN PICK ITEM */
+                    UPDATE PICK_ITEM
+                    SET PICK_LINE_STATUS = :PICK_STATUS,
+                        PICK_ITEM.REASON = ''
+                    WHERE PICK_LABEL_NO = :SPICKLABELNO;
+                  END
+               END
+            END
+          END
+       END /* else from unhold */
+    END /* else from hold */
+    
+    /* UPDATE PICK ORDER STATUS */
+    IF (VALID_SO = 'T') THEN 
+    BEGIN
+            IF (:PICK_STATUS = 'OP') THEN
+            BEGIN
+              UPDATE PICK_ORDER
+              SET PICK_STATUS = :PICK_STATUS,
+                  APPROVED_DATE = 'NOW',
+                  APPROVED_BY = :APPROVED_BY
+              WHERE PICK_ORDER = :PICK_ORDER;
+            END
+            ELSE
+            BEGIN
+              UPDATE PICK_ORDER
+              SET PICK_STATUS = :PICK_STATUS
+              WHERE PICK_ORDER = :PICK_ORDER;
+            END
+    END
+    SUSPEND;
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

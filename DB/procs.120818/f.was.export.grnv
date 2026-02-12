@@ -1,0 +1,108 @@
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+/* want to run this from the hh receive
+for a GRN
+PO Order
+PO Line
+or Load Product 
+1 line for total received for the product
+
+so can only send when leave verify to receive menu
+or product changed
+
+*/
+
+CREATE OR ALTER  PROCEDURE EXPORT_PUTAWAY (PUTAWAY_ID VARCHAR(10) )
+AS 
+  DECLARE VARIABLE WK_DO_EXPORT_W CHAR(1);
+  DECLARE VARIABLE WK_DATE VARCHAR(8);
+  DECLARE VARIABLE WK_PROD VARCHAR(30);
+  DECLARE VARIABLE WK_COMPANY VARCHAR(20);
+  DECLARE VARIABLE WK_QTY INTEGER;
+  DECLARE VARIABLE WK_PROD_QTY INTEGER;
+  DECLARE VARIABLE WK_GRN VARCHAR(10);
+  DECLARE VARIABLE WK_PO VARCHAR(10);
+  DECLARE VARIABLE WK_PRINTER CHAR(2);
+  DECLARE VARIABLE WK_DIRECTORY VARCHAR(75);
+  DECLARE VARIABLE WK_FILENAME VARCHAR(255);
+  DECLARE VARIABLE WK_LABEL_LINE VARCHAR(250);
+  DECLARE VARIABLE WK_HAVE_FILE INTEGER;
+  DECLARE VARIABLE WK_RESULT INTEGER;
+  DECLARE VARIABLE WK_OBJECT VARCHAR(30);
+  DECLARE VARIABLE DEVICE_ID CHAR(2);
+  DECLARE VARIABLE PERSON_ID VARCHAR(10);
+  DECLARE VARIABLE TRN_DATE TIMESTAMP;
+
+BEGIN
+   SELECT 'T', EXPORT_PUTAWAY_PRINTER 
+   FROM CONTROL 
+   INTO :WK_DO_EXPORT_W, :WK_PRINTER;
+   IF (WK_DO_EXPORT_W = 'T') THEN
+   BEGIN
+      TRN_DATE = 'NOW';
+      WK_DATE = LPAD(MER_DAY(TRN_DATE),'0',2) || LPAD(MER_MONTH(TRN_DATE),'0',2) || SUBSTR(CAST(MER_YEAR(TRN_DATE) AS CHAR(4)) , 3,4);
+      /* need the directory for this label set */
+      SELECT WORKING_DIRECTORY FROM SYS_EQUIP 
+             WHERE DEVICE_ID = :WK_PRINTER
+             INTO :WK_DIRECTORY;
+      BEGIN
+         FOR SELECT ISSN.COMPANY_ID, ISSN.PROD_ID , SUM(ISSN.CURRENT_QTY), SSN.GRN, SSN.PO_ORDER, ISSN_PUTAWAY.DEVICE_ID, ISSN_PUTAWAY.PERSON_ID
+         FROM ISSN_PUTAWAY 
+         JOIN ISSN ON ISSN.SSN_ID = ISSN_PUTAWAY.SSN_ID
+         JOIN SSN ON SSN.SSN_ID = ISSN.ORIGINAL_SSN
+         WHERE PUTAWAY_ID = :PUTAWAY_ID
+         GROUP BY ISSN.COMPANY_ID, ISSN.PROD_ID, SSN.GRN, SSN.PO_ORDER, ISSN_PUTAWAY.DEVICE_ID, ISSN_PUTAWAY.PERSON_ID
+         INTO :WK_COMPANY , :WK_PROD, :WK_QTY, :WK_GRN, :WK_PO, :DEVICE_ID, PERSON_ID
+         DO
+         BEGIN
+            IF (WK_COMPANY IS NULL) THEN
+            BEGIN
+               WK_COMPANY = '';
+            END
+            IF (WK_PROD IS NULL) THEN
+            BEGIN
+               WK_PROD = '';
+            END
+            IF (WK_GRN IS NULL) THEN
+            BEGIN
+               WK_GRN = '';
+            END
+            IF (WK_PO IS NULL) THEN
+            BEGIN
+               WK_PO = '';
+            END
+            IF (WK_QTY IS NULL) THEN
+            BEGIN
+               WK_QTY = 0;
+            END
+            /* append the file name to the directory*/
+            WK_FILENAME = WK_DIRECTORY || 'PUTAWAY.txt';
+            WK_LABEL_LINE = '"' || WK_COMPANY || '",' ||
+                WK_DATE || ',"' ||
+                WK_PO || '","' ||
+                WK_GRN || '","' ||
+                WK_PROD || '",' ||
+                WK_QTY || ',"' ||
+                DEVICE_ID || ' ' || PUTAWAY_ID || '"' ;
+     
+            WK_HAVE_FILE = 1;
+            WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+            IF (WK_RESULT <> 0) THEN
+            BEGIN
+               WK_FILENAME = WK_DIRECTORY || 'PUTAWAY.2xt';
+               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+               WK_HAVE_FILE = -1;
+            END
+         END
+      END
+      
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,344 @@
+
+def updateOrder( wk_order):
+	# update order 
+	print "start update order " , wk_order
+	wk_dummy = 0.0
+	wk_weight = 0.0
+	wk_volume = 0.0
+	wk_volume_uom = "M3"
+	wk_weight_uom = "KG"
+	wk_pp_volume = 0
+	wk_pp_uom = "M3"
+	wk_pick_order_qty = 0
+	wk_pp_weight = 0.0
+	wk_pp_weight_uom = "KG"
+	wk_pp_pack_weight = 0.0
+	wk_po_ship_via = None
+	wk_ca_max_weight = None
+	wk_cn_ugly_carrier = None
+	# want to update the net_weight as well
+	# get x and y for all prods  on order (in conveyor)
+	wk_select_stmt = """select pp.volume, pp.volume_uom, pi.pick_order_qty, pp.net_weight, pp.net_weight_uom ,pp.pack_weight
+from pick_item pi 
+join pick_order po on po.pick_order = pi.pick_order
+left outer join prod_profile pp
+on pi.prod_id = pp.prod_id and po.company_id = pp.company_id
+where pi.pick_order = '%s' and pi.pick_order_qty>0 and pi.exported_despatch in ('T','F') """ % (wk_order)
+	print wk_select_stmt
+	#cur.execute(wk_select_stmt )
+	cur4.execute(wk_select_stmt )
+	#data_fields = cur.fetchone()
+	data_fields = cur4.fetchone()
+	if data_fields is None:
+		wk_pp_volume = 0
+		wk_pp_uom = "M3"
+		wk_pick_order_qty = 0
+		wk_pp_weight = 0.0
+		wk_pp_weight_uom = "KG"
+		wk_pp_pack_weight = 0.0
+		print "have none prod volume ",wk_pp_volume, "order qty", wk_pick_order_qty
+	
+	while not data_fields is None:
+		for pos in range(len(data_fields)):
+			if  data_fields[pos] is None:
+				if pos == 0:
+					wk_pp_volume = 0
+				elif pos == 1:
+					wk_pp_volume_uom = "M3"
+				elif pos == 2:
+					wk_pick_order_qty = 0
+				elif pos == 3:
+					wk_pp_weight = 0.0
+				elif pos == 4:
+					wk_pp_weight_uom = "KG"
+				else:
+					wk_pp_pack_weight = 0.0
+			else:
+				if pos == 0:
+					wk_pp_volume = float(data_fields[pos])
+				elif pos == 1:
+					wk_pp_volume_uom = str(data_fields[pos])
+				elif pos == 2:
+					wk_pick_order_qty = float(data_fields[pos])
+				elif pos == 3:
+					wk_pp_weight = float(data_fields[pos])
+				elif pos == 4:
+					wk_pp_weight_uom = str(data_fields[pos])
+				else:
+					wk_pp_pack_weight = float(data_fields[pos])
+		# have volume for a unit
+		# volume = products volume  * order qty
+		print "have prod volume ",wk_pp_volume, "order qty", wk_pick_order_qty
+		wk_volume = wk_volume + (wk_pp_volume * wk_pick_order_qty)
+		wk_volume_uom = wk_pp_volume_uom
+		if wk_pp_weight > 0.0:
+			wk_weight = wk_weight + (wk_pp_weight * wk_pick_order_qty)
+		else:
+			wk_weight = wk_weight + (wk_pp_pack_weight * wk_pick_order_qty)
+		print "weight sum ",wk_weight,wk_pp_weight,wk_pp_pack_weight,"order qty",wk_pick_order_qty
+		#data_fields = cur.fetchone()
+		data_fields = cur4.fetchone()
+	print "weight total ",wk_weight
+	# have volume 
+	# what is volume uom
+	# 24/01/2013 carrier will have a max weight . 
+	#            if the weight is bigger than that use the ugly
+	#            carrier to use setup in the control  table
+	wk_update_stmt = """update pick_order set volume  = '%.3f', volume_uom = '%s' , net_weight = '%.3f'   
+ """ % (wk_volume, wk_volume_uom, wk_weight)
+	wk_update_stmt2 = " where pick_order = '%s'" % (wk_order)
+	wk_update_stmt = wk_update_stmt + wk_update_stmt2
+	print wk_update_stmt
+	#cur.execute(wk_update_stmt )
+	cur5.execute(wk_update_stmt )
+	print datetime.datetime.now()
+	# check weight overflow 25-01-2013
+	wk_select_stmt = """select po.ship_via, ca.max_weight , cn.ugly_carrier_id
+from pick_order po 
+left outer join carrier ca
+on po.ship_via   = ca.carrier_id
+join control cn on cn.record_id = 1
+where po.pick_order = '%s'  """ % (wk_order)
+	print wk_select_stmt
+	wk_select_stmt = """select po.ship_via, ca.max_weight , cn.ugly_carrier_id
+from pick_order po 
+join control cn on cn.record_id = 1
+join carrier ca
+on po.ship_via   = ca.carrier_id
+where po.pick_order = '%s'  """ % (wk_order)
+	print wk_select_stmt
+	cur9.execute(wk_select_stmt )
+	print datetime.datetime.now()
+	data_fields = cur9.fetchone()
+	if data_fields is None:
+		wk_po_ship_via = None
+		wk_ca_max_weight = None
+		wk_cn_ugly_carrier = None
+		print "have none ship via "
+	while not data_fields is None:
+		for pos in range(len(data_fields)):
+			if  data_fields[pos] is None:
+				if pos == 0:
+					wk_po_ship_via = None
+				elif pos == 1:
+					wk_ca_max_weight = None
+				else:
+					wk_cn_ugly_carrier = None
+			else:
+				if pos == 0:
+					wk_po_ship_via = data_fields[pos]
+				elif pos == 1:
+					wk_ca_max_weight = float(data_fields[pos])
+				else:
+					wk_cn_ugly_carrier = data_fields[pos]
+		#data_fields = cur.fetchone()
+		data_fields = cur9.fetchone()
+		print datetime.datetime.now()
+	print datetime.datetime.now()
+	if wk_cn_ugly_carrier is not None:
+		if wk_ca_max_weight is not None:
+			if wk_po_ship_via is not None:
+				if wk_po_ship_via != wk_cn_ugly_carrier:
+					if wk_ca_max_weight < wk_weight:
+						wk_update_stmt = """update pick_order set ship_via  = '%s' """ % (wk_cn_ugly_carrier)
+						wk_update_stmt2 = " where pick_order = '%s'" % (wk_order)
+						wk_update_stmt = wk_update_stmt + wk_update_stmt2
+						print wk_update_stmt
+						cur10.execute(wk_update_stmt )
+	print "after uglyfy update", datetime.datetime.now()
+	# now have the weight and uglyfield due to overweight
+	# have to calc the ship_service and P_CARRIER_SERVICE_RECORD_ID for the weight and state
+	# and populate the s_addresses
+	wk_select_stmt = """select wh.address1, wh.address2, wh.wh_city, wh.wh_suburb, wh.wh_state, wh.wh_country, wh.wh_post_code 
+from pick_order po 
+join warehouse wh
+on po.wh_id   = wh.wh_id     
+where po.pick_order = '%s'  """ % (wk_order)
+	print wk_select_stmt
+	cur12.execute(wk_select_stmt )
+	print datetime.datetime.now()
+	data_fields = cur12.fetchone()
+	if data_fields is None:
+		wk_wh_address1 = None
+		wk_wh_address2 = None
+		wk_wh_city = None
+		wk_wh_suburb = None
+		wk_wh_state  = None
+		wk_wh_country  = None
+		wk_wh_post_code  = None
+		print "have none warehouse "
+	while not data_fields is None:
+		for pos in range(len(data_fields)):
+			if  data_fields[pos] is None:
+				if pos == 0:
+					wk_wh_address1 = None
+				elif pos == 1:
+					wk_wh_address2 = None
+				elif pos == 2:
+					wk_wh_city = None
+				elif pos == 3:
+					wk_wh_suburb = None
+				elif pos == 4:
+					wk_wh_state  = None
+				elif pos == 5:
+					wk_wh_country  = None
+				else:
+					wk_wh_post_code  = None
+			else:
+				if pos == 0:
+					wk_wh_address1 = data_fields[pos]
+				elif pos == 1:
+					wk_wh_address2 = data_fields[pos]
+				elif pos == 2:
+					wk_wh_city     = data_fields[pos]
+				elif pos == 3:
+					wk_wh_suburb   = data_fields[pos]
+				elif pos == 4:
+					wk_wh_state    = data_fields[pos]
+				elif pos == 5:
+					wk_wh_country  = data_fields[pos]
+				else:
+					wk_wh_post_code  = data_fields[pos]
+		#data_fields = cur.fetchone()
+		data_fields = cur12.fetchone()
+		print datetime.datetime.now()
+	# ==========================================
+	# get the zone for the state
+	wk_select_stmt = """select first 1  cd.cd_depot_id 
+from pick_order po 
+join carrier_depot cd
+on po.ship_via   = cd.cd_carrier_id and  po.p_state = cd.cd_state
+where po.pick_order = '%s'  
+and cd.cd_depot_status = 'CU'
+order by cd.cd_sequence
+""" % (wk_order)
+	print wk_select_stmt
+	cur14.execute(wk_select_stmt )
+	print datetime.datetime.now()
+	data_fields = cur14.fetchone()
+	if data_fields is None:
+		wk_cd_depot_id = None
+		print "have none cd_depot_id "
+	while not data_fields is None:
+		for pos in range(len(data_fields)):
+			if  data_fields[pos] is None:
+				wk_cd_depot_id  = None
+			else:
+				wk_cd_depot_id  = data_fields[pos]
+		#data_fields = cur.fetchone()
+		data_fields = cur14.fetchone()
+		print datetime.datetime.now()
+	if wk_cd_depot_id is None:
+		print "have none cd_depot_id "
+	else:
+		print "have cd_depot_id %s" % (wk_cd_depot_id)
+	# ==========================================
+	# get the carrier_service for the zone and weight within the range
+	if wk_cd_depot_id is None:
+		wk_cs_record_id = None
+		wk_cs_service_type = None
+		print "wk_cd_depot_id is None" 
+	else:
+		wk_select_stmt = """select first 1  cs.record_id ,cs.service_type   
+from pick_order po 
+join carrier_service cs
+on po.ship_via   = cs.carrier_id and  cs.depot_id = '%s'
+where po.pick_order = '%s'  
+and coalesce(cs.min_weight,0) <= (case when po.net_weight = 0 then 0.001 else po.net_weight end)
+and coalesce(cs.max_weight,9999.999) >= (case when po.net_weight = 0 then 0.001 else po.net_weight end) 
+order by cs.max_weight
+	""" % (wk_cd_depot_id, wk_order )
+		print wk_select_stmt
+		cur15.execute(wk_select_stmt )
+		print datetime.datetime.now()
+		data_fields = cur15.fetchone()
+		if data_fields is None:
+			wk_cs_record_id = None
+			wk_cs_service_type = None
+			print "have none cs_record_id for zone "
+		while not data_fields is None:
+			for pos in range(len(data_fields)):
+				if  data_fields[pos] is None:
+					if pos == 0:
+						wk_cs_record_id  = None
+					else:
+						wk_cs_service_type = None
+				else:
+					if pos == 0:
+						wk_cs_record_id  = data_fields[pos]
+					else:
+						wk_cs_service_type = data_fields[pos]
+			#data_fields = cur.fetchone()
+			data_fields = cur15.fetchone()
+			print datetime.datetime.now()
+	if wk_cs_record_id is None:
+		print "wk_cs_record_id is None"
+	else:
+		print "wk_cs_record_id is ", wk_cs_record_id
+	if wk_cs_service_type is None:
+		print "wk_cs_service_type is None"
+	else:
+		print "wk_cs_service_type is ", wk_cs_service_type
+	# if none found try zone null and change the zone to be none
+	if wk_cs_record_id is None:
+		wk_cd_depot_id = None
+		wk_select_stmt = """select first 1  cs.record_id ,cs.service_type   
+from pick_order po 
+join carrier_service cs
+on po.ship_via   = cs.carrier_id and  cs.depot_id is Null
+where po.pick_order = '%s'  
+and coalesce(cs.min_weight,0) <= (case when po.net_weight = 0 then 0.001 else po.net_weight end)
+and coalesce(cs.max_weight,9999.999) >= (case when po.net_weight = 0 then 0.001 else po.net_weight end) 
+order by cs.max_weight
+	""" % (wk_order )
+		cur15.execute(wk_select_stmt )
+		print datetime.datetime.now()
+		data_fields = cur15.fetchone()
+		if data_fields is None:
+			wk_cs_record_id = None
+			wk_cs_service_type = None
+			print "have none cs_record_id for zone None "
+		while not data_fields is None:
+			for pos in range(len(data_fields)):
+				if  data_fields[pos] is None:
+					if pos == 0:
+						wk_cs_record_id  = None
+					else:
+						wk_cs_service_type = None
+				else:
+					if pos == 0:
+						wk_cs_record_id  = data_fields[pos]
+					else:
+						wk_cs_service_type = data_fields[pos]
+			#data_fields = cur.fetchone()
+			data_fields = cur15.fetchone()
+			print datetime.datetime.now()
+	if wk_cs_record_id is None:
+		print "wk_cs_record_id is None"
+	else:
+		print "wk_cs_record_id is ", wk_cs_record_id
+	if wk_cs_service_type is None:
+		print "wk_cs_service_type is None"
+	else:
+		print "wk_cs_service_type is ", wk_cs_service_type
+	# =========================================
+	# update the order
+	wk_update_stmt = """update pick_order set S_ADDRESS_LINE1  = ?, S_ADDRESS_LINE2 = ?, S_CITY = ?, S_STATE = ?, S_COUNTRY = ?, S_POST_CODE = ?, P_POST_CODE_ZONE = ?, P_CARRIER_SERVICE_RECORD_ID = ?, SHIP_SERVICE = ?, S_SUBURB = ?
+ """ 
+	wk_update_stmt2 = " where pick_order = '%s'" % (wk_order)
+	wk_update_stmt = wk_update_stmt + wk_update_stmt2
+	print wk_update_stmt
+	cur13.execute(wk_update_stmt, (wk_wh_address1, wk_wh_address2, wk_wh_city, wk_wh_state, wk_wh_country, wk_wh_post_code, wk_cd_depot_id, wk_cs_record_id, wk_cs_service_type, wk_wh_suburb) )
+	print datetime.datetime.now()
+	# now save the address in pick_item_address for type S
+	wk_update_stmt = """update pick_item_address set PIA_ADDRESS_LINE1  = ?, PIA_ADDRESS_LINE2 = ?, PIA_CITY = ?, PIA_STATE = ?, PIA_COUNTRY = ?, PIA_POST_CODE = ?, PIA_SUBURB = ?
+ """ 
+	wk_update_stmt2 = " where pick_order = '%s' and pick_label_no = '%s' and pia_addr_type = 'S' " % (wk_order, 'ORDER')
+	wk_update_stmt = wk_update_stmt + wk_update_stmt2
+	cur18.execute(wk_update_stmt, (wk_wh_address1, wk_wh_address2, wk_wh_city, wk_wh_state, wk_wh_country, wk_wh_post_code,  wk_wh_suburb) )
+	print datetime.datetime.now()
+	#con.commit()
+	print "end   update order " , wk_order
+
+###############################################################################
+

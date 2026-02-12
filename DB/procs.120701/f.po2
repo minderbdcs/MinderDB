@@ -1,0 +1,3 @@
+drop trigger add_purchase_from_temp;
+alter table purchase_order alter po_sale_channel_code type code;
+

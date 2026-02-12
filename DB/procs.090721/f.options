@@ -1,0 +1,12 @@
+/*
+alter table options add save_description description;
+update options set save_description=description;
+commit;
+alter table options drop description;
+commit;
+alter table options add description varchar(1024);
+update options set description=save_description;
+-* alter table options drop save_description; *-
+*/
+alter table options add comments descr;
+alter table options add description2 trn_data;

@@ -1,0 +1,2 @@
+alter table pack_customer add partial_pick_allowed     value_tfn;
+alter table pack_customer add partial_despatch_allowed value_tfn;

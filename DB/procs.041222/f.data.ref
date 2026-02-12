@@ -1,0 +1,98 @@
+
+CREATE PROCEDURE GET_DATA_REFERENCE_FIELD4 (REFERENCE VARCHAR(1024) ,
+WK_DELIMITER CHAR(1))
+RETURNS (WK_FIELD_LABEL VARCHAR(1024) , WK_FIELD_DATA VARCHAR(1024) )
+AS 
+ 
+DECLARE VARIABLE POS INTEGER; 
+DECLARE VARIABLE S_TEMP VARCHAR(30);
+DECLARE VARIABLE S_POS INTEGER;
+DECLARE VARIABLE E_POS INTEGER;
+DECLARE VARIABLE WK_TOGET INTEGER;
+DECLARE VARIABLE WK_REF VARCHAR(1026);
+DECLARE VARIABLE WK_S2_POS INTEGER;
+DECLARE VARIABLE WK_E2_POS INTEGER;
+ 
+BEGIN
+  POS = 0;
+  WK_FIELD_DATA = '';
+  WK_FIELD_LABEL = '';
+  
+  IF (STRLEN(:REFERENCE) = 0) THEN
+  BEGIN     
+     EXIT;
+  END
+  WK_TOGET = STRLEN(:REFERENCE);
+  WK_REF = REFERENCE || '  '; /* add 2 bytes since v4substring cant get last 2 bytes */
+  
+  S_POS = POS+1;
+  E_POS = 0;
+  WHILE (POS <= WK_TOGET) DO  
+  BEGIN        
+     S_TEMP = V4SUBSTRING(WK_REF, POS, POS + 1);     
+     IF (S_TEMP = WK_DELIMITER) THEN
+     BEGIN
+         S_POS = POS+1;
+         POS = WK_TOGET + 1;
+     END   
+     POS = POS + 1;
+  END
+  IF (E_POS = 0) THEN
+  BEGIN
+     E_POS = WK_TOGET;
+  END
+  IF ((E_POS - S_POS) > 255) THEN
+  BEGIN
+     /* string length requested is more than 255 bytes */
+     WK_E2_POS = S_POS + 255;
+     WK_S2_POS = S_POS ;
+     WHILE (WK_S2_POS <= E_POS) DO
+     BEGIN
+        IF (WK_E2_POS > E_POS) THEN
+        BEGIN
+           WK_FIELD_DATA = WK_FIELD_DATA || V4SUBSTRING(WK_REF, WK_S2_POS, E_POS + 1);
+        END
+        ELSE
+        BEGIN
+           WK_FIELD_DATA = WK_FIELD_DATA || V4SUBSTRING(WK_REF, WK_S2_POS, WK_E2_POS + 1);
+        END
+        WK_S2_POS = WK_S2_POS + 255;
+        WK_E2_POS = WK_S2_POS + 255;
+     END /* while */
+  END
+  ELSE
+  BEGIN
+     WK_FIELD_DATA = V4SUBSTRING(WK_REF, S_POS, E_POS + 1);
+  END
+
+  /* now the label */
+  E_POS = S_POS - 2;
+  S_POS = 2;
+  IF (E_POS > 0) THEN
+  BEGIN
+     IF ((E_POS - S_POS) > 255) THEN
+     BEGIN
+        /* string length requested is more than 255 bytes */
+        WK_E2_POS = S_POS + 255;
+        WK_S2_POS = S_POS ;
+        WHILE (WK_S2_POS <= E_POS) DO
+        BEGIN
+           IF (WK_E2_POS > E_POS) THEN
+           BEGIN
+              WK_FIELD_LABEL = WK_FIELD_DATA || V4SUBSTRING(WK_REF, WK_S2_POS, E_POS + 1);
+           END
+           ELSE
+           BEGIN
+              WK_FIELD_LABEL = WK_FIELD_DATA || V4SUBSTRING(WK_REF, WK_S2_POS, WK_E2_POS + 1);
+           END
+           WK_S2_POS = WK_S2_POS + 255;
+           WK_E2_POS = WK_S2_POS + 255;
+        END /* while */
+     END
+     ELSE
+     BEGIN
+        WK_FIELD_LABEL = V4SUBSTRING(WK_REF, S_POS, E_POS + 1);
+     END
+  END
+  SUSPEND;
+END^

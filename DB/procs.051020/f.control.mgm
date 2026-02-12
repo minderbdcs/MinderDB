@@ -1,0 +1,2 @@
+update control set export_putaway_printer='PG';
+

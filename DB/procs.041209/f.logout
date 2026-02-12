@@ -1,0 +1,43 @@
+DROP PROCEDURE LOGOUT_DEVICE ^
+
+
+CREATE PROCEDURE LOGOUT_DEVICE (DEVICE_ID CHAR(2)) RETURNS( LG_STATUS INTEGER, LG_MESSAGE VARCHAR(50))
+AS 
+ 
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_FOUND INTEGER;
+
+BEGIN
+        
+    /* Update Pick Item Status */
+    LG_STATUS = -1;
+    WK_FOUND = -1;
+    LG_MESSAGE = '';
+    SELECT 1, CURRENT_PERSON 
+    FROM SYS_EQUIP
+    WHERE DEVICE_ID = :DEVICE_ID
+    INTO :WK_FOUND, :WK_USER;
+    IF (WK_FOUND = 1) THEN
+    BEGIN
+        IF (WK_USER IS NULL) THEN
+        BEGIN
+            LG_MESSAGE = 'No User Logged in on Device - Cannot LG'; 
+        END
+        ELSE
+        BEGIN
+            UPDATE SYS_EQUIP SET CURRENT_PERSON = NULL, CURRENT_LOGGED_ON = NULL 
+            WHERE DEVICE_ID = :DEVICE_ID;
+            UPDATE SYS_USER SET DEVICE_ID = NULL, LOGIN_DATE = NULL 
+            WHERE USER_ID = :WK_USER;
+            LG_MESSAGE = 'Logged Out From Device ' || :DEVICE_ID || ' by ' || :WK_USER;
+            LG_STATUS = 0;
+        END
+    END
+    ELSE
+    BEGIN
+        LG_MESSAGE = 'Device Not Found - Cannot LG'; 
+    END
+
+    SUSPEND;
+END
+^

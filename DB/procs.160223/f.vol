@@ -1,0 +1,3 @@
+
+alter table pick_despatch_dx alter pickd_wt_actual type despatched_weight;
+

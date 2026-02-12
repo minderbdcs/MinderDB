@@ -1,0 +1,20 @@
+/*
+create domain connote_prefix varchar(18);
+alter table carrier alter connote_prefix type connote_prefix;
+
+create domain connote_version varchar(2);
+alter table carrier add c_version connote_version; 
+
+create domain connote_max_sequence int;
+alter table carrier add c_max_sequence connote_max_sequence; 
+*/
+
+
+create domain connote_version_from varchar(30);
+create domain connote_version_to varchar(30);
+create domain connote_freight_paid char(1);
+
+alter table carrier_service add cs_version connote_version; 
+alter table carrier_service add cs_date_version_from connote_version_from; 
+alter table carrier_service add cs_date_version_to   connote_version_to  ; 
+alter table carrier_service add cs_freight_paid connote_freight_paid; 

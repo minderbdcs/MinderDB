@@ -1,0 +1,2 @@
+create domain locn_seq decimal(7,3);
+alter table location add locn_seq locn_seq;

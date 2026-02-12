@@ -1,0 +1,2 @@
+alter table control add pick_order_method code;
+

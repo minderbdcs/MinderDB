@@ -1,0 +1,3 @@
+alter table company add DESPATCH_CHECK_WEIGHT value_tf;
+alter table company add DESPATCH_CHECK_VOLUME value_tf;
+update company set despatch_check_weight='T', despatch_check_volume='T';

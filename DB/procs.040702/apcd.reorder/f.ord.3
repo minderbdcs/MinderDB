@@ -1,0 +1,4 @@
+update pick_order set pick_status = 'CN' where pick_status in ('SC');
+update pick_order set pick_status = 'DA' where pick_status in ('SD');
+update pick_order set pick_status = 'OP' where pick_status in ('SO');
+

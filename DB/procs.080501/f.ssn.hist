@@ -1,0 +1,2 @@
+alter table ssn_hist add prev_qty qty;
+

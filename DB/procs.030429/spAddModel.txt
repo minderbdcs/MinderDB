@@ -1,0 +1,25 @@
+ CREATE PROCEDURE ADD_MODEL (
+  CODE VARCHAR(40)
+)  AS    
+ 
+  
+DECLARE VARIABLE REC_EXIST INTEGER; 
+
+BEGIN
+
+   REC_EXIST = 0;
+      
+   /* Check record exists */                        
+   SELECT 1 
+   FROM MODEL
+   WHERE CODE = :CODE   
+   INTO :REC_EXIST;
+         
+   IF (REC_EXIST = 0) THEN
+   BEGIN
+      INSERT INTO MODEL (CODE, DESCRIPTION)
+      VALUES (:CODE, :CODE); 
+   END      
+   
+END
+^

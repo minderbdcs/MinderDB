@@ -1,0 +1,14 @@
+/*
+execute procedure add_tran_response('FX','RC000002','87510101','UISS','A','NOW','test me',0,'F',''
+,'MASTER    ',0,'','SSSSSSSSS','me','me');
+object           
+sublocn AUSTPOST
+wh 27
+locn 87553
+qty 0
+class S
+ref [0000NONE      000000010100000000SSGENSPA          ||2787553|GEN|]
+*/
+execute procedure add_tran_response('27','87553','          ','DSOT','S','NOW',
+'0000NONE      000000010100000000SSGENSPA          ||2787553|GEN|',0,'F','','MASTER    ',0,'AUSTPOST','SSSSSSSSS','BDCS','XX');
+

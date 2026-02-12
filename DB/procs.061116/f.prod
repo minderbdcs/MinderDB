@@ -1,0 +1,8 @@
+/*
+alter table prod_profile drop export_category;
+commit;
+*/
+
+alter table prod_profile add export_category char(1);
+
+insert into options(group_code, code,description) values('PRODEXPCAT','C','Customs Inspection');

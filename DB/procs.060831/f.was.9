@@ -1,0 +1,8 @@
+/* select pick_order from pick_item where device_id='SA'; 
+select count(*) from pick_item where device_id='SA';
+*/
+select p2.pick_line_status,count(*) from pick_item p2 where pick_order in ( select pick_order from pick_item where device_id='SA') group by p2.pick_line_status;
+/* select pick_order from pick_item where device_id='SA'; 
+select count(*) from pick_item where device_id='SA';
+*/
+select p2.pick_line_status,count(*) from pick_item p2 where p2.pick_order in ( select pick_order from pick_item where device_id='SA') group by p2.pick_line_status;

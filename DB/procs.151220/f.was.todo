@@ -1,0 +1,50 @@
+add to prod_profile
+RECEIVE_STYLE 		VALUE_TF
+RECEIVE_COLOUR 		VALUE_TF
+RECEIVE_SIZE 		VALUE_TF
+MANUFACTURE_DATE	????
+
+table
+ISSN_DATES_BATCH_NO (IDBN)
+IDBN_RECORD_ID		RECORDID NOT NULL 
+IDBN_SSN_ID		SSN_ID NOT NULL
+IDBN_USE_BY_DATE	USE_BY_DATE
+IDBN_BEST_BY_DATE	USE_BY_DATE
+IDBN_MANUFACTURE_DATE	USE_BY_DATE
+IDBN_BATCH_NO 		BATCH
+IDBN_VERSION_NO		VERSION_NO /* VARCHAR(20) –Use for Software Releases */
+IDBN_FIRMWARE_NO	FIRMWARE_NO /* VARCHAR(20) –Use for Electronic Hardware */
+IDBN_LAST_UPDATE_DATE	LAST_UPDATE_DATE
+IDBN_LAST_UPDATE_BY	USER_ID
+IDBN_DEVICE_ID		DEVICE
+
+table
+ISSN_OTHER_PROPERTIES (ISOP)
+ISOP_RECORD_ID		RECORDID NOT NULL 
+ISOP_SSN_ID		SSN_ID NOT NULL
+ISOP_DIM_X		QTY_DECIMAL /* Holds the roll slit width e.g. ‘142’ and which remains static */
+ISOP_DIM_X_UOM		UOM	/* ‘mm’ */
+ISOP_DIM_Y		QTY_DECIMAL	/* Holds say Face stock media thickness and remains static */
+ISOP_DIM_Y_UOM		UOM	/* ‘um’ -micro millimeters */
+ISOP_DIM_Z		QTY_DECIMAL	/* Holds the Backing Thickness and remains statici.e. ‘WG80’ = 7 micro mm, WG62' = 5.5 micro mm */
+ISOP_DIM_Z_UOM		UOM	/* ‘um’ */
+ISOP_OTHER1		OTHER_PROPERTY (new Domain)
+ISOP_OTHER1_UOM		UOM
+ISOP_OTHER2		OTHER_PROPERTY (new Domain)
+ISOP_OTHER2_UOM		UOM
+ISOP_PACKAGED_TYPE	CODE_TWO /* Supplied-Rolls, Loose Packs, Need PACKAGED_TYPE table */ 
+ISOP_LAST_UPDATE_DATE	LAST_UPDATE_DATE
+ISOP_LAST_UPDATE_BY	USER_ID
+ISOP_DEVICE_ID		DEVICE_ID
+
+table
+ISSN_STYLE_COLOUR_SIZE
+ISCS_RECORD_ID		RECORDID NOT NULL 
+ISCS_SSN_ID		SSN_ID NOT NULL
+ISCS_STYLE	/* I have no idea of data size and type but please create new DOMAIN so we can change later e.g. ‘ISSN_STYLE’ */
+ISCS_COLOUR	/* we need basic colours plus PMS Colours plus Web colours so a VARCHAR(20) maybe needed Domain= ISSN_COLOUR */ 
+ISCS_SIZE	/* I have no idea of data size and type but please create new DOMAIN so we can change later e.g. ‘ISSN_SIZE’ */
+ISCS_OTHER	/* This is a spare property of Footware and clothing that maybe required */
+ISCS_LAST_UPDATE_DATE	LAST_UPDATE_DATE
+ISCS_LAST_UPDATE_BY	USER_ID
+ISCS_DEVICE_ID		DEVICE_ID

@@ -1,0 +1,5 @@
+update control set default_prod_stock = '2';
+update control set prod_stock_ok = ',0,1,';
+insert into options(group_code,code,description) values('PROD_STOCK','2','New Product on Hold');
+
+

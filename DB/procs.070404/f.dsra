@@ -1,0 +1,174 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP TRIGGER RUN_TRANSACTION_DSRA ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_DSRA FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 133 
+AS
+/* Consume queue in pick_queue table */
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_FIRST_DATE TIMESTAMP;
+DECLARE VARIABLE WK_ORDER VARCHAR(30);
+DECLARE VARIABLE WK_FIRST_ORDER VARCHAR(30);
+DECLARE VARIABLE WK_ERROR VARCHAR(70);
+DECLARE VARIABLE WK_ZONE CHAR(2);
+DECLARE VARIABLE WK_CON_DEVICE CHAR(2);
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'DSRA') THEN
+  BEGIN
+     WK_USER = NEW.PERSON_ID;
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     IF (NEW.TRN_CODE = 'O') THEN
+     BEGIN
+        /* consume it */
+        WK_ORDER = NEW.OBJECT;
+        IF (WK_ORDER IS NULL) THEN
+        BEGIN
+           WK_ORDER = '';
+        END
+
+        /* get my zone - for conveyor device */
+        WK_ZONE = '';
+        SELECT OPERATING_ZONE
+        FROM SYS_EQUIP 
+        WHERE DEVICE_ID = :WK_DEVICE
+        INTO :WK_ZONE;
+        IF (WK_ZONE IS NULL) THEN
+        BEGIN
+           WK_ZONE = '';
+        END
+        /* get device - for conveyor  */
+        WK_CON_DEVICE = '';
+        SELECT FIRST 1 DEVICE_ID
+        FROM SYS_EQUIP 
+        WHERE DEVICE_TYPE = 'HH'
+        AND   OPERATING_ZONE = :WK_ZONE
+        INTO :WK_CON_DEVICE;
+        IF (WK_CON_DEVICE IS NULL) THEN
+        BEGIN
+           WK_CON_DEVICE = '';
+        END
+          
+        /* 
+           must check that its the top order
+           for the specific device queue 
+        */
+        WK_FIRST_ORDER = '';
+        SELECT FIRST 1 
+           PICK_ORDER
+        FROM PICK_QUEUE
+        WHERE PICK_QUEUE_STATUS = 'LB'
+        AND   DEVICE_ID = :WK_CON_DEVICE
+        INTO :WK_FIRST_ORDER;
+        IF (WK_FIRST_ORDER IS NULL) THEN
+        BEGIN
+           WK_FIRST_ORDER = '';
+        END
+        IF (WK_FIRST_ORDER = WK_ORDER) THEN
+        BEGIN
+           UPDATE PICK_QUEUE 
+              SET PICK_QUEUE_STATUS = 'SN',
+                  SEEN_DATE = :WK_DATE,
+                  USER_ID = :WK_USER
+           WHERE PICK_ORDER = :WK_ORDER
+           AND PICK_QUEUE_STATUS = 'LB';
+           EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+        END
+        ELSE
+        BEGIN
+           WK_ERROR = 'Expected Order ' || WK_FIRST_ORDER;
+           EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F',WK_ERROR );
+        END
+     END
+     ELSE
+     BEGIN
+        IF (NEW.TRN_CODE = 'X') THEN
+        BEGIN
+           /* cancel  all or 1 in queue it */
+           WK_ORDER = NEW.OBJECT;
+           IF (WK_ORDER IS NULL) THEN
+           BEGIN
+              WK_ORDER = '';
+           END
+           IF (WK_ORDER = '') THEN
+           BEGIN
+              /* get my zone - for conveyor device */
+              WK_ZONE = '';
+              SELECT OPERATING_ZONE
+              FROM SYS_EQUIP 
+              WHERE DEVICE_ID = :WK_DEVICE
+              INTO :WK_ZONE;
+              IF (WK_ZONE IS NULL) THEN
+              BEGIN
+                 WK_ZONE = '';
+              END
+              /* get device - for conveyor  */
+              WK_CON_DEVICE = '';
+              SELECT FIRST 1 DEVICE_ID
+              FROM SYS_EQUIP 
+              WHERE DEVICE_TYPE = 'HH'
+              AND   OPERATING_ZONE = :WK_ZONE
+              INTO :WK_CON_DEVICE;
+              IF (WK_CON_DEVICE IS NULL) THEN
+              BEGIN
+                 WK_CON_DEVICE = '';
+              END
+          
+              /* check that there are any to do */
+              WK_FIRST_DATE = 'NOW';
+              SELECT FIRST 1 
+                 CREATE_DATE
+              FROM PICK_QUEUE
+              WHERE PICK_QUEUE_STATUS = 'LB'
+              AND   DEVICE_ID = :WK_CON_DEVICE
+              INTO :WK_FIRST_DATE;
+              IF (WK_FIRST_DATE IS NULL) THEN
+              BEGIN
+                 WK_ERROR = 'There are NO Labels to Cancel in your Device ' || WK_CON_DEVICE;
+                 EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F',WK_ERROR );
+              END
+              ELSE
+              BEGIN
+                 UPDATE PICK_QUEUE 
+                    SET PICK_QUEUE_STATUS = 'CN',
+                        SEEN_DATE = :WK_DATE,
+                        USER_ID = :WK_USER
+                 WHERE PICK_QUEUE_STATUS = 'LB'
+                 AND   DEVICE_ID = :WK_CON_DEVICE;
+                 EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+              END
+           END
+           ELSE
+           BEGIN
+              UPDATE PICK_QUEUE 
+                 SET PICK_QUEUE_STATUS = 'CN',
+                     SEEN_DATE = :WK_DATE,
+                     USER_ID = :WK_USER
+              WHERE PICK_ORDER = :WK_ORDER
+              AND   PICK_QUEUE_STATUS = 'LB';
+              EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+           END
+        END
+     END
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+  END
+ END
+END ^
+ 
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

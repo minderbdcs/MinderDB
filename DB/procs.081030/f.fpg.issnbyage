@@ -1,0 +1,11 @@
+/* first have # days past which to report
+   in the options table 
+*/
+insert into options(group_code,code,description) values ('RPTLOAN','FREE','7');
+select issn.ssn_id,issn.wh_id,issn.locn_id,issn.current_qty,issn.issn_status, issn.create_date, diffdate(issn.create_date, 'NOW', 4)
+from issn
+join options on options.group_code='RPTLOAN' and options.code='FREE'
+where (issn.wh_id < 'X ' or issn.wh_id > 'X~')
+      and (issn.create_date is not null)
+      and diffdate(issn.create_date, 'NOW', 4) > options.description;
+

@@ -1,0 +1,125 @@
+glen wants a procedure to print a label for generate_label_txt F
+
+so if generate label txt is 'F' write a record to a print request table 
+with the device and printfile created by the procedure
+
+for the sys_label format to use
+	device_id _FORMAT in group code and print method in code to give format name in description
+	eg 'PA_FORMAT' and 'ISSN' to get 'MYISSNFORMAT'
+
+for the print_request record
+	insert into print_requests with a status of 'NP'
+
+	the message_id I will supply via an insert trigger
+	also an event to wake up the file creation task
+	then in an update of NP status do the db event
+
+	important fields are
+        DEVICE_ID      this is the device id of the printer to use
+        PRN_TYPE       this is the print method that you are using eg 'ISSN'
+        PRN_COPY       this is the print copies to print
+        BASE_FILE_NAME this is the file name to use
+        PRN_DATA       this is the | seperated list of passed parameters
+  /* with status NP  new print request
+                 CP  created print file
+                 XP  completed */
+DO NOT Use '<' '/>'  or ' in wrappers they are a waste of time
+
+for the file creation part 
+if the base_file_name is empty or null
+
+use a default file name initially of the print type _ message_id .prn
+	eg 'ISSN_2.prn
+if there is a record in options table for the print methods file name
+then use that
+eg 'LABEL_FILE'	'ISSN' '%issn%_ISSN.prn'
+and a default for when no specific type record exists of
+   'LABEL_FILE' 'DEFAULT'   '%PRNType%%PRNMessageId%.prn'
+note thate PRNMessageId and PRNType are vaiables not avaiable to be used for any other
+use than these passed parameters
+ 
+Also have a record for the print device in the options table to hold the record seperator.
+The default is '\n'.
+eg group_code  'PA'
+   code        'LABEL RECORD SEPERATOR'
+   description '\n'
+
+
+
+have a task waiting for the db event for a record added (ie status NP)
+use the passed parms
+
+for the send to printer part
+have a python task listening for a devices print request via a db event
+
+use the echo client to echo the file to the printer
+then update the print request to printed (or closed)
+
+have a print_request like the web_request
+with an event which is the device_id of the request
+
+at a reboot run the tasks to listen for the print requests
+
+after the file sent to the printer change the print_reqeusts status to printed (closed)
+
+
+daily do an archive of print requests (closed)
+
+==========================================================================
+
+control table add field for delimiter of field name
+(label_format_placeholder) - I used labeL_format_wrapper.
+
+sys_label_var add in sys_label_name and remove sys_label_record_id from sys_label_var
+add a sequence to the sys_label_var
+so that sequence 0 are passed vars (they depend on no other vars)
+sequence 1 depend on no vars - eg chr(33)
+pass 1 gives these
+sequence 2 depend on sequence 0 or 1 vars
+pass 2 gives these
+sequence 3 depend on sequence 0 or 1 or 2 vars
+pass 3 gives these
+what could be requiring more than this
+a = passed
+b = chr(12)
+c = substr(a, 2, 10)
+d = substr(a, 1, 2)
+e = c || b || d
+
+
+so in print_label
+	passed device to print on
+	copies to send
+	label type  eg 'ISSN'
+
+lookup from options 'device' || '_FORMAT'
+gives sys_label format name to use
+
+
+must split fields from field
+allow for ?? fields
+
+do I use an array ?
+
+next step is to construct the calced fields from the fixed ones
+
+use the expression for this
+eg substr(%field1%,$field2%,%field3%)
+or chr(179)
+or %field1% || %field2%
+or %field1% > 10 ? 50 : 90
+here evaluate %field1% > 10 if true use 10 else use 90
+
+if all the fields for the expressions are not yet known then must wait for the next pass
+so 3 passes are required
+
+then once the variables are calculated
+go through the  sys_label records ordered by sequence
+and replace variables in the line with the calculated ones
+then append to the output file
+
+
+==========================================================================================
+need to change the prn_data to 1024
+from 255
+

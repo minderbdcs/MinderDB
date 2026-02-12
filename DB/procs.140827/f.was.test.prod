@@ -1,0 +1,6 @@
+select prod_profile.prod_id,prod_profile.company_id,
+                   PROD_PROFILE.NET_WEIGHT,
+                   PROD_PROFILE.PACK_WEIGHT,
+                   (CAST(PROD_PROFILE.DIMENSION_X AS DOUBLE PRECISION) *  CAST(PROD_PROFILE.DIMENSION_Y AS DOUBLE PRECISION) * CAST(PROD_PROFILE.DIMENSION_Z AS DOUBLE PRECISION)) 
+from prod_profile
+;

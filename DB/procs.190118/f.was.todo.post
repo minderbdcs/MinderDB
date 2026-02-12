@@ -1,0 +1,43 @@
+Completely different Prefix - was 8 bytes now 18 bytes.
+Longer Merchant Code was 3 bytes now 5 bytes.
+Requires Product Code padded with leading zeros to 5 bytes.
+Last Article Indicator dropped.
+Post Code moved from 1D Code 128 Barcode now included in new 2D DataMatrix Barcode.
+Postage Paid Indicator added to Code 128 Barcode.
+Length of Code 128 from 29 bytes to 41 bytes. Means we must increase field size and add a new field for the 2D Barcode.
+New 2D Data Matrix Barcode added length = 64 + plus 3 x FNC1 Group separators Totals 67 bytes when scanned.
+The 2D Barcode requires an Application Id = 420 before the Post Code
+The 2D Barcode requires an Application Id = 8008 before the Date Created Timestamp
+The Date Created Timestamp must use 'YYMMDDHHMMSS' format.
+The Address blocks must have no spaces or blanks lines as AP use OCR to read these.
+This requires adding a set of new fields PD_SEND_TO_ADDR1 to 7 in the PICK_DESPATCH so that these are populated without missing lines for SYS_LABEL.
+Suburb, State must be UPPERCASE and included on one line with Post Code
+
+=========================
+
+upshift pick_despatch
+	pickd_suburb
+	pickd_state
+	pickd_country
+
+add pd_send_to_addr1 - 7
+
+carrier alter connote_prefix to x18
+	add c_version x2
+carrier.c_max_sequence int
+
+carrier_service cs_version x2
+		cs_date_version_from
+		cs_date_version_to
+		cs_freight_paid x1
+
+pack_id al prefix 8008 + yymmddhhmmss
+pack_id.pack_sequenc_no pad with '0' to length 2
+
+pack_id.despatch_label_no to x96
+
+add pack_id.despatch_label_no_2d x96
+add pack_id.pack_check_digit x2
+add pack_id.pack_freight_paid x1
+
+also changes to pick_despatch_dx, pack_id_dx

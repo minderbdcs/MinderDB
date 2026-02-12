@@ -1,0 +1,1 @@
+alter table prod_profile add discount_code code_two;

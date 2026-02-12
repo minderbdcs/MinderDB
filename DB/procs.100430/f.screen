@@ -1,0 +1,10 @@
+alter table sys_screen_var alter ssv_dropdown_sql type trn_data;
+
+alter table sys_screen_var add   ssv_dropdown_default trn_data;
+
+update sys_screen_var set ssv_dropdown_default = dropdown_default;
+commit;
+
+alter table sys_screen_var drop  dropdown_default ; 
+
+

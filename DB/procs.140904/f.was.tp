@@ -1,0 +1,7 @@
+/*
+iNSERT INTO LOCATION (WH_ID, LOCN_ID, LOCN_NAME, LOCN_STAT, MOVE_STAT, STORE_AREA)
+ select wh_id,substr(locn_id,1,5) ||'3' || substr(locn_id,7,8) ,
+'[' || WH_ID || '] [' ||substr(locn_id,1,5) ||'3' || substr(locn_id,7,8)  || ']',
+'OK',NULL,NULL from location where wh_id='XB'  and locn_id starting 'TP0001' order by locn_id;
+*/
+

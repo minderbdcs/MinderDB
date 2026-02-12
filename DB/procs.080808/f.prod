@@ -1,0 +1,2 @@
+alter table prod_profile add pp_material_safety_data value_tf;
+

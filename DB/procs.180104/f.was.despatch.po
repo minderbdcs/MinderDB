@@ -1,0 +1,12 @@
+/* in minder db 
+ insert into sys_mirror_var(smv_rules_name,smv_table,smv_fieldname,smv_sequence) values('PICKORDER','PICK_ORDER','WH_ID',240);
+ insert into sys_mirror_var(smv_rules_name,smv_table,smv_fieldname,smv_sequence) values('PICKORDER','PICK_ORDER','COMPANY_ID',245);
+*/
+/* in despatch db 
+create domain FMS_WH_ID VARCHAR(2);
+create domain FMS_COMPANY_ID VARCHAR(20);
+commit;
+alter table pick_order add  wh_id  FMS_WH_ID;
+alter table pick_order add  company_id  FMS_COMPANY_ID;
+commit;
+*/

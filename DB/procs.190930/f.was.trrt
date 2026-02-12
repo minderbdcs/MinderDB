@@ -1,0 +1,129 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+/* 
+    need to add company and prod_id to the transactions record for P trn_code
+*/
+ 
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_TRRT FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 131 
+AS
+/* Transfer of allocated replenish to another handheld */
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_DEVICE_FROM CHAR(2);
+DECLARE VARIABLE WK_DEVICE_TO VARCHAR(10);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_MYREF VARCHAR(40);
+DECLARE VARIABLE WK_HAS_SSN INTEGER;
+DECLARE VARIABLE WK_WH_FROM CHAR(2);
+DECLARE VARIABLE WK_WH_TO CHAR(2);
+DECLARE VARIABLE WK_COMPANY COMPANY;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'TRRT') THEN
+  BEGIN
+     WK_DEVICE_FROM = NEW.WH_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     BEGIN
+        WK_DEVICE_TO = NEW.SUB_LOCN_ID;
+        SELECT FIRST 1 WH_ID 
+        FROM LOCATION
+        WHERE LOCN_ID = :WK_DEVICE_FROM
+        AND (WH_ID NOT STARTING 'X')
+        INTO :WK_WH_FROM;
+        IF (NEW.TRN_CODE = ' ' OR NEW.TRN_CODE = 'K') THEN
+        BEGIN
+           /* transfer all picks from one device to another */
+           IF (LEN(NEW.SUB_LOCN_ID) = 2) THEN
+           BEGIN
+              SELECT FIRST 1 WH_ID 
+              FROM LOCATION
+              WHERE LOCN_ID = :WK_DEVICE_TO
+              AND (WH_ID NOT STARTING 'X')
+              INTO :WK_WH_TO;
+              UPDATE TRANSFER_REQUEST
+                 SET DEVICE_ID = :WK_DEVICE_TO
+                 WHERE DEVICE_ID = :WK_DEVICE_FROM;
+              UPDATE ISSN SET WH_ID = :WK_WH_TO,
+                 LOCN_ID = :WK_DEVICE_TO
+                 WHERE WH_ID = :WK_WH_FROM
+                 AND LOCN_ID = :WK_DEVICE_FROM;
+              EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+           END
+        END
+        ELSE
+        IF (NEW.TRN_CODE = 'P') THEN
+        BEGIN
+           /* transfer next product from one device to another */
+           WK_PROD = NEW.OBJECT;
+           WK_COMPANY = NEW.COMPANY_ID;
+           WK_HAS_SSN = 0;
+
+           IF (WK_DEVICE_TO = 'NULL') THEN
+           BEGIN
+              SELECT FIRST 1 1 FROM ISSN
+                 WHERE WH_ID = :WK_WH_FROM
+                 AND LOCN_ID = :WK_DEVICE_FROM
+                 INTO :WK_HAS_SSN;
+              IF (WK_HAS_SSN IS NULL) THEN
+              BEGIN
+                 WK_HAS_SSN = 0;
+              END
+              IF (WK_HAS_SSN = 0) THEN
+              BEGIN
+                 UPDATE TRANSFER_REQUEST
+                    SET DEVICE_ID = NULL,
+                    TRN_STATUS = 'OP',
+                    TRN_PRIORITY = TRN_PRIORITY + NEW.QTY,
+                    ZONE_C = NULL
+                    WHERE PROD_ID = :WK_PROD
+                    AND   COMPANY_ID = :WK_COMPANY
+                    AND DEVICE_ID = :WK_DEVICE_FROM;
+                 EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+              END
+              ELSE
+              BEGIN
+                 EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F','Cannot Transfer has Unfinished SSNs');
+              END
+           END
+           ELSE
+           BEGIN
+              SELECT FIRST 1 WH_ID 
+              FROM LOCATION
+              WHERE LOCN_ID = :WK_DEVICE_TO
+              AND (WH_ID NOT STARTING 'X')
+              INTO :WK_WH_TO;
+              UPDATE TRANSFER_REQUEST
+                 SET DEVICE_ID = :WK_DEVICE_TO,
+                 TRN_PRIORITY = TRN_PRIORITY + NEW.QTY
+                 WHERE PROD_ID = :WK_PROD
+                 AND   COMPANY_ID = :WK_COMPANY
+                 AND DEVICE_ID = :WK_DEVICE_FROM;
+              UPDATE ISSN SET WH_ID = :WK_WH_TO,
+                 LOCN_ID = :WK_DEVICE_TO
+                 WHERE WH_ID = :WK_WH_FROM
+                 AND LOCN_ID = :WK_DEVICE_FROM;
+           END
+           EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+        END
+     END
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+  END
+ END
+END ^
+ 
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

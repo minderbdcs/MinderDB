@@ -1,0 +1,79 @@
+
+ DROP TABLE TRANSACTION_TYPES; 
+
+CREATE TABLE TRANSACTION_TYPES ( 
+	SEQ INTEGER,
+	TRN_TYPE TRN_TYPE,
+	TRN_PREFIX CODE_TWO,
+        DESCRIPTION DESCRIPTION,
+	MAX_LENGTH MAX_LENGTH,
+	COMPULSORY CODE_ONE,
+	FAST_CHANGING CODE_ONE,
+	NO_COMPULSORYS CODE_ONE,
+	COPY_DATA CODE_ONE,
+	REMOTE_UPDATE CODE_ONE,
+	FIELD_NAME CODE,
+	TABLE_NAME CODE,
+	COMMENT CODE_255
+);
+
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NITP','/1','Asset Type',40,'U','SSN_TYPE','SSN',04);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIOB','/2','Generic Description',40,'U','GENERIC','SSN',05);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIBC','/3','Brand',40,'U','BRAND','SSN',07);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIMO','/4','Model',40,'U','MODEL','SSN',08);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NICC','/5','Cost Center',40,'U','COST_CENTER','SSN',10);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,fast_changing,table_name,seq) values ('NISN','/6','Serial Number',40,'U','SERIAL_NUMBER','T','SSN',03);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIST','/7','Status Code',40,'U','STATUS_CODE','SSN',40);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NILT','/8','Location Type',40,'U','LOCN_TYPE','LOCATION',101);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NILS','/9','Location Status',40,'U','LOCN_STAT','LOCATION',102);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIO1','/A','Appearance',40,'R','OTHER1','SSN',19);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIO2','/B','Operating',40,'R','OTHER2','SSN',20);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIO3','/C','Completeness',40,'R','OTHER3','SSN',21);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIO4','/D','Service',40,'R','OTHER4','SSN',22);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIO5','/E','Other 5',40,'U','OTHER5','SSN',23);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIO6','/F','Other 6',40,'U','OTHER6','SSN',24);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIO7','/G','Other 7',40,'U','OTHER7','SSN',25);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIO8','/H','Other 8',40,'U','OTHER8','SSN',26);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIO9','/I','Other 9',40,'U','OTHER9','SSN',27);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIOA','/J','Other 10',40,'U','OTHER10','SSN',28);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NI11','Other 11',40,'U','OTHER11','SSN',29);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NI12','Other 12',40,'U','OTHER12','SSN',30);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NI13','Other 13',40,'U','OTHER13','SSN',31);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NI14','Other 14',40,'U','OTHER14','SSN',32);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NI15','Other 15',40,'U','OTHER15_DATE','SSN',33);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NI16','Other 16',40,'U','OTHER16_DATE','SSN',34);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NI17','Other 17',40,'U','OTHER17_QTY','SSN',35);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NI18','Other 18',40,'U','OTHER18_QTY','SSN',36);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NI19','Other 19',40,'U','OTHER19','SSN',37);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NI20','Other 20',40,'U','OTHER20','SSN',38);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,seq) values ('NIAP','/K','Not New Cond. Items',40,'U',103);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,seq) values ('NIOP','/M','Faulty Cond. Items',40,'U',104);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,seq) values ('NICP','/N','InComplete Cond. Items',40,'U',105);
+insert into transaction_types (trn_type,description,max_length,remote_update,seq) values ('NIDP','Serviced Cond. Items',40,'U',106);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NILX','/L','Label Location',1,'U','LABEL_LOCN','SSN',41);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,table_name,seq,no_compulsorys) values ('NIGC','/O','Group Copy',40,'U','SSN',107,'T');
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NILG','/P','Legacy Item No',40,'U','LEGACY_ID','SSN',47);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIOC','/Q','Other 19',40,'U','OTHER19','SSN',108);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,copy_data,seq) values ('NIPC','/T','Product ID',30,'U','PROD_ID','SSN','T',109);
+insert into transaction_types (trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('/U','Home Location',40,'U','HOME_LOCN_ID','SSN',45);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,seq) values ('EITS','/Y','Employee Skill',40,'U',111);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,seq) values ('EITS','/Z','Skill Pass/Fail',4,'U',112);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NI21','/a','Other 21',40,'U','OTHER21','SSN',113);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NI22','/b','Other 22',40,'U','OTHER22','SSN',114);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NI23','/c','Other 23',40,'U','OTHER23','SSN',115);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NI24','/d','Other 24',40,'U','OTHER24','SSN',116);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NI25','/e','Other 25',40,'U','OTHER25','SSN',117);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NIOD','Other 20',40,'U','OTHER20','SSN',118);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NIOK','Other 19',40,'U','OTHER19','SSN',119);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NIOL','Other 20',40,'U','OTHER20','SSN',120);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NIPP','Purchase Price',40,'R','PURCHASE_PRICE','SSN',17);
+insert into transaction_types (trn_type,description,max_length,remote_update,table_name,seq) values ('NIRM','Create Group Copy from SSN',40,'U','SSN',121);
+insert into transaction_types (trn_type,description,max_length,remote_update,table_name,seq) values ('NINB','Notes',40,'U','SSN',57);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('NISU','Supplier',20,'U','SUPPLIER_ID','SSN',39);
+insert into transaction_types (trn_type,description,max_length,remote_update,field_name,table_name,seq) values ('AUOB','SSN Seen',10,'U','LOCN_ID','SSN',02);
+
+/* new trans */
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NID3','/f','Asset Sub Type',40,'U','SSN_SUB_TYPE','SSN',06);
+insert into transaction_types (trn_type,trn_prefix,description,max_length,remote_update,field_name,table_name,seq) values ('NIPD','/g','Product',40,'U','PRODUCT','SSN',54);
+
+

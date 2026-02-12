@@ -1,0 +1,10 @@
+if glen wants add carrier_1-10_col_5-11 to postcode_depot
+
+in POAL O if block BLOCK000 ie the one in control table is used
+then treat as if POAD D is done - many orders allowed in the block
+
+in pc_label write PRRQ but max length is currently 254 not 1024 - done - had to change the udf
+	that needs reinstalling
+
+add export_method to carrier table
+

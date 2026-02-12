@@ -1,0 +1,19 @@
+use the PKOL transaction
+this takes from location
+if the location has 
+	replenish flag 'T'
+	and prod_id matches the one taken
+
+	get current stock of that product in the location
+	if current stock < reorder_level
+	begin
+		if current stock <= min level
+		begin
+			priority is High
+		end
+		else
+		begin
+			priority is default
+		end
+		add/update the transfer_request
+	end

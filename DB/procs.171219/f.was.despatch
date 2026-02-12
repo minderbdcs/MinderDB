@@ -1,0 +1,13 @@
+create domain FMS_GEN_ID INTEGER;
+/*
+alter table pick_despatch alter despatch_id fms_gen_id;
+alter table pack_id       alter despatch_id fms_gen_id;
+alter table pack_id       alter pack_id     fms_gen_id;
+*/
+/*
+alter domain despatch_id type BIGINT;
+*/
+/*
+alter table pack_id drop constraint integ_146;
+alter table pick_despatch  drop constraint integ_109;
+*/

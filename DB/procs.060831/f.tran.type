@@ -1,0 +1,4 @@
+update transaction_types set trn_prefix=null where trn_type='NIOC';
+update transaction_types set trn_prefix='/Q' where trn_type='NI19';
+update transaction_types set trn_prefix='/S' where trn_type='NI20';
+

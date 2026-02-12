@@ -1,0 +1,7 @@
+CREATE DOMAIN FREIGHT_ACCOUNT_NO AS VARCHAR(20);
+
+alter table grn add grn_due_date grn_date;
+alter table grn add grn_status status;
+alter table grn add grn_freight_forwarder person;
+alter table grn add grn_freight_account_no freight_account_no;
+

@@ -1,0 +1,8 @@
+alter table ssn_type add LAST_UPDATE_DATE LAST_UPDATE_DATE;
+alter table ssn_type add LAST_UPDATE_BY USER_ID;
+
+alter table generic add LAST_UPDATE_DATE LAST_UPDATE_DATE;
+alter table generic add LAST_UPDATE_BY USER_ID;
+
+alter table ssn_sub_type add LAST_UPDATE_DATE LAST_UPDATE_DATE;
+alter table ssn_sub_type add LAST_UPDATE_BY USER_ID;

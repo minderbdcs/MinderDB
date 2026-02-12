@@ -1,0 +1,2 @@
+update sys_hh set ip_address='barcode.internalnc.sta.nsw.gov.au';
+

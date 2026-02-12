@@ -1,0 +1,1 @@
+select trn_type,trn_code,object wh_id,locn_id,qty,device_id,person_id from transactions_archive where trn_date between cast('JAN-02-2007' as timestamp) and cast('JAN-06-2007' as timestamp)  and reference starting 'Completing SSN Adjustment' and trn_type = 'TRIL' order by trn_date ;

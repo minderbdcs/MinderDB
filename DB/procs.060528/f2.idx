@@ -1,0 +1,4 @@
+create index pick_item_dev_prod3_idx on
+                 pick_item(device_id, PROD_ID, pick_line_status);
+create index pick_item_dev_prod4_idx on
+                 pick_item(device_id, pick_line_status);

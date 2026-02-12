@@ -1,0 +1,6 @@
+alter table pick_order add last_invoice_date last_update_date;
+alter table pick_order add last_invoice_no invoice_no;
+alter table pick_order add freight_every_invoice value_tf;
+alter table pick_order add freight_last_update_date last_update_date;
+alter table pick_order add freight_last_updated_by user_id;
+

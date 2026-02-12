@@ -1,0 +1,160 @@
+../procs.020714/f.dsas.4.sql:           PS_SSCC_STATUS = 'DN',
+../procs.020714/f.dsas.4.sql:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DN',
+../procs.020714/f.dsas.5.sql:           PS_SSCC_STATUS = 'DN',
+../procs.020714/f.dsas.5.sql:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DN',
+../procs.020714/f.dsgs:‘|PS_SSCC_STATUS=DC|PS_SSCC_DIM_X=30|
+../procs.020714/f.dsgs:               PS_SSCC_STATUS       = :WK_TRN_REF_STATUS,
+../procs.020714/f.dsgs:         PS_SSCC_STATUS is changed from 'GO' to 'DC'. 
+../procs.020714/f.dsgs:            PS_SSCC_STATUS,        /* New PS_SSCC_STATUS starts as 'GO'. Use DSGS D to update  */                
+../procs.020714/f.dsgs:            :WK_PS_SSCC_STATUS,     /*  We should not be copying Status from one record to another */
+../procs.020714/f.dsgs:               PS_SSCC_STATUS                  ,         /* 'GO' = Generated Only */
+../procs.020714/f.dsgs:               IF (WK_PS_SSCC_STATUS = 'GO') THEN
+../procs.020714/f.dsgs:                  SET PS_SSCC_STATUS = 'CL',
+../procs.020714/f.dsgs:               PS_SSCC_STATUS = 'CL',
+../procs.020714/f.test.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.020714/f.test.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.070614/f.dsas.2.sql:           /* PS_SSCC_STATUS = 'DC', */
+../procs.070614/f.dsas.2.sql:           PS_SSCC_STATUS = 'DN',
+../procs.070614/f.dsas.2.sql:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DN',
+../procs.070614/f.dsas.3.sql:           PS_SSCC_STATUS = 'DN',
+../procs.070614/f.dsas.3.sql:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DN',
+../procs.070614/f.dsas.4.sql:           PS_SSCC_STATUS = 'DN',
+../procs.070614/f.dsas.4.sql:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DN',
+../procs.070614/f.dsas.sql:           PS_SSCC_STATUS = 'DC',
+../procs.070614/f.dsas.sql:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DC',
+../procs.070614/f.dsgs:‘|PS_SSCC_STATUS=DC|PS_SSCC_DIM_X=30|
+../procs.070614/f.dsgs:               PS_SSCC_STATUS       = :WK_TRN_REF_STATUS,
+../procs.070614/f.dsgs:         PS_SSCC_STATUS is changed from 'GO' to 'DC'. 
+../procs.070614/f.dsgs:            PS_SSCC_STATUS,        /* New PS_SSCC_STATUS starts as 'GO'. Use DSGS D to update  */                
+../procs.070614/f.dsgs:            :WK_PS_SSCC_STATUS,     /*  We should not be copying Status from one record to another */
+../procs.070614/f.dsgs:               PS_SSCC_STATUS                  ,         /* 'GO' = Generated Only */
+../procs.070614/f.dsgs:               IF (WK_PS_SSCC_STATUS = 'GO') THEN
+../procs.070614/f.dsgs:                  SET PS_SSCC_STATUS = 'CL',
+../procs.070614/f.dsgs:               PS_SSCC_STATUS = 'CL',
+../procs.110514/f.dsas:           PS_SSCC_STATUS = 'DC',
+../procs.110514/f.dsas:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DC',
+../procs.110514/f.dsgs:‘|PS_SSCC_STATUS=DC|PS_SSCC_DIM_X=30|
+../procs.110514/f.dsgs:               PS_SSCC_STATUS       = :WK_TRN_REF_STATUS,
+../procs.110514/f.dsgs:         PS_SSCC_STATUS is changed from 'GO' to 'DC'. 
+../procs.110514/f.dsgs:            PS_SSCC_STATUS,        /* New PS_SSCC_STATUS starts as 'GO'. Use DSGS D to update  */                
+../procs.110514/f.dsgs:            :WK_PS_SSCC_STATUS,     /*  We should not be copying Status from one record to another */
+../procs.110514/f.dsgs:               PS_SSCC_STATUS                  ,         /* 'GO' = Generated Only */
+../procs.110514/f.dsgs:            IF (WK_PS_SSCC_STATUS = 'GO') THEN
+../procs.110514/f.dsgs:               SET PS_SSCC_STATUS = 'CL'
+../procs.110514/f.sscc.temp:   WK_P_PS_SSCC_STATUS  = NEW.P_PS_SSCC_STATUS ;
+../procs.110514/f.sscc.temp:            PS_SSCC_STATUS ,
+../procs.110514/f.sscc.temp:            :WK_P_PS_SSCC_STATUS ,
+../procs.110514/f.sscc.temp:            PS_SSCC_STATUS = :WK_P_PS_SSCC_STATUS ,
+../procs.110514/f.tifs.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.110514/f.tifs.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.140414/f.dsgs.2:‘|PS_SSCC_STATUS=DC|PS_SSCC_DIM_X=30|
+../procs.140414/f.dsgs.2:               PS_SSCC_STATUS       = :WK_TRN_REF_STATUS,
+../procs.140414/f.dsgs.2:         PS_SSCC_STATUS is changed from 'GO' to 'DC'. 
+../procs.140414/f.dsgs.2:            PS_SSCC_STATUS,        /* New PS_SSCC_STATUS starts as 'GO'. Use DSGS D to update  */                
+../procs.140414/f.dsgs.2:            :WK_PS_SSCC_STATUS,     /*  We should not be copying Status from one record to another */
+../procs.140414/f.dsgs.2:               PS_SSCC_STATUS                  ,         /* 'GO' = Generated Only */
+../procs.140414/f.dsgs.2:            IF (WK_PS_SSCC_STATUS = 'GO') THEN
+../procs.140414/f.dsgs.2:               SET PS_SSCC_STATUS = 'CL'
+../procs.150714/f.dsas.5.sql:           PS_SSCC_STATUS = 'DN',
+../procs.150714/f.dsas.5.sql:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DN',
+../procs.150714/f.test.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.150714/f.test.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.160514/f.test.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.160514/f.test.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.160814/f.dsas.5.sql:           PS_SSCC_STATUS = 'DN',
+../procs.160814/f.dsas.5.sql:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DN',
+../procs.180314/f.sscc.temp2:   WK_P_PS_SSCC_STATUS  = NEW.P_PS_SSCC_STATUS ;
+../procs.180314/f.sscc.temp2:            PS_SSCC_STATUS ,
+../procs.180314/f.sscc.temp2:            :WK_P_PS_SSCC_STATUS ,
+../procs.180314/f.sscc.temp2:            PS_SSCC_STATUS = :WK_P_PS_SSCC_STATUS ,
+../procs.190514/f.dsas:           PS_SSCC_STATUS = 'DC',
+../procs.190514/f.dsas:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DC',
+../procs.190514/f.dsgs:‘|PS_SSCC_STATUS=DC|PS_SSCC_DIM_X=30|
+../procs.190514/f.dsgs:               PS_SSCC_STATUS       = :WK_TRN_REF_STATUS,
+../procs.190514/f.dsgs:         PS_SSCC_STATUS is changed from 'GO' to 'DC'. 
+../procs.190514/f.dsgs:            PS_SSCC_STATUS,        /* New PS_SSCC_STATUS starts as 'GO'. Use DSGS D to update  */                
+../procs.190514/f.dsgs:            :WK_PS_SSCC_STATUS,     /*  We should not be copying Status from one record to another */
+../procs.190514/f.dsgs:               PS_SSCC_STATUS                  ,         /* 'GO' = Generated Only */
+../procs.190514/f.dsgs:            IF (WK_PS_SSCC_STATUS = 'GO') THEN
+../procs.190514/f.dsgs:               SET PS_SSCC_STATUS = 'CL'
+../procs.190514/f.sscc.temp:   WK_P_PS_SSCC_STATUS  = NEW.P_PS_SSCC_STATUS ;
+../procs.190514/f.sscc.temp:            PS_SSCC_STATUS ,
+../procs.190514/f.sscc.temp:            :WK_P_PS_SSCC_STATUS ,
+../procs.190514/f.sscc.temp:            PS_SSCC_STATUS = :WK_P_PS_SSCC_STATUS ,
+../procs.220814/f.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.220814/f.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.230414/f.dsas:           PS_SSCC_STATUS = 'DC',
+../procs.230414/f.dsas.2:           PS_SSCC_STATUS = 'DC',
+../procs.230414/f.dsas.3:           PS_SSCC_STATUS = 'DC',
+../procs.230414/f.dsas.3:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DC',
+../procs.240514/f.dsas:           PS_SSCC_STATUS = 'DC',
+../procs.240514/f.dsas:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DC',
+../procs.240514/f.dsas.2:           PS_SSCC_STATUS = 'DC',
+../procs.240514/f.dsas.2:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DC',
+../procs.240514/f.dsas.3:           PS_SSCC_STATUS = 'DC',
+../procs.240514/f.dsas.3:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DC',
+../procs.240514/f.dsgs:‘|PS_SSCC_STATUS=DC|PS_SSCC_DIM_X=30|
+../procs.240514/f.dsgs:               PS_SSCC_STATUS       = :WK_TRN_REF_STATUS,
+../procs.240514/f.dsgs:         PS_SSCC_STATUS is changed from 'GO' to 'DC'. 
+../procs.240514/f.dsgs:            PS_SSCC_STATUS,        /* New PS_SSCC_STATUS starts as 'GO'. Use DSGS D to update  */                
+../procs.240514/f.dsgs:            :WK_PS_SSCC_STATUS,     /*  We should not be copying Status from one record to another */
+../procs.240514/f.dsgs:               PS_SSCC_STATUS                  ,         /* 'GO' = Generated Only */
+../procs.240514/f.dsgs:            IF (WK_PS_SSCC_STATUS = 'GO') THEN
+../procs.240514/f.dsgs:               SET PS_SSCC_STATUS = 'CL'
+../procs.240514/f.dsgs.2:‘|PS_SSCC_STATUS=DC|PS_SSCC_DIM_X=30|
+../procs.240514/f.dsgs.2:               PS_SSCC_STATUS       = :WK_TRN_REF_STATUS,
+../procs.240514/f.dsgs.2:         PS_SSCC_STATUS is changed from 'GO' to 'DC'. 
+../procs.240514/f.dsgs.2:            PS_SSCC_STATUS,        /* New PS_SSCC_STATUS starts as 'GO'. Use DSGS D to update  */                
+../procs.240514/f.dsgs.2:            :WK_PS_SSCC_STATUS,     /*  We should not be copying Status from one record to another */
+../procs.240514/f.dsgs.2:               PS_SSCC_STATUS                  ,         /* 'GO' = Generated Only */
+../procs.240514/f.dsgs.2:            IF (WK_PS_SSCC_STATUS = 'GO') THEN
+../procs.240514/f.dsgs.2:               SET PS_SSCC_STATUS = 'CL'
+../procs.240514/f.test.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.240514/f.test.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.240514/f.tifs.dsot:              PS_SSCC_STATUS = 'DC' 
+../procs.240514/f.tifs.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.250614/f.test.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.250614/f.test.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.250614/f.tifs.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.250614/f.tifs.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.270814/f.dsas:           PS_SSCC_STATUS = 'DN',
+../procs.270814/f.dsas:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DN',
+../procs.280714/f.test.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.280714/f.test.dsot:              PS_SSCC_STATUS = 'DC'
+../procs.300414/f.dsas.4:           PS_SSCC_STATUS = 'DC',
+../procs.300414/f.dsas.4:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DC',
+../procs.300414/f.dsas.5:           PS_SSCC_STATUS = 'DC',
+../procs.300414/f.dsas.5:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DC',
+../procs.300414/f.dsas.6:           PS_SSCC_STATUS = 'DC',
+../procs.300414/f.dsas.6:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DC',
+../procs.300414/f.dsas.7:           PS_SSCC_STATUS = 'DC',
+../procs.300414/f.dsas.7:              UPDATE PACK_SSCC SET PS_SSCC_STATUS = 'DC',
+../procs.300514/f.dsgs.2:‘|PS_SSCC_STATUS=DC|PS_SSCC_DIM_X=30|
+../procs.300514/f.dsgs.2:               PS_SSCC_STATUS       = :WK_TRN_REF_STATUS,
+../procs.300514/f.dsgs.2:         PS_SSCC_STATUS is changed from 'GO' to 'DC'. 
+../procs.300514/f.dsgs.2:            PS_SSCC_STATUS,        /* New PS_SSCC_STATUS starts as 'GO'. Use DSGS D to update  */                
+../procs.300514/f.dsgs.2:            :WK_PS_SSCC_STATUS,     /*  We should not be copying Status from one record to another */
+../procs.300514/f.dsgs.2:               PS_SSCC_STATUS                  ,         /* 'GO' = Generated Only */
+../procs.300514/f.dsgs.2:            IF (WK_PS_SSCC_STATUS = 'GO') THEN
+../procs.300514/f.dsgs.2:               SET PS_SSCC_STATUS = 'CL',
+../procs.300514/f.dsgs.2:            PS_SSCC_STATUS = 'CL',
+../procs.300514/f.dsgs.3:‘|PS_SSCC_STATUS=DC|PS_SSCC_DIM_X=30|
+../procs.300514/f.dsgs.3:               PS_SSCC_STATUS       = :WK_TRN_REF_STATUS,
+../procs.300514/f.dsgs.3:         PS_SSCC_STATUS is changed from 'GO' to 'DC'. 
+../procs.300514/f.dsgs.3:            PS_SSCC_STATUS,        /* New PS_SSCC_STATUS starts as 'GO'. Use DSGS D to update  */                
+../procs.300514/f.dsgs.3:            :WK_PS_SSCC_STATUS,     /*  We should not be copying Status from one record to another */
+../procs.300514/f.dsgs.3:               PS_SSCC_STATUS                  ,         /* 'GO' = Generated Only */
+../procs.300514/f.dsgs.3:               IF (WK_PS_SSCC_STATUS = 'GO') THEN
+../procs.300514/f.dsgs.3:                  SET PS_SSCC_STATUS = 'CL',
+../procs.300514/f.dsgs.3:               PS_SSCC_STATUS = 'CL',
+../procs.300514/f.dsgs.4:‘|PS_SSCC_STATUS=DC|PS_SSCC_DIM_X=30|
+../procs.300514/f.dsgs.4:               PS_SSCC_STATUS       = :WK_TRN_REF_STATUS,
+../procs.300514/f.dsgs.4:         PS_SSCC_STATUS is changed from 'GO' to 'DC'. 
+../procs.300514/f.dsgs.4:            PS_SSCC_STATUS,        /* New PS_SSCC_STATUS starts as 'GO'. Use DSGS D to update  */                
+../procs.300514/f.dsgs.4:            :WK_PS_SSCC_STATUS,     /*  We should not be copying Status from one record to another */
+../procs.300514/f.dsgs.4:               PS_SSCC_STATUS                  ,         /* 'GO' = Generated Only */
+../procs.300514/f.dsgs.4:               IF (WK_PS_SSCC_STATUS = 'GO') THEN
+../procs.300514/f.dsgs.4:                  SET PS_SSCC_STATUS = 'CL',
+../procs.300514/f.dsgs.4:               PS_SSCC_STATUS = 'CL',
+../procs.300514/f.sscc:                    NEW.PS_SSCC_STATUS,
+../procs.300514/f.sscc:            UPDATE PACK_MANIFEST SET PACKM_STATUS = NEW.PS_SSCC_STATUS,

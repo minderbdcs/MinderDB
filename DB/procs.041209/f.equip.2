@@ -1,0 +1,7 @@
+ALTER TABLE SYS_EQUIP DROP COMPUTERNAME ;
+ALTER TABLE SYS_EQUIP ADD COMPUTER_NAME DESCRIPTION;
+ALTER TABLE SYS_EQUIP ADD IP_ADDRESS IP_ADDRESS;
+ALTER TABLE SYS_EQUIP ADD PARAM_CLASS_ID CODE;
+
+update sys_equip set ip_address = (select ssn.ip_address from ssn where ssn.ssn_id = sys_equip.ssn_id); 
+

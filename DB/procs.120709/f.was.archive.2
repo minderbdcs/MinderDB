@@ -1,0 +1,11 @@
+alter table prod_profile drop constraint integ_40;
+alter table prod_profile drop constraint integ_30;
+alter table prod_profile drop constraint integ_372;
+alter table prod_profile drop constraint integ_482;
+alter table prod_profile drop constraint integ_496;
+alter table prod_profile drop constraint integ_498;
+alter table prod_profile drop constraint integ_493;
+alter table prod_profile drop constraint integ_471;
+create index prod_profile_prod_idx on prod_profile(prod_id);
+
+

@@ -1,0 +1,223 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+/*
+export_prod_profile has
+PROD_ID                           OUTPUT VARCHAR(30)
+LAST_UPDATE_DATE                  OUTPUT TIMESTAMP
+SHORT_DESC                        OUTPUT VARCHAR(255)
+LONG_DESC                         OUTPUT VARCHAR(255)
+COMPANY_ID                        OUTPUT VARCHAR(10)
+STOCK                             OUTPUT VARCHAR(1)
+UOM                               OUTPUT VARCHAR(2)
+SPECIAL_INSTR                     OUTPUT VARCHAR(50)
+PROD_TYPE                         OUTPUT VARCHAR(2)
+SSN_TYPE                          OUTPUT VARCHAR(40)
+TOG_C                             OUTPUT VARCHAR(2)
+STOCK_ON_HAND                     OUTPUT INTEGER
+DIMENSION_X                       OUTPUT NUMERIC(9, 3)
+DIMENSION_Y                       OUTPUT NUMERIC(9, 3)
+DIMENSION_Z                       OUTPUT NUMERIC(9, 3)
+DIMENSION_X_UOM                   OUTPUT VARCHAR(2)
+DIMENSION_Y_UOM                   OUTPUT VARCHAR(2)
+DIMENSION_Z_UOM                   OUTPUT VARCHAR(2)
+ORDER_WEIGHT                      OUTPUT DECIMAL(6, 3)
+07/09/13 have to add the S_ and G_ fields for creating issn's in a location
+ALTERNATE_ID                      OUTPUT VARCHAR(30)
+S_CREATE_WH_ID                    (WH_ID) CHAR(2),
+S_CREATE_LOCN_ID                  (LOCN_ID) VARCHAR(10),
+S_CREATE_QTY                      (QTY) INTEGER ,
+S_CREATE_COMPANY_ID               (COMPANY) VARCHAR(20) ,
+S_CREATE_PER_ISSN_QTY             (QTY) INTEGER ,
+01/07/16 add GRN_LEACY_ID = Filename 
+S_CREATE_GRN_LEGACY_ID            (GRN_LEGACY_ID) VARCHAR(40) ,
+*/
+
+CREATE OR ALTER PROCEDURE IMPORT_PROD_PROFILE  (
+P_PROD_ID                       VARCHAR(30) , 
+P_SHORT_DESC                    VARCHAR(255) , 
+P_LONG_DESC                     VARCHAR(255) , 
+P_COMPANY_ID                    COMPANY , 
+P_STOCK                         CHAR(1) , 
+P_UOM                           CHAR(2) , 
+P_SPECIAL_INSTR                 VARCHAR(50) , 
+P_PROD_TYPE                     CHAR(2) , 
+P_SSN_TRACK                     CHAR(1) , 
+P_TOG_C                         CHAR(2) , 
+P_STOCK_ON_HAND                 INTEGER , 
+P_DIMENSION_X                   NUMERIC(9, 3) , 
+P_DIMENSION_Y                   NUMERIC(9, 3) , 
+P_DIMENSION_Z                   NUMERIC(9, 3) , 
+P_DIMENSION_X_UOM               CHAR(2) , 
+P_DIMENSION_Y_UOM               CHAR(2) , 
+P_DIMENSION_Z_UOM               CHAR(2) , 
+P_ORDER_WEIGHT                  DECIMAL(5, 3) , 
+P_NET_WEIGHT_UOM                CHAR(2) , 
+P_ORDER_WEIGHT_UOM              CHAR(2) , 
+P_NET_WEIGHT                    DECIMAL(4, 3) , 
+P_INNER_WEIGHT                  DECIMAL(4, 3) , 
+P_SSN_TYPE                      VARCHAR(40) , 
+P_PACK_WEIGHT                   DECIMAL(4, 3) , 
+P_ISSUE_PER_PALLET              INTEGER , 
+P_ISSUE_PER_OUTER_CARTON        INTEGER , 
+P_ISSUE_PER_INNER_UNIT          INTEGER , 
+P_ISSUE_PER_ORDER_UNIT          INTEGER , 
+P_INNER_WEIGHT_UOM              CHAR(2) , 
+P_ORDER_QTY                     DOUBLE PRECISION ,
+P_ALTERNATE_ID                  VARCHAR(30) , 
+P_PP_BRAND_NAME                 CODE , 
+S_CREATE_WH_ID                  CHAR(2),
+S_CREATE_LOCN_ID                VARCHAR(10),
+S_CREATE_QTY                    INTEGER ,
+S_CREATE_COMPANY_ID             COMPANY ,
+S_CREATE_PER_ISSN_QTY           INTEGER ,
+S_CREATE_GRN_LEGACY_ID          GRN_LEGACY_ID )
+
+AS 
+
+DECLARE VARIABLE P_ISSUE_UOM                     CHAR(2) ; 
+DECLARE VARIABLE P_ORDER_UOM                     CHAR(2) ; 
+DECLARE VARIABLE P_PALLET_CFG_C                  CHAR(2) ; 
+DECLARE VARIABLE P_PERM_LEVEL                    CHAR(1) ; 
+DECLARE VARIABLE P_DEFAULT_ISSUE_QTY             INTEGER ; 
+DECLARE VARIABLE P_BACK_ORDER_QTY                INTEGER ; 
+DECLARE VARIABLE P_RESERVED_QTY                  INTEGER ; 
+DECLARE VARIABLE P_MIN_QTY                       INTEGER ; 
+DECLARE VARIABLE P_REORDER_QTY                   INTEGER ; 
+DECLARE VARIABLE P_LAST_UPDATE_DATE              TIMESTAMP ; 
+DECLARE VARIABLE P_LAST_UPDATE_BY                VARCHAR(10) ; 
+DECLARE VARIABLE P_PROD_RETRIEVE_STATUS          CHAR(1) ; 
+DECLARE VARIABLE P_ISSUE                         INTEGER ; 
+DECLARE VARIABLE P_INNER_UOM                     CHAR(2) ; 
+DECLARE VARIABLE P_PALLET_CFG_INNER              CHAR(2) ; 
+DECLARE VARIABLE P_VOLUME                        DOUBLE PRECISION ; 
+DECLARE VARIABLE P_UOM_SIZE                      VARCHAR(10) ; 
+DECLARE VARIABLE P_EXPORT_CATEGORY               CHAR(1) ; 
+DECLARE VARIABLE P_PICK_IMPORT                   CHAR(1) ; 
+DECLARE VARIABLE P_TEMPERATURE_ZONE              CHAR(2) ; 
+DECLARE VARIABLE P_TAX_APPLICABLE                CHAR(1) ; 
+DECLARE VARIABLE P_VOLUME_UOM                    VARCHAR(10) ; 
+DECLARE VARIABLE P_ORIENTATION                   VARCHAR(40) ; 
+DECLARE VARIABLE P_PROD_TYPE_COMMENT             VARCHAR(255) ; 
+DECLARE VARIABLE P_MIN_LOT_SIZE                  DOUBLE PRECISION ; 
+DECLARE VARIABLE P_STORE_TYPE                    VARCHAR(40) ; 
+DECLARE VARIABLE P_ALT_PROD_TYPE                 VARCHAR(40) ; 
+DECLARE VARIABLE P_PROD_LOCN_SEQ                 DECIMAL(7, 3) ; 
+DECLARE VARIABLE P_SIZE_TYPE                     VARCHAR(40) ; 
+DECLARE VARIABLE P_DISCOUNT_CODE                 CHAR(2) ; 
+DECLARE VARIABLE P_MIN_STOCK_DAYS                INTEGER ; 
+DECLARE VARIABLE P_REORDER_STOCK_DAYS            INTEGER ; 
+DECLARE VARIABLE P_ORIGINAL_STOCK_ON_HAND        INTEGER ; 
+DECLARE VARIABLE P_ORIGINAL_DATE                 TIMESTAMP ; 
+DECLARE VARIABLE P_REPLENISH                     CHAR(1) ; 
+DECLARE VARIABLE P_URL                           VARCHAR(255) ; 
+DECLARE VARIABLE G_PROD_GS1                      VARCHAR(14) ; 
+DECLARE VARIABLE G_PROD_GS1_EXTENSION            VARCHAR(6) ; 
+BEGIN 
+     P_ISSUE_UOM                     = NULL;   
+     P_ORDER_UOM                     = NULL;   
+     P_PALLET_CFG_C                  = NULL;   
+     P_PERM_LEVEL                    = NULL;   
+     P_DEFAULT_ISSUE_QTY             = NULL;   
+     P_BACK_ORDER_QTY                = NULL;   
+     P_RESERVED_QTY                  = NULL;   
+     P_MIN_QTY                       = NULL;   
+     P_REORDER_QTY                   = NULL;   
+     P_LAST_UPDATE_DATE              = NULL;     
+     P_LAST_UPDATE_BY                = NULL;  
+     P_PROD_RETRIEVE_STATUS          = NULL;   
+     P_ISSUE                         = NULL;   
+     P_INNER_UOM                     = NULL;   
+     P_PALLET_CFG_INNER              = NULL;   
+     P_VOLUME                        = NULL;
+     P_UOM_SIZE                      = NULL; 
+     P_EXPORT_CATEGORY               = NULL;   
+     P_PICK_IMPORT                   = NULL;   
+     P_TEMPERATURE_ZONE              = NULL;   
+     P_TAX_APPLICABLE                = NULL;   
+     P_VOLUME_UOM                    = NULL; 
+     P_ORIENTATION                   = NULL; 
+     P_PROD_TYPE_COMMENT             = NULL; 
+     P_MIN_LOT_SIZE                  = NULL; 
+     P_STORE_TYPE                    = NULL; 
+     P_ALT_PROD_TYPE                 = NULL; 
+     P_PROD_LOCN_SEQ                 = NULL; 
+     P_SIZE_TYPE                     = NULL; 
+     P_DISCOUNT_CODE                 = NULL;   
+     P_MIN_STOCK_DAYS                = NULL;   
+     P_REORDER_STOCK_DAYS            = NULL;   
+     P_ORIGINAL_STOCK_ON_HAND        = NULL;   
+     P_ORIGINAL_DATE                 = NULL; 
+     P_REPLENISH                     = NULL;  
+     P_URL                           = NULL; 
+     G_PROD_GS1                      = NULL; 
+     G_PROD_GS1_EXTENSION            = NULL; 
+   INSERT INTO PROD_PROFILE_TEMP( P_PROD_ID , P_SHORT_DESC , P_LONG_DESC , 
+P_PROD_TYPE , P_STOCK , P_SPECIAL_INSTR , 
+P_UOM ,
+P_ISSUE_UOM , P_ORDER_UOM , P_ISSUE_PER_ORDER_UNIT , P_PALLET_CFG_C ,
+P_PERM_LEVEL , P_SSN_TRACK , P_TOG_C , P_DEFAULT_ISSUE_QTY ,
+P_BACK_ORDER_QTY , P_RESERVED_QTY , P_MIN_QTY ,
+P_REORDER_QTY , P_LAST_UPDATE_DATE , P_LAST_UPDATE_BY ,
+P_PROD_RETRIEVE_STATUS , P_COMPANY_ID , P_ISSUE_PER_INNER_UNIT , P_ORDER_WEIGHT ,
+P_NET_WEIGHT_UOM , P_ORDER_WEIGHT_UOM , P_ISSUE , P_INNER_UOM ,
+P_INNER_WEIGHT_UOM , P_PALLET_CFG_INNER , P_NET_WEIGHT ,
+P_INNER_WEIGHT , P_VOLUME , P_UOM_SIZE ,
+P_DIMENSION_X , P_DIMENSION_Y ,
+P_DIMENSION_Z , P_DIMENSION_X_UOM , P_DIMENSION_Y_UOM , P_DIMENSION_Z_UOM ,
+P_EXPORT_CATEGORY , P_PICK_IMPORT , P_TEMPERATURE_ZONE , P_TAX_APPLICABLE ,
+P_SSN_TYPE , 
+P_VOLUME_UOM , P_ORIENTATION , P_PROD_TYPE_COMMENT ,
+P_ORDER_QTY , 
+P_MIN_LOT_SIZE , 
+P_STORE_TYPE , P_ALT_PROD_TYPE , 
+P_PROD_LOCN_SEQ , P_SIZE_TYPE , P_PACK_WEIGHT , 
+P_DISCOUNT_CODE , P_STOCK_ON_HAND , P_MIN_STOCK_DAYS ,
+P_REORDER_STOCK_DAYS , 
+P_ORIGINAL_STOCK_ON_HAND , 
+P_ORIGINAL_DATE , P_REPLENISH , 
+P_URL , P_ISSUE_PER_PALLET, P_ISSUE_PER_OUTER_CARTON, P_ALTERNATE_ID,
+P_PP_BRAND_NAME,
+S_CREATE_WH_ID , S_CREATE_LOCN_ID , S_CREATE_QTY , S_CREATE_COMPANY_ID , S_CREATE_PER_ISSN_QTY , 
+G_PROD_GS1 , G_PROD_GS1_EXTENSION,
+S_CREATE_GRN_LEGACY_ID )
+      VALUES( :P_PROD_ID , :P_SHORT_DESC , :P_LONG_DESC , 
+:P_PROD_TYPE , :P_STOCK , :P_SPECIAL_INSTR , 
+:P_UOM ,
+:P_ISSUE_UOM , :P_ORDER_UOM , :P_ISSUE_PER_ORDER_UNIT , :P_PALLET_CFG_C ,
+:P_PERM_LEVEL , :P_SSN_TRACK , :P_TOG_C , :P_DEFAULT_ISSUE_QTY ,
+:P_BACK_ORDER_QTY , :P_RESERVED_QTY , :P_MIN_QTY ,
+:P_REORDER_QTY , :P_LAST_UPDATE_DATE , :P_LAST_UPDATE_BY ,
+:P_PROD_RETRIEVE_STATUS , :P_COMPANY_ID , :P_ISSUE_PER_INNER_UNIT , :P_ORDER_WEIGHT ,
+:P_NET_WEIGHT_UOM , :P_ORDER_WEIGHT_UOM , :P_ISSUE , :P_INNER_UOM ,
+:P_INNER_WEIGHT_UOM , :P_PALLET_CFG_INNER , :P_NET_WEIGHT ,
+:P_INNER_WEIGHT , :P_VOLUME , :P_UOM_SIZE ,
+:P_DIMENSION_X , :P_DIMENSION_Y ,
+:P_DIMENSION_Z , :P_DIMENSION_X_UOM , :P_DIMENSION_Y_UOM , :P_DIMENSION_Z_UOM ,
+:P_EXPORT_CATEGORY , :P_PICK_IMPORT , :P_TEMPERATURE_ZONE , :P_TAX_APPLICABLE ,
+:P_SSN_TYPE , 
+:P_VOLUME_UOM , :P_ORIENTATION , :P_PROD_TYPE_COMMENT ,
+:P_ORDER_QTY , 
+:P_MIN_LOT_SIZE , 
+:P_STORE_TYPE , :P_ALT_PROD_TYPE , 
+:P_PROD_LOCN_SEQ , :P_SIZE_TYPE , :P_PACK_WEIGHT , 
+:P_DISCOUNT_CODE , :P_STOCK_ON_HAND , :P_MIN_STOCK_DAYS ,
+:P_REORDER_STOCK_DAYS , 
+:P_ORIGINAL_STOCK_ON_HAND , 
+:P_ORIGINAL_DATE , :P_REPLENISH , 
+:P_URL , :P_ISSUE_PER_PALLET, :P_ISSUE_PER_OUTER_CARTON, :P_ALTERNATE_ID,
+:P_PP_BRAND_NAME,
+:S_CREATE_WH_ID , :S_CREATE_LOCN_ID , :S_CREATE_QTY , :S_CREATE_COMPANY_ID , :S_CREATE_PER_ISSN_QTY , 
+:G_PROD_GS1 , :G_PROD_GS1_EXTENSION ,
+:S_CREATE_GRN_LEGACY_ID );
+
+   SUSPEND; 
+END ^
+
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

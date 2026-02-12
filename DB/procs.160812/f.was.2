@@ -1,0 +1,617 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/* given a person_id and a location take all of the location
+   create an order
+   use the previous order details for the person id  using the pick_order and pick_order_dx tables
+   if not found try the archive db pick_order table
+   have to read the user and password to use from the /etc/minder/MINDER.password file
+   if not found try the person table
+pick to DS
+return the order number
+*/
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_PKTL FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 51 
+AS
+
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_ISSUE_TO VARCHAR(10); /* person_id for order */
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_PRODUCT PRODUCT;
+DECLARE VARIABLE WK_CHARGE_TO REFERENCE; /* reference was the cost centre */
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_TRN_TYPE VARCHAR(4);
+DECLARE VARIABLE WK_TRN_CODE CHAR(1);
+DECLARE VARIABLE WK_AUDIT_DESC VARCHAR(40);
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_SO_ID PICK_ORDER;
+
+DECLARE VARIABLE WK_PICK_LABEL_NO CHAR(8);
+DECLARE VARIABLE WK_PICK_LABEL_START INTEGER;
+DECLARE VARIABLE WK_PICK_LABEL_STOP INTEGER;
+DECLARE VARIABLE WK_PICK_LABEL_PREFIX INTEGER;
+DECLARE VARIABLE WK_LEN_LABEL_NO INTEGER;
+DECLARE VARIABLE WK_LABEL_LENGTH INTEGER;
+DECLARE VARIABLE WK_PICK_ADJUSTMENT INTEGER;
+DECLARE VARIABLE WK_L_PICK_LABEL_NO  VARCHAR(7);
+DECLARE VARIABLE WK_QTY_TOGET INTEGER;
+DECLARE VARIABLE WK_SSN_QTY INTEGER;
+DECLARE VARIABLE WK_SSN_ID VARCHAR(30);
+DECLARE VARIABLE WK_REASON ERROR_TEXT;
+DECLARE VARIABLE WK_REASON_TOTAL ERROR_TEXT;
+DECLARE VARIABLE iSSN_LENGTH INTEGER;
+DECLARE VARIABLE iSSN_ID INTEGER;
+DECLARE VARIABLE I_SSN_ID VARCHAR(20);
+DECLARE VARIABLE I_LEN_SSN_ID INTEGER;
+DECLARE VARIABLE LEN_SSN_ID INTEGER;
+DECLARE VARIABLE P_SSN_ID INTEGER;
+DECLARE VARIABLE WK_PARENT_SSN_ID VARCHAR(30);
+DECLARE VARIABLE WK_SAVE_SSN_ID VARCHAR(30);
+DECLARE VARIABLE WK_SAVE_PARENT_SSN_ID VARCHAR(30);
+DECLARE VARIABLE WK_ISSN_PREFIX VARCHAR(20);
+DECLARE VARIABLE WK_DEFAULT_DESPATCH DESPATCH_LOCATION;
+DECLARE VARIABLE WK_DEFAULT_DESPATCH_LOCN_ID LOCN_ID;
+DECLARE VARIABLE WK_CARRIER_ID DESPATCH_CARRIER;
+/* previous pick order fields */
+DECLARE VARIABLE WK_PREV_PICK_ORDER PICK_ORDER;
+DECLARE VARIABLE WK_PREV_FIRST_NAME FIRST_NAME;
+DECLARE VARIABLE WK_PREV_LAST_NAME LAST_NAME;
+DECLARE VARIABLE WK_PREV_ADDRESS_LINE1 VARCHAR(100);
+DECLARE VARIABLE WK_PREV_ADDRESS_LINE2 ADDRESS_LINE;
+DECLARE VARIABLE WK_PREV_ADDRESS_LINE3 ADDRESS_LINE;
+DECLARE VARIABLE WK_PREV_ADDRESS_LINE4 ADDRESS_LINE;
+DECLARE VARIABLE WK_PREV_CITY CITY;
+DECLARE VARIABLE WK_PREV_PHONE_NO PHONE_NO;
+DECLARE VARIABLE WK_PREV_STATE STATE;
+DECLARE VARIABLE WK_PREV_POST_CODE POST_CODE;
+DECLARE VARIABLE WK_PREV_COUNTRY COUNTRY;
+DECLARE VARIABLE WK_PREV_CONTACT_NAME CONTACT_NAME;
+DECLARE VARIABLE WK_PREV_OTHER1 OTHER_CHAR;
+DECLARE VARIABLE WK_PREV_OTHER5 OTHER_CHAR;
+DECLARE VARIABLE WK_PREV_OTHER6 OTHER_CHAR;
+DECLARE VARIABLE WK_PREV_OTHER9 CODE_255;
+/* warehouse address */
+DECLARE VARIABLE WK_WH_ADDRESS_LINE1 ADDRESS_LINE;
+DECLARE VARIABLE WK_WH_ADDRESS_LINE2 ADDRESS_LINE;
+DECLARE VARIABLE WK_WH_CITY CITY;
+DECLARE VARIABLE WK_WH_STATE STATE;
+DECLARE VARIABLE WK_WH_POST_CODE POST_CODE;
+DECLARE VARIABLE WK_WH_COUNTRY COUNTRY;
+DECLARE VARIABLE WK_WH_SUBURB CITY;
+/* log stuff */
+  DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(80) ;
+  DECLARE VARIABLE WK_LOG_RESULT   INTEGER;
+  DECLARE VARIABLE WK_LOG_BUFFER VARCHAR(100) ;
+DECLARE VARIABLE WK_EXEC_STMT VARCHAR(310);
+
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKTL') THEN
+  BEGIN
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_ISSUE_TO = NEW.SUB_LOCN_ID;
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     /* location to take from */
+     WK_USER = NEW.PERSON_ID;
+/*     WK_PRODUCT = NEW.OBJECT; */
+     WK_CHARGE_TO = NEW.REFERENCE;
+
+     WK_QTY = NEW.QTY;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_TRN_CODE = NEW.TRN_CODE;
+     WK_TRN_TYPE = NEW.TRN_TYPE;
+     WK_SAVE_SSN_ID = 'SAVE';
+     WK_SAVE_PARENT_SSN_ID = 'SAVE';
+
+     WK_AUDIT_DESC = 'Issued to Device ' || :WK_DEVICE ;
+     WK_REASON_TOTAL = '' ;
+/*
+     get order for pick_order
+     create order
+     get label no for pick_item
+     create pick_item
+
+     set qtytoget
+     for issn in location for product status PA or ST
+     {
+          if current_qty > qtytoget
+                split the issn so that we take the qtytoget
+                and create a pick_item_detail for it
+                and change the status to 'DS' and put in the  default despatch location
+                set the qtytoget to 0
+          else
+                take all current_qty
+                create a pick_item_detail
+                change status to 'DS' and put in the default despatch location
+                reduce the qtytoget by the current_qty
+          if (qtytoget is zero)
+               break
+     }
+*/
+
+     SELECT DEFAULT_DESPATCH_LOCATION, UGLY_CARRIER_ID FROM CONTROL INTO :WK_DEFAULT_DESPATCH, :WK_CARRIER_ID;
+     WK_DEFAULT_DESPATCH_LOCN_ID = SUBSTR(:WK_DEFAULT_DESPATCH,2,10);
+/* get warehouse address for sent from */
+   WK_WH_ADDRESS_LINE1 = NULL;
+   WK_WH_ADDRESS_LINE2 = NULL;
+   WK_WH_CITY = NULL;
+   WK_WH_SUBURB = NULL;
+   WK_WH_STATE  = NULL;
+   WK_WH_COUNTRY  = NULL;
+   WK_WH_POST_CODE  = NULL;
+   SELECT CAST(TIMESTAMP 'NOW' AS VARCHAR(26)) FROM CONTROL INTO :WK_LOG_BUFFER;
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'get S addresses data' || :WK_LOG_BUFFER );
+   SELECT WH.ADDRESS1, WH.ADDRESS2, WH.WH_CITY, WH.WH_SUBURB, WH.WH_STATE, WH.WH_COUNTRY, WH.WH_POST_CODE 
+   FROM WAREHOUSE WH
+   WHERE WH.WH_ID  = :WK_WH_ID    
+   INTO
+      :WK_WH_ADDRESS_LINE1 , 
+      :WK_WH_ADDRESS_LINE2 , 
+      :WK_WH_CITY , 
+      :WK_WH_SUBURB , 
+      :WK_WH_STATE  , 
+      :WK_WH_COUNTRY  ,
+      :WK_WH_POST_CODE  ;
+
+/* use default despatch location for when none supplied */
+/* have to get a carrier to use - the control ugly carrier */
+/* have to get the p_addresses from person  */
+/* pinpoint dont have person address or person populated */
+/* so want the previous order for this customer
+   to give the p_first_name
+               p_last_name
+               p_address_line1
+               p_address_line2
+               p_address_line3
+               p_address_line4
+               p_city
+               p_phone_no
+               p_state
+               p_post_code
+               p_country
+               contact_name
+               other1
+               other5
+               other6
+               other9
+
+*/
+/* have to get the sent from addresses */
+
+     SELECT FIRST 1 PICK_ORDER,
+               P_FIRST_NAME,
+               P_LAST_NAME,
+               P_ADDRESS_LINE1,
+               P_ADDRESS_LINE2,
+               P_ADDRESS_LINE3,
+               P_ADDRESS_LINE4,
+               P_CITY,
+               P_PHONE,
+               P_STATE,
+               P_POST_CODE,
+               P_COUNTRY,
+               CONTACT_NAME,
+               OTHER1,
+               OTHER5,
+               OTHER6,
+               OTHER9
+             FROM PICK_ORDER
+             WHERE P_PERSON_ID = :WK_ISSUE_TO
+             ORDER BY CREATE_DATE DESC
+             INTO :WK_PREV_PICK_ORDER,
+               :WK_PREV_FIRST_NAME,
+               :WK_PREV_LAST_NAME,
+               :WK_PREV_ADDRESS_LINE1,
+               :WK_PREV_ADDRESS_LINE2,
+               :WK_PREV_ADDRESS_LINE3,
+               :WK_PREV_ADDRESS_LINE4,
+               :WK_PREV_CITY,
+               :WK_PREV_PHONE_NO,
+               :WK_PREV_STATE,
+               :WK_PREV_POST_CODE,
+               :WK_PREV_COUNTRY,
+               :WK_PREV_CONTACT_NAME,
+               :WK_PREV_OTHER1,
+               :WK_PREV_OTHER5,
+               :WK_PREV_OTHER6,
+               :WK_PREV_OTHER9 ;
+     /* if none found try pick_order_dx */
+     IF (:WK_PREV_PICK_ORDER IS NULL) THEN
+     BEGIN
+        SELECT FIRST 1 PICK_ORDER,
+               P_FIRST_NAME,
+               P_LAST_NAME,
+               P_ADDRESS_LINE1,
+               P_ADDRESS_LINE2,
+               P_ADDRESS_LINE3,
+               P_ADDRESS_LINE4,
+               P_CITY,
+               P_PHONE,
+               P_STATE,
+               P_POST_CODE,
+               P_COUNTRY,
+               CONTACT_NAME,
+               OTHER1,
+               OTHER5,
+               OTHER6,
+               OTHER9
+             FROM PICK_ORDER_DX
+             WHERE P_PERSON_ID = :WK_ISSUE_TO
+             ORDER BY CREATE_DATE DESC
+             INTO :WK_PREV_PICK_ORDER,
+               :WK_PREV_FIRST_NAME,
+               :WK_PREV_LAST_NAME,
+               :WK_PREV_ADDRESS_LINE1,
+               :WK_PREV_ADDRESS_LINE2,
+               :WK_PREV_ADDRESS_LINE3,
+               :WK_PREV_ADDRESS_LINE4,
+               :WK_PREV_CITY,
+               :WK_PREV_PHONE_NO,
+               :WK_PREV_STATE,
+               :WK_PREV_POST_CODE,
+               :WK_PREV_COUNTRY,
+               :WK_PREV_CONTACT_NAME,
+               :WK_PREV_OTHER1,
+               :WK_PREV_OTHER5,
+               :WK_PREV_OTHER6,
+               :WK_PREV_OTHER9 ;
+     END
+     /* if none found try pick_order table in archive db */
+     IF (:WK_PREV_PICK_ORDER IS NULL) THEN
+     BEGIN
+        WK_EXEC_STMT = 'SELECT FIRST 1 PICK_ORDER, P_FIRST_NAME, P_LAST_NAME, P_ADDRESS_LINE1, P_ADDRESS_LINE2, P_ADDRESS_LINE3, P_ADDRESS_LINE4, P_CITY, P_PHONE, P_STATE, P_POST_CODE, P_COUNTRY, CONTACT_NAME, OTHER1, OTHER5, OTHER6, OTHER9 FROM PICK_ORDER WHERE P_PERSON_ID = ?  ORDER BY CREATE_DATE DESC ';
+        EXECUTE STATEMENT (WK_EXEC_STMT)  (WK_ISSUE_TO)
+            ON EXTERNAL 'localhost:archive'
+            AS USER 'MINDER'
+            PASSWORD 'mindeR'
+
+             INTO :WK_PREV_PICK_ORDER,
+               :WK_PREV_FIRST_NAME,
+               :WK_PREV_LAST_NAME,
+               :WK_PREV_ADDRESS_LINE1,
+               :WK_PREV_ADDRESS_LINE2,
+               :WK_PREV_ADDRESS_LINE3,
+               :WK_PREV_ADDRESS_LINE4,
+               :WK_PREV_CITY,
+               :WK_PREV_PHONE_NO,
+               :WK_PREV_STATE,
+               :WK_PREV_POST_CODE,
+               :WK_PREV_COUNTRY,
+               :WK_PREV_CONTACT_NAME,
+               :WK_PREV_OTHER1,
+               :WK_PREV_OTHER5,
+               :WK_PREV_OTHER6,
+               :WK_PREV_OTHER9 ;
+     END
+     /* if none found try person table */
+     IF (:WK_PREV_PICK_ORDER IS NULL) THEN
+     BEGIN
+        SELECT FIRST 1 PERSON_ID,
+               FIRST_NAME,
+               LAST_NAME,
+               ADDRESS_LINE1,
+               ADDRESS_LINE2,
+               ADDRESS_LINE3,
+               ADDRESS_LINE4,
+               CITY,
+               PHONE_NO,
+               STATE,
+               POST_CODE,
+               COUNTRY,
+               CONTACT_FIRST_NAME,
+               NULL,
+               PHONE_NO,
+               FAX_NO,
+               EMAIL
+             FROM PERSON
+             WHERE PERSON_ID = :WK_ISSUE_TO
+             ORDER BY CREATE_DATE DESC
+             INTO :WK_PREV_PICK_ORDER,
+               :WK_PREV_FIRST_NAME,
+               :WK_PREV_LAST_NAME,
+               :WK_PREV_ADDRESS_LINE1,
+               :WK_PREV_ADDRESS_LINE2,
+               :WK_PREV_ADDRESS_LINE3,
+               :WK_PREV_ADDRESS_LINE4,
+               :WK_PREV_CITY,
+               :WK_PREV_PHONE_NO,
+               :WK_PREV_STATE,
+               :WK_PREV_POST_CODE,
+               :WK_PREV_COUNTRY,
+               :WK_PREV_CONTACT_NAME,
+               :WK_PREV_OTHER1,
+               :WK_PREV_OTHER5,
+               :WK_PREV_OTHER6,
+               :WK_PREV_OTHER9 ;
+     END
+
+/* if have pick_item_address then generate pick_item_address P and D records for the order */
+     EXECUTE PROCEDURE  GET_SALE_ORDER_NO 'S'
+             RETURNING_VALUES :WK_SO_ID;
+  
+
+/* need the company  to use - this is defaulting to default company */
+     INSERT INTO PICK_ORDER (PICK_ORDER, PICK_ORDER_TYPE, PICK_ORDER_SUB_TYPE, PERSON_ID, P_PERSON_ID, PICK_DUE_DATE, CREATE_DATE, CREATED_BY, PICK_STARTED, PICK_STATUS, WH_ID, SHIP_VIA, 
+               P_FIRST_NAME, P_LAST_NAME, P_ADDRESS_LINE1, P_ADDRESS_LINE2,
+               P_ADDRESS_LINE3, P_ADDRESS_LINE4, P_CITY, P_PHONE,
+               P_STATE, P_POST_CODE, P_COUNTRY, CONTACT_NAME,
+               OTHER1, OTHER5, OTHER6, OTHER9, P_SUBURB,
+               D_FIRST_NAME, D_LAST_NAME, D_ADDRESS_LINE1, D_ADDRESS_LINE2,
+               D_ADDRESS_LINE3, D_ADDRESS_LINE4, D_CITY, D_PHONE,
+               D_STATE, D_POST_CODE, D_COUNTRY, D_SUBURB)
+            VALUES (:WK_SO_ID,'SO','LN',:WK_ISSUE_TO, :WK_ISSUE_TO, :WK_DATE,:WK_DATE,:WK_USER,:WK_DATE,'DA',:WK_WH_ID, :WK_CARRIER_ID,
+               :WK_PREV_FIRST_NAME, :WK_PREV_LAST_NAME, :WK_PREV_ADDRESS_LINE1, :WK_PREV_ADDRESS_LINE2,
+               :WK_PREV_ADDRESS_LINE3, :WK_PREV_ADDRESS_LINE4, :WK_PREV_CITY, :WK_PREV_PHONE_No,
+               :WK_PREV_STATE, :WK_PREV_POST_CODE, :WK_PREV_COUNTRY, :WK_PREV_CONTACT_NAME,
+               :WK_PREV_OTHER1, :WK_PREV_OTHER5, :WK_PREV_OTHER6, :WK_PREV_OTHER9, :WK_PREV_CITY ,
+               :WK_PREV_FIRST_NAME, :WK_PREV_LAST_NAME, :WK_PREV_ADDRESS_LINE1, :WK_PREV_ADDRESS_LINE2,
+               :WK_PREV_ADDRESS_LINE3, :WK_PREV_ADDRESS_LINE4, :WK_PREV_CITY, :WK_PREV_PHONE_NO,
+               :WK_PREV_STATE, :WK_PREV_POST_CODE, :WK_PREV_COUNTRY, :WK_PREV_CITY);
+
+
+   UPDATE OR INSERT INTO PICK_ITEM_ADDRESS (PICK_ORDER, PICK_LABEL_NO, PIA_ADDR_TYPE, 
+      PIA_ADDRESS_LINE1  ,PIA_ADDRESS_LINE2 ,  
+      PIA_CITY , PIA_STATE , 
+      PIA_COUNTRY , PIA_POST_CODE ,  
+      PIA_SUBURB )
+   VALUES ( :WK_SO_ID, 'ORDER', 'S',
+      :WK_WH_ADDRESS_LINE1, :WK_WH_ADDRESS_LINE2,  
+      :WK_WH_CITY, :WK_WH_STATE, 
+      :WK_WH_COUNTRY, :WK_WH_POST_CODE, 
+      :WK_WH_SUBURB ); 
+   UPDATE OR INSERT INTO PICK_ITEM_ADDRESS (PICK_ORDER, PICK_LABEL_NO, PIA_ADDR_TYPE, 
+      PIA_ADDRESS_LINE1  ,PIA_ADDRESS_LINE2 , PIA_ADDRESS_LINE3 , 
+      PIA_ADDRESS_LINE4 , PIA_CITY , PIA_STATE , 
+      PIA_COUNTRY , PIA_POST_CODE , PIA_FIRST_NAME, 
+      PIA_LAST_NAME, PIA_SUBURB , PIA_PHONE , 
+      PIA_EMAIL )
+   VALUES ( :WK_SO_ID, 'ORDER', 'P',
+      :WK_PREV_ADDRESS_LINE1, :WK_PREV_ADDRESS_LINE2, :WK_PREV_ADDRESS_LINE3, 
+      :WK_PREV_ADDRESS_LINE4, :WK_PREV_CITY, :WK_PREV_STATE, 
+      :WK_PREV_COUNTRY, :WK_PREV_POST_CODE, :WK_PREV_FIRST_NAME,
+      :WK_PREV_LAST_NAME, :WK_PREV_CITY , :WK_PREV_OTHER5 ,
+      :WK_PREV_OTHER9 );
+   UPDATE OR INSERT INTO PICK_ITEM_ADDRESS (PICK_ORDER, PICK_LABEL_NO, PIA_ADDR_TYPE, 
+      PIA_ADDRESS_LINE1  ,PIA_ADDRESS_LINE2 , PIA_ADDRESS_LINE3 , 
+      PIA_ADDRESS_LINE4 , PIA_CITY , PIA_STATE , 
+      PIA_COUNTRY , PIA_POST_CODE , PIA_FIRST_NAME, 
+      PIA_LAST_NAME, PIA_SUBURB , PIA_PHONE , 
+      PIA_EMAIL )
+   VALUES ( :WK_SO_ID, 'ORDER', 'D',
+      :WK_PREV_ADDRESS_LINE1, :WK_PREV_ADDRESS_LINE2, :WK_PREV_ADDRESS_LINE3, 
+      :WK_PREV_ADDRESS_LINE4, :WK_PREV_CITY, :WK_PREV_STATE, 
+      :WK_PREV_COUNTRY, :WK_PREV_POST_CODE, :WK_PREV_FIRST_NAME,
+      :WK_PREV_LAST_NAME, :WK_PREV_CITY , :WK_PREV_OTHER5 ,
+      :WK_PREV_OTHER9 );
+/*
+     for prods in location get sum qty to take into wk_product and wk_qty
+*/
+     FOR SELECT PROD_ID, SUM( CURRENT_QTY)
+         FROM ISSN
+         WHERE WH_ID = :WK_WH_ID
+           AND LOCN_ID = :WK_LOCN_ID
+           AND ISSN_STATUS IN ('PA','ST')
+           GROUP BY PROD_ID
+          INTO :WK_PRODUCT, :WK_QTY 
+     DO
+     BEGIN
+
+        WK_REASON = ''; /* init reason like isil */
+        WK_SAVE_SSN_ID = 'SAVE';
+        WK_SAVE_PARENT_SSN_ID = 'SAVE';
+
+        /* Get length for label */   
+        SELECT MAX_LENGTH
+        FROM PARAM
+        WHERE DATA_ID = 'PICK'
+        INTO :WK_LABEL_LENGTH;
+        WK_PICK_LABEL_NO = GEN_ID(PICK_LABEL_GEN, 1);
+        WK_PICK_LABEL_START = GEN_ID(PICK_LABEL_START, 0);
+        WK_PICK_LABEL_STOP = GEN_ID(PICK_LABEL_STOP, 0);
+        WK_PICK_LABEL_PREFIX = GEN_ID(PICK_LABEL_PREFIX , 0);
+        IF (WK_PICK_LABEL_NO > WK_PICK_LABEL_STOP) THEN
+        BEGIN
+           WK_PICK_ADJUSTMENT = WK_PICK_LABEL_START - WK_PICK_LABEL_STOP;
+           WK_PICK_LABEL_NO = GEN_ID(PICK_LABEL_GEN, WK_PICK_ADJUSTMENT);
+           WK_PICK_LABEL_PREFIX = GEN_ID(PICK_LABEL_PREFIX , 1);
+           WK_PICK_LABEL_NO = WK_PICK_LABEL_START;
+        END
+        WK_LEN_LABEL_NO = STRLEN(ALLTRIM(WK_PICK_LABEL_NO)) + 1;     
+        /* Get Label prefix */      
+        WK_L_PICK_LABEL_NO = chr(WK_PICK_LABEL_PREFIX);
+        /* Padding leading with 0 */
+        WHILE (WK_LEN_LABEL_NO < WK_LABEL_LENGTH) DO
+        BEGIN
+           WK_L_PICK_LABEL_NO = WK_L_PICK_LABEL_NO || '0';      
+           WK_LEN_LABEL_NO = WK_LEN_LABEL_NO + 1;
+        END
+        WK_L_PICK_LABEL_NO = WK_L_PICK_LABEL_NO || ALLTRIM(WK_PICK_LABEL_NO);
+   
+        INSERT INTO PICK_ITEM(PICK_LABEL_NO,PICK_ORDER,PROD_ID,PICK_ORDER_QTY,PICKED_QTY,CREATE_DATE,USER_ID,DEVICE_ID,PICK_LINE_STATUS,WH_ID,PICK_LOCATION) 
+               VALUES (:WK_L_PICK_LABEL_NO,:WK_SO_ID,:WK_PRODUCT,:WK_QTY,:WK_QTY,:WK_DATE,:WK_USER,:WK_DEVICE,'DS',:WK_WH_ID,:WK_LOCN_ID);
+   
+        WK_QTY_TOGET = WK_QTY;
+        FOR SELECT SSN_ID, CURRENT_QTY, ORIGINAL_SSN
+            FROM ISSN
+            WHERE WH_ID = :WK_WH_ID
+              AND LOCN_ID = :WK_LOCN_ID
+              AND PROD_ID = :WK_PRODUCT
+              AND ISSN_STATUS IN ('PA','ST')
+             INTO :WK_SSN_ID, :WK_SSN_QTY, :WK_PARENT_SSN_ID
+        DO
+        BEGIN
+           WK_SAVE_SSN_ID = WK_SSN_ID;
+           WK_SAVE_PARENT_SSN_ID = WK_PARENT_SSN_ID;
+           IF (WK_QTY_TOGET > 0) THEN
+           BEGIN
+              IF (WK_SSN_QTY > WK_QTY_TOGET) THEN
+              BEGIN
+                 /*  SPlit it */
+                 WK_ISSN_PREFIX = '';
+                 /* Get length for Barcode */   
+                 EXECUTE PROCEDURE GET_BARCODE_LENGTH RETURNING_VALUES iSSN_LENGTH;
+                 SELECT DATA_PREFIX FROM PARAM WHERE DATA_ID = 'BARCODE' INTO :WK_ISSN_PREFIX;
+                 IF (WK_ISSN_PREFIX IS NULL) THEN
+                 BEGIN
+                    WK_ISSN_PREFIX = '';
+                 END
+                 iSSN_ID = GEN_ID(ISSN_SSN_ID, 1);
+                 P_SSN_ID = iSSN_ID - 1;
+
+                 SELECT ISSN_ID FROM GET_ISSN_BARCODE('BARCODE', :P_SSN_ID, 36) INTO :I_SSN_ID;
+                    
+                 EXECUTE PROCEDURE PC_TRSS 
+                 :WK_RECORD ,
+                 :WK_WH_ID,
+                 :WK_LOCN_ID,
+                 :WK_SSN_ID,
+                 'TRSS',
+                 'A',
+                 :WK_DATE,
+                 :I_SSN_ID,
+                 :WK_QTY_TOGET,
+                 :WK_USER,
+                 :WK_DEVICE;
+                 /* take all this of the split issn */
+                 UPDATE ISSN SET ISSN_STATUS = 'DS',
+                     PREV_PREV_WH_ID = PREV_WH_ID,
+                     PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                     PREV_WH_ID = WH_ID,
+                     PREV_LOCN_ID = LOCN_ID,
+                     WH_ID = :WK_WH_ID,
+                     LOCN_ID = :WK_DEFAULT_DESPATCH_LOCN_ID,
+                     PREV_QTY = CURRENT_QTY,
+                     CURRENT_QTY = 0,
+                     PICK_ORDER = :WK_L_PICK_LABEL_NO
+                  WHERE SSN_ID = :I_SSN_ID;
+                  UPDATE SSN SET CURRENT_QTY = CURRENT_QTY - :WK_QTY_TOGET
+                  WHERE SSN_ID = :WK_PARENT_SSN_ID;
+                  WK_REASON = 'Issued Split ' || :WK_QTY_TOGET || 'to User ' || :WK_USER ;
+                  EXECUTE PROCEDURE ADD_SSN_HIST(:WK_WH_ID, :WK_LOCN_ID, :WK_PARENT_SSN_ID, 
+                          :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                          :WK_AUDIT_DESC , :WK_REASON, :WK_QTY_TOGET, :WK_USER, :WK_DEVICE); 
+                  INSERT INTO PICK_ITEM_DETAIL 
+                      (PICK_LABEL_NO, 
+                       SSN_ID, 
+                       PICK_DETAIL_STATUS, 
+                       QTY_PICKED,
+                       USER_ID, 
+                       DEVICE_ID, 
+                       CREATE_DATE,
+                       FROM_WH_ID,
+                       FROM_LOCN_ID,
+                       DESPATCH_LOCATION)
+                  VALUES (:WK_L_PICK_LABEL_NO, 
+                       :I_SSN_ID,
+                       'DS',
+                       :WK_QTY_TOGET,
+                       :WK_USER,
+                       :WK_DEVICE,
+                       :WK_DATE,
+                       :WK_WH_ID,
+                       :WK_LOCN_ID,
+                       :WK_DEFAULT_DESPATCH_LOCN_ID);
+                   WK_QTY_TOGET = 0;
+              END
+              ELSE
+              BEGIN
+                 /* take all this qty */
+                 UPDATE ISSN SET ISSN_STATUS = 'DS',
+                     PREV_PREV_WH_ID = PREV_WH_ID,
+                     PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                     PREV_WH_ID = WH_ID,
+                     PREV_LOCN_ID = LOCN_ID,
+                     WH_ID = :WK_WH_ID,
+                     LOCN_ID = :WK_DEFAULT_DESPATCH_LOCN_ID,
+                     PREV_QTY = CURRENT_QTY,
+                     CURRENT_QTY = 0,
+                     PICK_ORDER = :WK_L_PICK_LABEL_NO
+                  WHERE SSN_ID = :WK_SSN_ID;
+                  /* UPDATE SSN SET CURRENT_QTY = CURRENT_QTY - :WK_SSN_QTY
+                  WHERE SSN_ID = :WK_PARENT_SSN_ID; */
+                  WK_REASON = 'Issued All ' || :WK_QTY || 'to User ' || :WK_USER ;
+                  EXECUTE PROCEDURE ADD_SSN_HIST(:WK_WH_ID, :WK_LOCN_ID, :WK_SSN_ID, 
+                          :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                          :WK_AUDIT_DESC , :WK_REASON, :WK_QTY, :WK_USER, :WK_DEVICE); 
+                  INSERT INTO PICK_ITEM_DETAIL 
+                      (PICK_LABEL_NO, 
+                       SSN_ID, 
+                       PICK_DETAIL_STATUS, 
+                       QTY_PICKED,
+                       USER_ID, 
+                       DEVICE_ID, 
+                       CREATE_DATE,
+                       FROM_WH_ID,
+                       FROM_LOCN_ID,
+                       DESPATCH_LOCATION)
+                  VALUES (:WK_L_PICK_LABEL_NO, 
+                       :WK_SSN_ID,
+                       'DS',
+                       :WK_SSN_QTY,
+                       :WK_USER,
+                       :WK_DEVICE,
+                       :WK_DATE,
+                       :WK_WH_ID,
+                       :WK_LOCN_ID,
+                       :WK_DEFAULT_DESPATCH_LOCN_ID);
+                   WK_QTY_TOGET = WK_QTY_TOGET - WK_SSN_QTY;
+              END
+           END
+        END
+   
+/* update the order net weight etc
+   also if have pick_item_address set sent from pick_item_address */
+        EXECUTE PROCEDURE SET_PICK_ORDER_POST_IMPORT(:WK_SO_ID);
+         WK_REASON = '';
+         IF (WK_QTY_TOGET > 0) THEN
+         BEGIN
+            IF (WK_SAVE_SSN_ID <> 'SAVE') THEN
+            BEGIN
+               UPDATE ISSN SET ISSN_STATUS = 'DS',
+                        PREV_QTY = CURRENT_QTY,
+                        CURRENT_QTY = CURRENT_QTY - :WK_QTY_TOGET
+               WHERE SSN_ID = :WK_SAVE_SSN_ID;
+               /* UPDATE SSN SET CURRENT_QTY = CURRENT_QTY - :WK_QTY_TOGET
+                   WHERE SSN_ID = :WK_SAVE_PARENT_SSN_ID; */
+               WK_REASON = 'Issued Negative ' || :WK_QTY_TOGET || 'to User ' || :WK_USER ;
+               EXECUTE PROCEDURE ADD_SSN_HIST(:WK_WH_ID, :WK_LOCN_ID, :WK_SAVE_PARENT_SSN_ID, 
+                             :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                             :WK_AUDIT_DESC , :WK_REASON, :WK_QTY_TOGET, :WK_USER, :WK_DEVICE); 
+            END
+            WK_REASON = :WK_PRODUCT || ' Still to Issue ' || :WK_QTY_TOGET || ' OF ' || :WK_QTY ;
+         END
+       /* now append reason */
+      WK_REASON_TOTAL = WK_REASON_TOTAL || WK_REASON;
+     END
+
+   IF (WK_REASON_TOTAL <> '') THEN
+   BEGIN
+      WK_REASON_TOTAL = WK_REASON_TOTAL || '|' || :WK_SO_ID;
+      EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F',:WK_REASON_TOTAL);
+   END
+   ELSE
+   BEGIN
+      WK_REASON_TOTAL = 'Processed successfully|' || :WK_SO_ID ;
+      /* EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully'); */
+      EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T',:WK_REASON_TOTAL);
+   END
+   UPDATE TRANSACTIONS SET ORDER_NO = :WK_SO_ID  WHERE RECORD_ID=:WK_RECORD;
+/*   EXECUTE PROCEDURE TRAN_ARCHIVE; */
+  END
+ END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,2 @@
+ alter table sys_equip add equipment_status status;
+

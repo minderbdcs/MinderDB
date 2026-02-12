@@ -1,0 +1,111 @@
+
+/*
+use controls 
+legacy_ledger_accounts to control whether todo chart of accounts
+
+then lookup in options table using the company and account type to get the account to use
+ using group code 'CMPLGRCODE' 
+*/
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP   TRIGGER ADD_PICK_ITEM_TIME^
+COMMIT^
+
+CREATE TRIGGER ADD_PICK_ITEM_TIME FOR PICK_ITEM
+ACTIVE BEFORE INSERT POSITION 20 
+AS
+DECLARE VARIABLE WK_DO_CHART CHAR(1);
+DECLARE VARIABLE WK_LEGACY_CODE VARCHAR(50);
+DECLARE VARIABLE WK_LEGACY_LEDGER_CODE VARCHAR(50);
+DECLARE VARIABLE WK_PROD_LEDGER_CODE VARCHAR(50);
+DECLARE VARIABLE WK_SSN_LEDGER_CODE VARCHAR(50);
+DECLARE VARIABLE WK_FOUND  INTEGER;
+DECLARE VARIABLE WK_SSN_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_ISSN_ORIGINAL_SSN VARCHAR(20);
+BEGIN
+   NEW.LAST_UPDATE_DATE = 'NOW';
+   WK_DO_CHART = 'F';
+   SELECT LEGACY_LEDGER_ACCOUNTS 
+   FROM CONTROL
+   INTO :WK_DO_CHART;
+   IF (WK_DO_CHART IS NULL) THEN
+   BEGIN
+      WK_DO_CHART = 'F';
+   END
+   IF (WK_DO_CHART = 'T') THEN
+   BEGIN
+      IF ((NEW.LEGACY_LEDGER_SALE_CODE IS NULL) OR (NEW.LEGACY_LEDGER_SALE_CODE = '')) THEN
+      BEGIN
+         /* no sale account code */
+         /* so 1st try one for the product */
+         WK_FOUND = 0;
+         WK_PROD_LEDGER_CODE  = NULL;
+         WK_SSN_LEDGER_CODE  = NULL;
+         WK_SSN_PROD_ID  = NULL;
+         WK_ISSN_ORIGINAL_SSN  = NULL;
+         IF ((NEW.PROD_ID IS NOT NULL) AND (NEW.PROD_ID <> '')) THEN
+         BEGIN
+            SELECT LEGACY_LEDGER_SALE_CODE
+            FROM PROD_PROFILE
+            WHERE PROD_PROFILE.PROD_ID = NEW.PROD_ID
+            INTO :WK_PROD_LEDGER_CODE ;
+         END
+         IF ((WK_PROD_LEDGER_CODE IS NULL) OR (WK_PROD_LEDGER_CODE = '')) THEN
+         BEGIN
+            /* no account via prod_id so try ssn_id as an ssn  - to get prod_id */
+            SELECT PROD_ID 
+            FROM SSN
+            WHERE SSN_ID = NEW.SSN_ID
+            INTO :WK_SSN_PROD_ID;
+            IF ((WK_SSN_PROD_ID IS NULL) OR (WK_SSN_PROD_ID = ''))  THEN
+            BEGIN
+               /* no account via ssns prod_id so try ssn_id as an issn  - to get prod_id */
+               SELECT PROD_ID 
+               FROM ISSN
+               WHERE SSN_ID = NEW.SSN_ID
+               INTO :WK_SSN_PROD_ID;
+            END
+            SELECT LEGACY_LEDGER_SALE_CODE
+            FROM PROD_PROFILE
+            WHERE PROD_PROFILE.PROD_ID = :WK_SSN_PROD_ID
+            INTO :WK_PROD_LEDGER_CODE ;
+         END
+         IF ((WK_PROD_LEDGER_CODE IS NULL) OR (WK_PROD_LEDGER_CODE = '')) THEN
+         BEGIN
+            /* no account via prod_id so try ssns sale code  */
+            SELECT LEGACY_LEDGER_SALE_CODE 
+            FROM SSN
+            WHERE SSN_ID = NEW.SSN_ID
+            INTO :WK_SSN_LEDGER_CODE ;
+            IF ((WK_SSN_LEDGER_CODE IS NULL) OR (WK_SSN_LEDGER_CODE = ''))  THEN
+            BEGIN
+               /* no account via ssn  so try ssn_id as an issn  - to get it  */
+               SELECT ORIGINAL_SSN 
+               FROM ISSN
+               WHERE SSN_ID = NEW.SSN_ID
+               INTO :WK_ISSN_ORIGINAL_SSN;
+               SELECT LEGACY_LEDGER_SALE_CODE 
+               FROM SSN
+               WHERE SSN_ID = :WK_ISSN_ORIGINAL_SSN
+               INTO :WK_SSN_LEDGER_CODE ;
+            END
+         END
+         IF ((WK_PROD_LEDGER_CODE IS NULL) OR (WK_PROD_LEDGER_CODE = '')) THEN
+         BEGIN
+               NEW.LEGACY_LEDGER_SALE_CODE = WK_SSN_LEDGER_CODE;
+         END
+         ELSE
+         BEGIN
+               NEW.LEGACY_LEDGER_SALE_CODE = WK_PROD_LEDGER_CODE;
+         END
+      END
+   END
+END^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+

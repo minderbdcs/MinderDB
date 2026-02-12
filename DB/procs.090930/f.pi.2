@@ -1,0 +1,5 @@
+alter table pick_item alter column orig_ssn_id to old_ssn_id;
+alter table pick_item add orig_ssn_id code_255;
+update pick_item set orig_ssn_id=old_ssn_id;
+
+

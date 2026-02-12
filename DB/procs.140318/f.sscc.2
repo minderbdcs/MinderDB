@@ -1,0 +1,4 @@
+create domain pick_order_25 varchar(25);
+commit;
+
+alter table pack_sscc alter ps_pick_order type pick_order_25;

@@ -1,0 +1,5 @@
+update query_layout set label='SalesOrder' where code='msales' and sequence=0;
+update query_layout set label='Whom' where code='msales' and sequence=2;
+update query_layout set label='Addr' where code='msales' and sequence=3;
+update query_layout set label='Dated' where code='msales' and sequence=4;
+select * from query_layout where code='msales';

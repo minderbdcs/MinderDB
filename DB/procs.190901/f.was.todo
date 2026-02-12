@@ -1,0 +1,3 @@
+
+	v6substr 	to left (str , c) when the start position is 1
+	v6substr 	to substring(str from b [for c])

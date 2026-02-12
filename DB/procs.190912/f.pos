@@ -1,0 +1,13 @@
+/*
+538 DECLARE EXTERNAL FUNCTION POS
+541 ENTRY_POINT 'fudlib_pos' MODULE_NAME 'fudlib';
+678 DECLARE EXTERNAL FUNCTION V4POS
+681 ENTRY_POINT 'fudlib_pos' MODULE_NAME 'fudlib';
+783 DECLARE EXTERNAL FUNCTION VPOS
+786 ENTRY_POINT 'fudlib_pos' MODULE_NAME 'fudlib';
+*/
+
+drop external function v4pos;
+drop external function pos;
+drop external function vpos;
+

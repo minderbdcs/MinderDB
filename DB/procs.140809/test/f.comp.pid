@@ -1,0 +1,3 @@
+
+alter table pick_item_detail alter company_id type company_group;
+

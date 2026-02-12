@@ -1,0 +1,220 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+
+CREATE OR ALTER PROCEDURE PC_TRIS (RECORD_ID RECORD_ID,
+WH_ID WH_ID ,
+LOCN_ID LOCN_ID ,
+OBJECT OBJECT ,
+TRN_TYPE TRN_TYPE ,
+TRN_CODE TRN_CODE ,
+TRN_DATE TRN_DATE,
+REFERENCE REFERENCE ,
+QTY QTY,
+SUB_LOCN_ID LOCN_ID ,
+PERSON_ID PERSON ,
+DEVICE_ID DEVICE_ID )
+AS 
+      
+DECLARE VARIABLE SSN_EXIST INTEGER;
+DECLARE VARIABLE STRWH_ID WH_ID;
+DECLARE VARIABLE STRLOCN_ID LOCN_ID;
+DECLARE VARIABLE STR_SSN VARCHAR(30);
+DECLARE VARIABLE STRAUDIT_DESC VARCHAR(70);
+DECLARE VARIABLE ICURRENT_QTY INTEGER;
+DECLARE VARIABLE ISUB_QTY INTEGER;
+DECLARE VARIABLE IQTY INTEGER;
+DECLARE VARIABLE LAST_DATE TIMESTAMP;
+DECLARE VARIABLE STRPROD PRODUCT;
+DECLARE VARIABLE ISSN_LENGTH INTEGER;
+DECLARE VARIABLE ISSN_ID INTEGER;
+DECLARE VARIABLE I_SSN_ID SSN_ID;
+DECLARE VARIABLE I_LEN_SSN_ID INTEGER;
+DECLARE VARIABLE LEN_SSN_ID INTEGER;
+DECLARE VARIABLE P_SSN_ID INTEGER;
+DECLARE VARIABLE STRSTATUS STATUS;
+DECLARE VARIABLE WK_COMPANY COMPANY;
+DECLARE VARIABLE WK_IS_COMPANY_ID COMPANY;
+DECLARE VARIABLE WK_ISSN_PREFIX VARCHAR(20);
+       
+BEGIN
+  
+   STRAUDIT_DESC = ''; 
+    
+/* STRWH_ID = SUBSTR(SUB_LOCN_ID,1,2);
+   STRLOCN_ID = SUBSTR(SUB_LOCN_ID,3,10); */
+   STRWH_ID = SUBSTRING(SUB_LOCN_ID FROM 1 FOR 2);
+   STRLOCN_ID = SUBSTRING(SUB_LOCN_ID FROM 3 );
+
+   WK_ISSN_PREFIX = '';
+   /* Get length for Barcode */   
+   EXECUTE PROCEDURE GET_BARCODE_LENGTH RETURNING_VALUES :ISSN_LENGTH;
+   SELECT DATA_PREFIX FROM PARAM WHERE DATA_ID = 'BARCODE' INTO :WK_ISSN_PREFIX;
+   IF (WK_ISSN_PREFIX IS NULL) THEN
+   BEGIN
+      WK_ISSN_PREFIX = '';
+   END
+   SELECT NEW_SSN_STATUS
+   FROM CONTROL
+   INTO :STRSTATUS;
+    
+   IF (:TRN_CODE = 'A') THEN
+   BEGIN
+      SSN_EXIST = 0;
+      ICURRENT_QTY = -1; 
+      ISUB_QTY = :QTY;
+
+           /* Check SSN */
+      SELECT 1, CURRENT_QTY 
+      FROM SSN
+      WHERE SSN_ID = :OBJECT
+      INTO :SSN_EXIST, :ICURRENT_QTY ;
+      SELECT PROD_ID, COMPANY_ID
+      FROM ISSN
+      WHERE SSN_ID = :OBJECT
+      INTO :STRPROD, :WK_IS_COMPANY_ID;
+                
+           /* SSN not exists, then exit */
+      IF (SSN_EXIST = 0) THEN
+      BEGIN 
+             /* Update transactions table */        
+        EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'SSN is not in the database');
+        EXIT;
+      END 
+      /* Update SSN */ 
+       WK_COMPANY = '';
+       FOR SELECT SSN_ID, INTO_DATE, CURRENT_QTY, COMPANY_ID 
+          FROM ISSN 
+          WHERE ORIGINAL_SSN = :OBJECT
+            AND WH_ID = :STRWH_ID
+            AND LOCN_ID = :STRLOCN_ID
+            AND COMPANY_ID = :WK_IS_COMPANY_ID
+          AND SSN_ID <> ORIGINAL_SSN
+          INTO :STR_SSN, :LAST_DATE, :IQTY, :WK_COMPANY
+       DO
+       BEGIN
+          IF (ISUB_QTY > 0) THEN
+          BEGIN
+             IF (LAST_DATE IS NULL) THEN
+             BEGIN
+                /* LAST_DATE = CAST('JAN-01-2000' AS DATE); */
+                LAST_DATE = CAST('JAN-01-2000' AS TIMESTAMP);
+             END
+             IF (LAST_DATE < TRN_DATE) THEN
+             BEGIN
+                UPDATE ISSN
+                SET PREV_PREV_LOCN_ID = PREV_LOCN_ID, PREV_PREV_WH_ID = PREV_WH_ID, 
+                    PREV_LOCN_ID = LOCN_ID, PREV_WH_ID = WH_ID, 
+                    LOCN_ID = :LOCN_ID, WH_ID = :WH_ID,
+                    PREV_DATE = :TRN_DATE
+                WHERE SSN_ID = :STR_SSN;
+                ISUB_QTY = ISUB_QTY - IQTY;
+                IF (STR_SSN = OBJECT) THEN
+                BEGIN
+                   UPDATE SSN
+                   SET PREV_LOCN_ID = :STRLOCN_ID, LOCN_ID = :LOCN_ID, WH_ID = :WH_ID,
+                       DT_PREV_INTO = :TRN_DATE
+                   WHERE SSN_ID = :OBJECT;
+                END
+             END
+             ELSE
+             BEGIN
+                EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, '', '', :TRN_DATE,
+                'No Update Prior to INTO Date', '', :QTY,  '', :DEVICE_ID);
+             END
+          END /* sub qty */
+       END /* for */
+       IF (ISUB_QTY > 0) THEN
+       BEGIN
+          /* havent found the required qty in the from location */
+          /* so create stock until have the qty */
+          IF (WK_COMPANY IS NULL) THEN
+          BEGIN
+             WK_COMPANY = '';
+          END
+          IF (WK_COMPANY = '') THEN
+          BEGIN
+/*
+             WK_COMPANY = 'ALL';
+             SELECT COMPANY_ID
+             FROM PROD_PROFILE
+             WHERE PROD_ID = :STRPROD
+             INTO :WK_COMPANY;             
+             IF (WK_COMPANY IS NULL) THEN
+             BEGIN
+                WK_COMPANY = '';
+             END
+*/
+          END
+          IF (WK_COMPANY = '') THEN
+          BEGIN
+             SELECT COMPANY_ID
+             FROM CONTROL
+             INTO :WK_COMPANY;             
+             IF (WK_COMPANY IS NULL) THEN
+             BEGIN
+                WK_COMPANY = '';
+             END
+          END
+          WHILE (ISUB_QTY > 0)
+          DO
+          BEGIN
+/*           ISSN_ID = GEN_ID(ISSN_SSN_ID, 1); */
+             ISSN_ID = NEXT VALUE FOR ISSN_SSN_ID ;    
+             P_SSN_ID = ISSN_ID - 1;
+/*           SELECT ISSN_ID FROM GET_ISSN_BARCODE('BARCODE', :P_SSN_ID, 36) INTO :I_SSN_ID; */
+             SELECT ISSN_ID FROM GET_ISSN_BARCODE('BARCODE', :P_SSN_ID, 36, :WH_ID) INTO :I_SSN_ID;
+
+             INSERT INTO ISSN (SSN_ID ,
+                    ORIGINAL_SSN ,
+                    WH_ID ,
+                    LOCN_ID ,
+                    CURRENT_QTY ,
+                    ISSN_STATUS ,
+                    CREATE_DATE ,
+                    USER_ID ,
+                    PROD_ID ,
+                    INTO_DATE,
+                    COMPANY_ID, ORIGINAL_WH_ID) 
+                    VALUES (:I_SSN_ID ,
+                    :OBJECT,
+                    :WH_ID,
+                    :LOCN_ID,
+                    1,
+                    :STRSTATUS ,
+                    :TRN_DATE,
+                    :PERSON_ID,
+                    :STRPROD ,
+                    :TRN_DATE,
+                    :WK_COMPANY, :WH_ID);
+             ISUB_QTY = ISUB_QTY - 1;
+          END
+          IF (ICURRENT_QTY IS NULL) THEN
+          BEGIN
+             UPDATE SSN SET CURRENT_QTY = 1 + :QTY
+             WHERE SSN_ID = :OBJECT; 
+          END
+          ELSE
+          BEGIN
+             UPDATE SSN SET CURRENT_QTY = CURRENT_QTY + :QTY
+             WHERE SSN_ID = :OBJECT; 
+          END
+       END
+
+      STRAUDIT_DESC = 'Transfered ' || :QTY || ' from ' || :SUB_LOCN_ID || ' into ' || :WH_ID || ' ' || :LOCN_ID; 
+
+      /* Update transactions table */               
+      EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+
+      /* Add transaction history */                                                                                     
+      EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                     :STRAUDIT_DESC, :REFERENCE, :QTY,  :PERSON_ID, :DEVICE_ID);
+   END /* TRN_CODE = 'A' */
+       
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,235 @@
+/*
+alter table sys_equip add working_directory descr;
+
+SET TERM  ^ ;
+*/
+ALTER   PROCEDURE ADD_SSN_ISSN_GRNV (
+WH_ID                             VARCHAR(2) ,
+LOCN_ID                           VARCHAR(10) ,
+OBJECT                            VARCHAR(30) ,
+TRANS_DATE                        TIMESTAMP, 
+QTY                               INTEGER, 
+GRN                               VARCHAR(10) , 
+REFERENCE                         VARCHAR(40) ,
+SOURCE                            VARCHAR(9) )
+AS 
+
+DECLARE VARIABLE SSN_ID INTEGER;
+DECLARE VARIABLE P_SSN_ID INTEGER;
+DECLARE VARIABLE W_SSN_ID VARCHAR(20);
+DECLARE VARIABLE I_SSN_ID VARCHAR(20);
+DECLARE VARIABLE LEN_SSN_ID INTEGER;
+DECLARE VARIABLE I_LEN_SSN_ID INTEGER;
+DECLARE VARIABLE SSN_LENGTH INTEGER;
+DECLARE VARIABLE LABEL_NO INTEGER;
+DECLARE VARIABLE WK_LABEL_CURQTY INTEGER;
+DECLARE VARIABLE WK_LABELQTY1 VARCHAR(10);
+DECLARE VARIABLE WK_LABELQTY2 VARCHAR(10);
+DECLARE VARIABLE WK_SSNQTY1 VARCHAR(10);
+DECLARE VARIABLE WK_SSNQTY2 VARCHAR(10);
+
+DECLARE VARIABLE WK_GRN_TYPE CHAR(2);
+DECLARE VARIABLE WK_PRINTER CHAR(2);
+DECLARE VARIABLE WK_DIRECTORY VARCHAR(75);
+DECLARE VARIABLE WK_FILENAME VARCHAR(255);
+DECLARE VARIABLE WK_LABEL_LINE VARCHAR(250);
+DECLARE VARIABLE WK_LOADNO VARCHAR(10);
+DECLARE VARIABLE WK_RESULT INTEGER;
+DECLARE VARIABLE WK_DATE VARCHAR(20);
+DECLARE VARIABLE WK_TIME VARCHAR(10);
+DECLARE VARIABLE WK_PROD_DESC VARCHAR(50);
+
+BEGIN 
+   /* Get length for Barcode */   
+   EXECUTE PROCEDURE GET_BARCODE_LENGTH RETURNING_VALUES SSN_LENGTH;
+
+   /* Read Reference field to get Label No 
+   EXECUTE PROCEDURE GET_QTY_LABEL :REFERENCE  RETURNING_VALUES LABEL_NO;
+*/
+   EXECUTE PROCEDURE GET_REFERENCE_FIELD :REFERENCE, 4  RETURNING_VALUES :WK_SSNQTY1 ; 
+   EXECUTE PROCEDURE GET_REFERENCE_FIELD :REFERENCE, 5  RETURNING_VALUES :WK_LABELQTY1 ; 
+   LABEL_NO = CAST(WK_SSNQTY1 AS INTEGER);
+   WK_LABEL_CURQTY = CAST(WK_LABELQTY1 AS INTEGER);
+   EXECUTE PROCEDURE GET_REFERENCE_FIELD :REFERENCE, 2  RETURNING_VALUES :WK_LOADNO ; 
+   
+   /* find type of grn PO LD or */
+   WK_GRN_TYPE = substr(REFERENCE, 1, 2);
+
+   SSN_ID = GEN_ID(ISSN_SSN_ID, :LABEL_NO);
+   P_SSN_ID = SSN_ID - :LABEL_NO;
+   LEN_SSN_ID = STRLEN(P_SSN_ID);     
+         
+   W_SSN_ID = '';
+   /* Padding leading with 0 */
+   WHILE (LEN_SSN_ID < :SSN_LENGTH) DO
+   BEGIN
+      W_SSN_ID = W_SSN_ID || '0';      
+      LEN_SSN_ID = LEN_SSN_ID + 1;
+   END
+   W_SSN_ID = W_SSN_ID || P_SSN_ID;
+   
+   IF (WK_GRN_TYPE = 'PO') THEN
+   BEGIN
+      /* Insert data into SSN table */   
+      INSERT INTO SSN (SSN_ID, WH_ID, LOCN_ID, GRN, STATUS_SSN, LABEL_DATE, ORIGINAL_QTY,
+                    CURRENT_QTY, PURCHASE_DATE, PO_ORDER, PO_RECEIVE_DATE)
+      VALUES (:W_SSN_ID, :WH_ID, :LOCN_ID, :GRN, 'PA', 'NOW', :QTY, :QTY, :WK_LOADNO, 'NOW');     
+   END
+             
+   
+   /* Insert data into ISSN table */
+   WHILE (P_SSN_ID < SSN_ID) DO
+   BEGIN
+      I_SSN_ID = '';
+      I_LEN_SSN_ID = STRLEN(P_SSN_ID);
+      
+      /* Padding leading with 0 */
+      WHILE (I_LEN_SSN_ID < :SSN_LENGTH) DO
+      BEGIN
+      	I_SSN_ID = I_SSN_ID || '0';
+      	I_LEN_SSN_ID = I_LEN_SSN_ID + 1;
+      END
+      I_SSN_ID = I_SSN_ID || P_SSN_ID;
+      
+      IF (WK_GRN_TYPE = 'LD') THEN
+      BEGIN
+         /* Insert data into SSN table */   
+         INSERT INTO SSN (SSN_ID, WH_ID, LOCN_ID, GRN, STATUS_SSN, LABEL_DATE, ORIGINAL_QTY,
+                    CURRENT_QTY, PO_ORDER, PO_RECEIVE_DATE)
+         VALUES (:I_SSN_ID, :WH_ID, :LOCN_ID, :GRN, 'TS', 'NOW', :WK_LABEL_CURQTY, :WK_LABEL_CURQTY, :WK_LOADNO, 'NOW');     
+         INSERT INTO ISSN (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, CURRENT_QTY,ISSN_STATUS)
+         VALUES (:I_SSN_ID, :I_SSN_ID, :WH_ID, :LOCN_ID, :WK_LABEL_CURQTY, 'TS'); 
+      END
+      IF (WK_GRN_TYPE = 'PO') THEN
+      BEGIN
+         INSERT INTO ISSN (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, CURRENT_QTY,ISSN_STATUS)
+         VALUES (:I_SSN_ID, :W_SSN_ID, :WH_ID, :LOCN_ID, :WK_LABEL_CURQTY, 'PA'); 
+      END
+      
+      P_SSN_ID = P_SSN_ID + 1;
+   END
+
+   WK_PRINTER = 'P' || SUBSTR(SOURCE,5,5);
+   /* need the directory for this label set */
+   SELECT WORKING_DIRECTORY FROM SYS_EQUIP 
+       WHERE DEVICE_ID = :WK_PRINTER
+       INTO :WK_DIRECTORY;
+   /* append the file name to the directory*/
+   IF (WK_GRN_TYPE = 'LD') THEN
+   BEGIN
+      WK_FILENAME = WK_DIRECTORY || 'LOAD.txt';
+      WK_LABEL_LINE = DQUOTEDSTR(W_SSN_ID) || ',' ||
+          DQUOTEDSTR(WK_LOADNO) || ',' ||
+          DQUOTEDSTR(LABEL_NO);
+      WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+      IF (WK_RESULT <> 0) THEN
+      BEGIN
+         WK_FILENAME = WK_DIRECTORY || 'LOAD.2xt';
+         WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+      END
+   END
+   IF (WK_GRN_TYPE = 'PO') THEN
+   BEGIN
+      /* must get products desc  */
+      WK_DATE = MER_DAY(TRANS_DATE) || '/' || MER_MONTH(TRANS_DATE) || '/' || SUBSTR(CAST(MER_YEAR(TRANS_DATE) AS CHAR(4)) , 3,4);
+      WK_TIME = MER_HOUR(TRANS_DATE) || ':' || MER_MINUTE(TRANS_DATE) ;
+      WK_DATE = WK_DATE || ' ' || WK_TIME;
+      SELECT SHORT_DESC FROM PROD_PROFILE
+         WHERE PROD_ID = :OBJECT
+         INTO :WK_PROD_DESC;
+      WK_FILENAME = WK_DIRECTORY || 'Product.txt';
+      WK_LABEL_LINE = DQUOTEDSTR(W_SSN_ID) || ',' ||
+          DQUOTEDSTR(LABEL_NO) || ',' ||
+          DQUOTEDSTR(OBJECT) || ',' ||
+          DQUOTEDSTR(WK_PROD_DESC) || ',' ||
+          DQUOTEDSTR(WK_DATE);
+      WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+      IF (WK_RESULT <> 0) THEN
+      BEGIN
+         WK_FILENAME = WK_DIRECTORY || 'Product.2xt';
+         WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+      END
+   END
+   EXECUTE PROCEDURE GET_REFERENCE_FIELD :REFERENCE, 6  RETURNING_VALUES :WK_SSNQTY2 ; 
+   EXECUTE PROCEDURE GET_REFERENCE_FIELD :REFERENCE, 7  RETURNING_VALUES :WK_LABELQTY2 ; 
+   IF (WK_SSNQTY2 > 0) THEN
+   BEGIN
+      LABEL_NO = CAST(WK_SSNQTY2 AS INTEGER);
+      WK_LABEL_CURQTY = CAST(WK_LABELQTY2 AS INTEGER);
+      
+      SSN_ID = GEN_ID(ISSN_SSN_ID, :LABEL_NO);
+      P_SSN_ID = SSN_ID - :LABEL_NO;
+      LEN_SSN_ID = STRLEN(P_SSN_ID);     
+            
+      W_SSN_ID = '';
+      /* Padding leading with 0 */
+      WHILE (LEN_SSN_ID < :SSN_LENGTH) DO
+      BEGIN
+         W_SSN_ID = W_SSN_ID || '0';      
+         LEN_SSN_ID = LEN_SSN_ID + 1;
+      END
+      W_SSN_ID = W_SSN_ID || P_SSN_ID;
+      
+      /* Insert data into ISSN table */
+      WHILE (P_SSN_ID < SSN_ID) DO
+      BEGIN
+         I_SSN_ID = '';
+         I_LEN_SSN_ID = STRLEN(P_SSN_ID);
+         
+         /* Padding leading with 0 */
+         WHILE (I_LEN_SSN_ID < :SSN_LENGTH) DO
+         BEGIN
+         	I_SSN_ID = I_SSN_ID || '0';
+         	I_LEN_SSN_ID = I_LEN_SSN_ID + 1;
+         END
+         I_SSN_ID = I_SSN_ID || P_SSN_ID;
+         
+         IF (WK_GRN_TYPE = 'LD') THEN
+         BEGIN
+            /* Insert data into SSN table */   
+            INSERT INTO SSN (SSN_ID, WH_ID, LOCN_ID, GRN, STATUS_SSN, LABEL_DATE, ORIGINAL_QTY,
+                    CURRENT_QTY, PO_ORDER, PO_RECEIVE_DATE)
+            VALUES (:I_SSN_ID, :WH_ID, :LOCN_ID, :GRN, 'TS', 'NOW', :WK_LABEL_CURQTY, :WK_LABEL_CURQTY, :WK_LOADNO, 'NOW');     
+            INSERT INTO ISSN (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, CURRENT_QTY, ISSN_STATUS)
+            VALUES (:I_SSN_ID, :I_SSN_ID, :WH_ID, :LOCN_ID, :WK_LABEL_CURQTY, 'TS'); 
+         END
+         IF (WK_GRN_TYPE = 'PO') THEN
+         BEGIN
+            INSERT INTO ISSN (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, CURRENT_QTY, ISSN_STATUS)
+            VALUES (:I_SSN_ID, :W_SSN_ID, :WH_ID, :LOCN_ID, :WK_LABEL_CURQTY, 'PA'); 
+         END
+      
+         P_SSN_ID = P_SSN_ID + 1;
+      END
+      /* append the file name to the directory*/
+      IF (WK_GRN_TYPE = 'LD') THEN
+      BEGIN
+         WK_FILENAME = WK_DIRECTORY || 'LOAD.txt';
+         WK_LABEL_LINE = DQUOTEDSTR(W_SSN_ID) || ',' ||
+             DQUOTEDSTR(WK_LOADNO) || ',' ||
+             DQUOTEDSTR(LABEL_NO);
+         WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+         IF (WK_RESULT <> 0) THEN
+         BEGIN
+            WK_FILENAME = WK_DIRECTORY || 'LOAD.2xt';
+            WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+         END
+      END
+      IF (WK_GRN_TYPE = 'PO') THEN
+      BEGIN
+         WK_FILENAME = WK_DIRECTORY || 'Product.txt';
+         WK_LABEL_LINE = DQUOTEDSTR(W_SSN_ID) || ',' ||
+             DQUOTEDSTR(LABEL_NO) || ',' ||
+             DQUOTEDSTR(OBJECT) || ',' ||
+             DQUOTEDSTR(WK_PROD_DESC) || ',' ||
+             DQUOTEDSTR(WK_DATE);
+         WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+         IF (WK_RESULT <> 0) THEN
+         BEGIN
+            WK_FILENAME = WK_DIRECTORY || 'Product.2xt';
+            WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+         END
+      END
+   END
+END ^
+

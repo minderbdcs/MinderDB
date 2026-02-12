@@ -1,0 +1,7 @@
+alter table transactions_work add wh_id2 wh_id;
+alter table transactions_work add locn_id2 locn_id;
+alter table transactions_work add qty2 qty;
+alter table transactions_work add description description;
+create index transactions_work_locn2 on transactions_work(record_id, object, wh_id, locn_id, wh_id2, locn_id2);
+create index transactions_work_desc on transactions_work(record_id, description, wh_id, locn_id, wh_id2, locn_id2);
+

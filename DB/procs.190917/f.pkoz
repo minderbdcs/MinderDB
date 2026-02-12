@@ -1,0 +1,277 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_PKOZ FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 128 
+AS
+/* Pick a whole order using the imported locns   
+   only if order has status OP or DA
+   transfer the order to the device 
+   031006 -  can only do this to pick a whole line
+   for lines in this order
+       with statuses AL PG PL
+            and over_sized = 'F'
+       do a PKOL for the wh_id and pick_location
+          for the min of the required qty (order qty - picked)
+              and qty in location
+              if this is not the required qty then 
+                 dont do the pkol
+    at the end of this for
+    if all picked OK
+    do a PKIL (M) to the default despatch location
+             make status 'AL' and device the default one
+    
+*/
+
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE DEVICE_ID;
+DECLARE VARIABLE WK_USER USER_ID;
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_ORDER VARCHAR(30);
+DECLARE VARIABLE WK_DEVICE_2 DEVICE_ID;
+DECLARE VARIABLE WK_PO_STATUS CHAR(2);
+DECLARE VARIABLE WK_PO_COMPANY COMPANY;
+DECLARE VARIABLE WK_PO_COUNTRY COUNTRY;
+DECLARE VARIABLE WK_PO_ALTERNATE_COMPANYS COMPANY_GROUP;
+DECLARE VARIABLE WK_PI_PROD PRODUCT;
+DECLARE VARIABLE WK_PI_ORDER_QTY INTEGER;
+DECLARE VARIABLE WK_PI_PICKED_QTY INTEGER;
+DECLARE VARIABLE WK_PI_WH_ID WH_ID;
+DECLARE VARIABLE WK_PI_LOCN_ID LOCN_ID;
+DECLARE VARIABLE WK_PI_DEVICE DEVICE_ID;
+DECLARE VARIABLE WK_PI_STATUS CHAR(2);
+DECLARE VARIABLE WK_DOIT CHAR(1);
+DECLARE VARIABLE WK_IMPORTSTATUS VARCHAR(40);
+DECLARE VARIABLE WK_CURRENT_QTY INTEGER;
+DECLARE VARIABLE WK_TOPICK_QTY INTEGER;
+DECLARE VARIABLE WK_DESPATCH_LOCATION VARCHAR(10);
+DECLARE VARIABLE WK_DESPATCH_WH WH_ID;
+DECLARE VARIABLE WK_DESPATCH_LOCN LOCN_ID;
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_LOG VARCHAR(255);
+DECLARE VARIABLE WK_PI_LABEL_NO VARCHAR(10);
+DECLARE VARIABLE WK_DO_DSDX VARCHAR(40);
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKOZ') THEN
+  BEGIN
+     WK_USER = NEW.PERSON_ID;
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_ORDER = NEW.OBJECT;
+     WK_DOIT = 'T';
+     SELECT PICK_IMPORT_SSN_STATUS, DEFAULT_DESPATCH_LOCATION
+     FROM CONTROL
+     INTO :WK_IMPORTSTATUS, :WK_DESPATCH_LOCATION; 
+/*   WK_DESPATCH_WH = SUBSTR(WK_DESPATCH_LOCATION,1,2); */
+     WK_DESPATCH_WH = SUBSTRING(WK_DESPATCH_LOCATION FROM 1 FOR 2);
+/*   WK_DESPATCH_LOCN = SUBSTR(WK_DESPATCH_LOCATION,3,10); */
+     WK_DESPATCH_LOCN = SUBSTRING(WK_DESPATCH_LOCATION FROM 3);
+     SELECT PICK_STATUS, COMPANY_ID, P_COUNTRY, ALTERNATE_COMPANYS
+     FROM PICK_ORDER
+     WHERE PICK_ORDER = :WK_ORDER
+     INTO :WK_PO_STATUS, :WK_PO_COMPANY, :WK_PO_COUNTRY, :WK_PO_ALTERNATE_COMPANYS ;
+     IF (WK_PO_STATUS IS NULL) THEN
+     BEGIN
+        WK_PO_STATUS = '';
+     END
+     IF ((WK_PO_STATUS = 'OP') OR (WK_PO_STATUS = 'DA')) THEN
+     BEGIN
+        UPDATE PICK_ORDER SET PICK_ORDER_STARTED = 'NOW'
+        WHERE PICK_ORDER = :WK_ORDER;   
+        UPDATE PICK_ITEM 
+        SET DEVICE_ID = :WK_DEVICE
+        WHERE PICK_ORDER = :WK_ORDER    
+        AND PICK_LINE_STATUS IN ('AL','PG','PL')
+        AND OVER_SIZED = 'F';
+        FOR SELECT PICK_LABEL_NO
+            FROM PICK_ITEM
+            WHERE PICK_ORDER = :WK_ORDER    
+            AND DEVICE_ID = :WK_DEVICE
+            INTO :WK_PI_LABEL_NO
+        DO
+        BEGIN
+           UPDATE PICK_ITEM_DETAIL
+           SET DEVICE_ID = :WK_DEVICE
+           WHERE PICK_LABEL_NO =  :WK_PI_LABEL_NO;
+        END
+        FOR SELECT PROD_ID, 
+           PICK_ORDER_QTY, 
+           PICKED_QTY,  
+           WH_ID, 
+           PICK_LOCATION,
+           DEVICE_ID,
+           PICK_LINE_STATUS
+        FROM PICK_ITEM
+        WHERE PICK_ORDER = :WK_ORDER    
+        AND DEVICE_ID = :WK_DEVICE
+        AND (PICK_LINE_STATUS IN ('AL','PG')
+ OR   (PICK_LINE_STATUS ='PL' AND PICKED_QTY < PICK_ORDER_QTY AND (REASON = '' OR REASON IS NULL))) 
+        AND OVER_SIZED = 'F'
+        INTO :WK_PI_PROD, :WK_PI_ORDER_QTY, :WK_PI_PICKED_QTY, :WK_PI_WH_ID, :WK_PI_LOCN_ID, :WK_PI_DEVICE, WK_PI_STATUS
+        DO
+        BEGIN
+           IF (WK_DOIT = 'T') THEN
+           BEGIN
+              WK_DOIT = 'L';
+           END
+           IF (WK_PI_ORDER_QTY IS NULL) THEN
+           BEGIN
+              WK_PI_ORDER_QTY = 0;
+           END
+           IF (WK_PI_PICKED_QTY IS NULL) THEN
+           BEGIN
+              WK_PI_PICKED_QTY = 0;
+           END
+/*            AND (POS(:WK_IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1)  */
+           SELECT SUM( ISSN.CURRENT_QTY ) 
+              FROM ISSN
+              WHERE ISSN.PROD_ID = :WK_PI_PROD
+              AND WH_ID = :WK_PI_WH_ID
+              AND LOCN_ID = :WK_PI_LOCN_ID
+              AND (ISSN.COMPANY_ID = :WK_PO_COMPANY 
+              OR   (POSITION( ISSN.COMPANY_ID, :WK_PO_ALTERNATE_COMPANYS, 1) > 0))
+              AND (POSITION( ISSN.ISSN_STATUS, :WK_IMPORTSTATUS, 1) > 0)
+              INTO :WK_CURRENT_QTY;
+           IF (WK_CURRENT_QTY IS NULL) THEN
+           BEGIN
+              WK_CURRENT_QTY = 0;
+           END
+           WK_TOPICK_QTY =  WK_PI_ORDER_QTY - WK_PI_PICKED_QTY;
+           IF (WK_TOPICK_QTY > WK_CURRENT_QTY) THEN
+           BEGIN
+              /* WK_TOPICK_QTY = WK_CURRENT_QTY; */
+              WK_TOPICK_QTY = 0;
+           END
+           IF (WK_TOPICK_QTY > 0) THEN
+           BEGIN
+              /* have something to pick */
+              /* do pkol */
+              EXECUTE PROCEDURE ADD_TRAN(
+                 :WK_PI_WH_ID,
+                 :WK_PI_LOCN_ID,
+                 :WK_PI_PROD,
+                 'PKOL',
+                 'P',
+                 'NOW',
+                 '',
+                 :WK_TOPICK_QTY,
+                 'F',
+                 '',
+                 'MASTER',
+                 0,
+                 '',
+                 'SSSSSSSSS',
+                 :WK_USER,
+                 :WK_DEVICE);
+           END
+        END /* for */
+        IF (WK_DOIT = 'T') THEN
+        BEGIN
+           /* do we have any PL lines */
+           WK_FOUND = 0;
+           SELECT FIRST 1  1 
+           FROM PICK_ITEM
+           WHERE PICK_ORDER = :WK_ORDER    
+           AND DEVICE_ID = :WK_DEVICE
+           AND PICK_LINE_STATUS = 'PL'
+           AND OVER_SIZED = 'F'
+           INTO :WK_FOUND;
+           IF (WK_FOUND = 1) THEN
+           BEGIN
+              WK_DOIT = 'K';
+           END
+        END
+        IF ((WK_DOIT = 'L') OR (WK_DOIT = 'K')) THEN
+        BEGIN
+           /* do pkil */
+             EXECUTE PROCEDURE ADD_TRAN(
+                :WK_DESPATCH_WH,
+                :WK_DESPATCH_LOCN,
+                :WK_ORDER,
+                'PKIL',
+                'M',
+                 'NOW',
+                '',
+                1,
+                'F',
+                '',
+                'MASTER',
+                0,
+                :WK_DEVICE,
+                'SSSSSSSSS',
+                :WK_USER,
+                :WK_DEVICE);
+        END
+
+        SELECT FIRST 1 ZONE.DEFAULT_DEVICE_ID   
+        FROM COMPANY 
+        JOIN ZONE ON ZONE.COMPANY_ID = COMPANY.COMPANY_ID 
+        WHERE COMPANY.COMPANY_ID = :WK_PO_COMPANY
+        INTO :WK_DEVICE_2;
+        /* if company  set up for scanning at dx */
+        WK_DO_DSDX = 'F';
+        SELECT DESCRIPTION
+        FROM OPTIONS
+        WHERE GROUP_CODE = 'CMPPKDSDX'
+        AND CODE = :WK_PO_COMPANY
+        INTO :WK_DO_DSDX;
+        IF (WK_DO_DSDX IS NULL) THEN
+        BEGIN
+           WK_DO_DSDX = 'F';
+        END
+        IF (WK_DO_DSDX = 'T') THEN
+        BEGIN
+           /* now change the status of the DS lines to DX */
+           UPDATE PICK_ITEM 
+           SET DEVICE_ID = :WK_DEVICE_2,
+               PICK_LINE_STATUS = 'DC'
+           WHERE PICK_ORDER = :WK_ORDER    
+           AND DEVICE_ID = :WK_DEVICE
+           AND OVER_SIZED = 'F'
+           AND PICK_LINE_STATUS = 'DS';
+        END
+        /* return order to original device */
+        UPDATE PICK_ITEM 
+        SET DEVICE_ID = :WK_DEVICE_2
+        WHERE PICK_ORDER = :WK_ORDER    
+        AND DEVICE_ID = :WK_DEVICE
+        AND OVER_SIZED = 'F';
+        UPDATE PICK_ITEM_DETAIL
+        SET DEVICE_ID = :WK_DEVICE_2
+        WHERE DEVICE_ID = :WK_DEVICE
+        AND PICK_LABEL_NO IN 
+           (SELECT PICK_LABEL_NO FROM PICK_ITEM
+            WHERE PICK_ORDER = :WK_ORDER);  
+     END
+     ELSE
+     BEGIN
+        WK_DOIT = 'X';
+        EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'F', 'Cannot Pick Invalid Order Status'); 
+
+     END 
+     IF (WK_DOIT = 'T') THEN
+     BEGIN
+        EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'F', 'Nothing to Pick See Line Statuses'); 
+     END
+     IF ((WK_DOIT = 'L') OR (WK_DOIT = 'K')) THEN
+     BEGIN
+        EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'T', 'Processed successfully'); 
+     END
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+  END
+ END
+END ^
+ 
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

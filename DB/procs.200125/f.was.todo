@@ -1,0 +1,6 @@
+change the person_id to be varchar(36)
+
+I have dropped procedures manifest_delivery and manifest_issn
+
+2/8/21
+need to alter persons title as well to be varchar(100).

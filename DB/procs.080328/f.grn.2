@@ -1,0 +1,132 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+ 
+CREATE TRIGGER SAVE_GRN FOR GRN 
+ACTIVE BEFORE DELETE POSITION 0 
+AS
+BEGIN
+   INSERT INTO GRN_CANCEL (
+        GRN  ,
+        GRN_TYPE ,
+        TOTAL_QTY_PACKS ,
+        PACK_EAN_SSCC ,
+        CARRIER ,
+        VEHICLE_ID ,
+        AWB_CONSIGNMENT_NO ,
+        GRN_PALLET_QTY ,
+        DELIVERY_DOCKET ,
+        PALLETS_YN ,
+        CONTAINER_NO ,
+        COMMENTS ,
+        GRN_PRINTED ,
+        USER_ID ,
+        DEVICE_ID ,
+        GRN_DATE ,
+        ORDER_NO ,
+        ORDER_LINE_NO ,
+        RETURN_ID ,
+        SHIPPED_DATE ,
+        RECEIPT_FLAG ,
+        LAST_UPDATE_DATE ,
+        OWNER_ID ,
+        LAST_LINE_NO ,
+        LAST_PALLET_NO ,
+        SHIP_CONTAINER_TYPE ,
+        PACK_CRATE_OWNER ,
+        PACK_CRATE_TYPE ,
+        PACK_CRATE_QTY ,
+        CONTAINER_TYPE ,
+        SHIPPING_CRATE_OWNER ,
+        SHIPPING_CRATE_TYPE ,
+        SHIPPING_CRATE_QTY ,
+        GRN_DUE_DATE ,
+        GRN_STATUS ,
+        GRN_FREIGHT_FORWARDER ,
+        GRN_FREIGHT_ACCOUNT_NO ,
+        REASON ,
+        CANCEL_DATE ,
+        CANCEL_METHOD )
+   VALUES (
+        OLD.GRN  ,
+        OLD.GRN_TYPE ,
+        OLD.TOTAL_QTY_PACKS ,
+        OLD.PACK_EAN_SSCC ,
+        OLD.CARRIER ,
+        OLD.VEHICLE_ID ,
+        OLD.AWB_CONSIGNMENT_NO ,
+        OLD.GRN_PALLET_QTY ,
+        OLD.DELIVERY_DOCKET ,
+        OLD.PALLETS_YN ,
+        OLD.CONTAINER_NO ,
+        OLD.COMMENTS ,
+        OLD.GRN_PRINTED ,
+        OLD.USER_ID ,
+        OLD.DEVICE_ID ,
+        OLD.GRN_DATE ,
+        OLD.ORDER_NO ,
+        OLD.ORDER_LINE_NO ,
+        OLD.RETURN_ID ,
+        OLD.SHIPPED_DATE ,
+        OLD.RECEIPT_FLAG ,
+        OLD.LAST_UPDATE_DATE ,
+        OLD.OWNER_ID ,
+        OLD.LAST_LINE_NO ,
+        OLD.LAST_PALLET_NO ,
+        OLD.SHIP_CONTAINER_TYPE ,
+        OLD.PACK_CRATE_OWNER ,
+        OLD.PACK_CRATE_TYPE ,
+        OLD.PACK_CRATE_QTY ,
+        OLD.CONTAINER_TYPE ,
+        OLD.SHIPPING_CRATE_OWNER ,
+        OLD.SHIPPING_CRATE_TYPE ,
+        OLD.SHIPPING_CRATE_QTY ,
+        OLD.GRN_DUE_DATE ,
+        OLD.GRN_STATUS ,
+        OLD.GRN_FREIGHT_FORWARDER ,
+        OLD.GRN_FREIGHT_ACCOUNT_NO ,
+        'Record Deleted' ,
+        'NOW' ,
+        'D' );
+
+END ^
+ 
+
+CREATE TRIGGER SAVE_GRN_ORDER FOR GRN_ORDER 
+ACTIVE BEFORE DELETE POSITION 0 
+AS
+BEGIN
+   INSERT INTO GRN_ORDER_CANCEL (
+        GRN  ,
+        ORDER_NO ,
+        GRN_LABEL_NO  ,
+        COMPANY_ID ,
+        SUPPLIER_ID ,
+        CREATE_DATE ,
+        CREATED_BY ,
+        LOT_NO ,
+        LOT_LINE_NO ,
+        REASON ,
+        LAST_UPDATE_DATE ,
+        CANCEL_METHOD )
+   VALUES (
+        OLD.GRN  ,
+        OLD.ORDER_NO ,
+        OLD.GRN_LABEL_NO  ,
+        OLD.COMPANY_ID ,
+        OLD.SUPPLIER_ID ,
+        OLD.CREATE_DATE ,
+        OLD.CREATED_BY ,
+        OLD.LOT_NO ,
+        OLD.LOT_LINE_NO ,
+        'Record Deleted' ,
+        'NOW' ,
+        'D' );
+
+END ^
+ 
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

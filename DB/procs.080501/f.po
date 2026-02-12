@@ -1,0 +1,16 @@
+CREATE DOMAIN PO_DUE_DATE AS TIMESTAMP;
+
+alter table purchase_order add po_legacy_date po_date;
+alter table purchase_order add po_currency varchar(20);
+alter table purchase_order add po_due_date po_due_date;
+alter table purchase_order add po_legacy_internal_id varchar(20);
+alter table purchase_order add po_receive_wh_id varchar(20);
+alter table purchase_order add po_legacy_memo varchar(1024);
+alter table purchase_order add po_legacy_status varchar(50);
+alter table purchase_order add po_legacy_recvd_date po_receive_date;
+alter table purchase_order add po_ship_to_address1 address_line;
+alter table purchase_order add po_ship_to_address2 address_line;
+alter table purchase_order add po_ship_to_address3 address_line;
+alter table purchase_order add po_ship_to_address4 address_line;
+alter table purchase_order add po_ship_to_address5 address_line;
+alter table purchase_order add po_legacy_consignment integer;

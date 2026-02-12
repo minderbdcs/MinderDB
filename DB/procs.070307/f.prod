@@ -1,0 +1,3 @@
+alter table prod_profile add pick_import code_one default 'T';
+update prod_profile set pick_import = 'T';
+

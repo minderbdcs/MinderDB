@@ -1,0 +1,2 @@
+alter table prod_profile add legacy_id product;
+

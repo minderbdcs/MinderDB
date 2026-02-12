@@ -1,0 +1,8 @@
+/*
+add an oversize carrier to change when item is too big  or address has no depot
+*/
+alter table carrier add  max_weight    float  ;
+alter table control add ugly_carrier_id  despatch_carrier;
+update control set ugly_carrier_id = 'UGLY';
+
+alter table carrier_warehouse add no_depot_use_ugly value_tf;

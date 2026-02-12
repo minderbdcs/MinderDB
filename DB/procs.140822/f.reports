@@ -1,0 +1,31 @@
+/*
+CREATE DOMAIN QUERY_PROMPT_TYPE AS CHAR(1)
+         DEFAULT 'C'
+         CHECK (VALUE IN ('C','D','F','I','L','S','R'));
+CREATE DOMAIN QUERY_PROMPT_TYPE AS CHAR(1)
+         DEFAULT 'C'
+         CHECK (VALUE IN ('C','D','F','I','L','S','R'));
+*/
+
+COMMENT ON DOMAIN QUERY_PROMPT_TYPE IS  '
+C = Character
+D = Date
+A = American Date
+F = Float
+I = Integer
+L = Logical
+S = SQL Dropdown
+R = Repeat another field
+';
+
+
+alter table reports_detail alter query_prompt_type  type char(1);
+
+drop domain query_prompt_type;
+
+CREATE DOMAIN QUERY_PROMPT_TYPE AS CHAR(1)
+         DEFAULT 'C'
+         CHECK (VALUE IN ('A','C','D','F','I','L','S','R'));
+
+alter table reports_detail alter query_prompt_type  type query_prompt_type;
+

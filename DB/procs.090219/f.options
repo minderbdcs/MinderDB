@@ -1,0 +1,3 @@
+insert into options(group_code,code,description) values("PA_FORMAT","ISSN","myissnformat");
+insert into options(group_code,code,description) values("LABEL_FILE","ISSN","%issn%_%PRNType%_%PRNMessageId%.prn");
+insert into options(group_code,code,description) values("LABEL_FILE","DEFAULT","%PRNType%_%PRNMessageId%.prn");

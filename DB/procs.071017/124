@@ -1,0 +1,2 @@
+insert into query_layout(code,description,sequence,label) values('mssn','grn.return_id',4,'Supplier');
+

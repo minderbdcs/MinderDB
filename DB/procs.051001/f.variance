@@ -1,0 +1,2 @@
+alter table variance add create_date create_date;
+

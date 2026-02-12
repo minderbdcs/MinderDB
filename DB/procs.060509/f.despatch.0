@@ -1,0 +1,2 @@
+alter table pick_despatch add pack_type code_one;
+

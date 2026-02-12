@@ -1,0 +1,28 @@
+/* want 10 label generators */
+create generator carrier_pack_label_gen1;
+create generator carrier_pack_label_gen2;
+create generator carrier_pack_label_gen3;
+create generator carrier_pack_label_gen4;
+create generator carrier_pack_label_gen5;
+create generator carrier_pack_label_gen6;
+create generator carrier_pack_label_gen7;
+create generator carrier_pack_label_gen8;
+create generator carrier_pack_label_gen9;
+create generator carrier_pack_label_gen10;
+create generator carrier_pack_label_gen11;
+create generator carrier_pack_label_gen12;
+create generator carrier_pack_label_gen13;
+create generator carrier_pack_label_gen14;
+create generator carrier_pack_label_gen15;
+
+/* carrier table */
+alter table carrier add pack_label_START_NO START_NO;
+alter table carrier add pack_label_END_NO END_NO;
+alter table carrier add pack_label_generator CODE;
+alter table carrier add pack_label_param_id CODE;
+alter table carrier add pack_label_prefix CODE;
+alter table carrier add pack_label_suffix CODE;
+
+
+
+

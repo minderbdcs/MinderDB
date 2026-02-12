@@ -1,0 +1,60 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP PROCEDURE GET_QTY_LABEL ^
+
+/*
+CREATE OR ALTER PROCEDURE GET_QTY_LABEL (REFERENCE REFERENCE )
+RETURNS (QTY_LABEL INTEGER)
+AS 
+ 
+DECLARE VARIABLE POS INTEGER; 
+DECLARE VARIABLE S_TEMP VARCHAR(40);
+DECLARE VARIABLE STR VARCHAR(40);
+DECLARE VARIABLE X INTEGER;
+DECLARE VARIABLE S_POS INTEGER;
+DECLARE VARIABLE E_POS INTEGER;
+ 
+BEGIN
+  X = 0;  
+  POS = 0;
+  STR = '';  
+  
+  IF (CHAR_LENGTH(:REFERENCE) = 0) THEN
+  BEGIN     
+     QTY_LABEL = 0;
+     EXIT;
+  END
+  
+  WHILE (POS <= CHAR_LENGTH(:REFERENCE)) DO  
+  BEGIN        
+     S_TEMP = SUBSTRING(:REFERENCE FROM  POS FOR 1);     
+     IF (S_TEMP = '|') THEN
+     BEGIN
+       X = X + 1;
+       IF (X = 3) THEN
+       BEGIN
+         -* 3rd | *-
+         S_POS = POS+1;
+         -* 1st char of 3rd field *-
+       END
+       IF (X = 4) THEN
+       BEGIN
+         -* 4th | *-
+         E_POS = POS-1;
+         -* last char of 3rd field *-
+       END
+     END   
+     POS = POS + 1;
+  END
+  STR = SUBSTRING(:REFERENCE FROM S_POS FOR  E_POS - S_POS + 1);
+  QTY_LABEL = CAST(STR AS INTEGER);
+    
+END ^
+
+*/
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

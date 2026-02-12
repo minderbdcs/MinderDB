@@ -1,0 +1,3 @@
+alter table pick_item add remarks1 descr;
+alter table pick_item_dx add remarks1 descr;
+alter table pick_order_item_temp add l_remarks1 descr;

@@ -1,0 +1,1 @@
+select inspect_category,inspect_pass_criteria,valid_response from valid_responses order by inspect_pass_criteria,inspect_category;

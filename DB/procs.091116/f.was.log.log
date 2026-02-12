@@ -1,0 +1,114 @@
+Database:  apcd, User: sysdba
+RECORD_ID                       INTEGER Not Null 
+SSO_ORDER                       (CODE_255) VARCHAR(255) Nullable 
+SSO_SEQUENCE                    (SEQUENCE_NO) INTEGER Nullable 
+SSO_NOTES                       (NOTES) BLOB segment 80, subtype TEXT Nullable 
+SS_NAME                         (CODE) VARCHAR(40) Not Null 
+SSO_USER_TYPE                   (CODE) VARCHAR(40) Nullable 
+SSO_DEVICE_TYPE                 (DEVICE_TYPE) CHAR(2) Nullable 
+SSO_ORDER_STATUS                (STATUS) CHAR(2) Nullable 
+WH_ID                           (WH_ID) CHAR(2) Nullable 
+COMPANY_ID                      (COMPANY) VARCHAR(20) Nullable 
+LAST_UPDATE_DATE                (LAST_UPDATE_DATE) TIMESTAMP Nullable 
+LAST_UPDATE_BY                  (USER_ID) VARCHAR(10) Nullable 
+CONSTRAINT INTEG_442:
+  Primary key (RECORD_ID)
+
+Triggers on Table SYS_SCREEN_ORDER:
+ADD_SYS_SCREEN_ORDER, Sequence: 10, Type: BEFORE INSERT, Active
+UPD_SYS_SCREEN_ORDER, Sequence: 10, Type: BEFORE UPDATE, Active
+       ACCESS_COMPANY                         ACCESS_USER                    
+       ACCOUNT_PERIODS                        AISLES                         
+       ARCHIVE_LAYOUT                         AUDIT_CODE                     
+       BARCODE_CODES                          BAYS                           
+       BRAND                                  CARDTEXT                       
+       CARRIER                                CARRIER_SERVICE                
+       COMPANY                                COMPARTMENTS                   
+       CONTROL                                COST_CENTRE                    
+       DATA_COLLECTION                        DATA_COLLECT_HEADER            
+       DEPARTMENT                             DEPRECIATION                   
+       DEP_METHODS                            DESCRIPTION_LAYOUT             
+       DIVISION                               EMPLOYEE                       
+       EMPLOYEE_IMAGE                         EMPLOYEE_ISSUE                 
+       EMPLOYEE_SKILL                         GENERIC                        
+       GLOBAL_CONDITIONS                      GRN                            
+       GRN_CANCEL                             GRN_ORDER                      
+       GRN_ORDER_CANCEL                       GROUP_COPY                     
+       IMAGES                                 IMPORT_MAP                     
+       INSP_HIST                              ISSN                           
+       ISSN_PUTAWAY                           ITEM_CLASS                     
+       KIT                                    LABEL_LOCATION                 
+       LEGACY                                 LEGACY_ADJUSTMENT              
+       LOAN_CHARGE_TO                         LOAN_HISTORY                   
+       LOAN_ORDER                             LOAN_ORDER_LINE                
+       LOAN_RATE                              LOCATION                       
+       LOCN_ADDRESS                           LOCN_STATUS                    
+       LOG                                    METRICS                        
+       MODEL                                  MODULE                         
+       MOVE_STATUS                            OBJECT_IMAGE                   
+       OCCUPATION                             OPTIONS                        
+       ORDER_GROUP                            ORDER_TYPE                     
+       PACK_ID                                PACK_TYPE                      
+       PALLETS                                PALLET_CFG                     
+       PARAM                                  PAYMENT_METHODS                
+       PERSON                                 PERSON_ADDRESS                 
+       PERSON_COMPANY                         PERSON_TYPE                    
+       PICK_DESPATCH                          PICK_FORM                      
+       PICK_ITEM                              PICK_ITEM_CANCEL               
+       PICK_ITEM_DETAIL                       PICK_ITEM_LINE_NO              
+       PICK_ITEM_REVISED                      PICK_LOCATIONS                 
+       PICK_MODE                              PICK_ORDER                     
+       PICK_ORDER_GROUP                       PICK_ORDER_ITEM_TEMP           
+       PICK_QTYS                              PICK_QUEUE                     
+       PICK_UP                                PRINT_REQUESTS                 
+       PRINT_REQUESTS_ARCHIVE                 PRINT_SELECTION                
+       PRIVILIGES                             PRODUCT_CONDITION              
+       PRODUCT_COND_STATUS                    PRODUCT_DESCRIPTION            
+       PRODUCT_KIT                            PRODUCT_LAYOUT                 
+       PROD_COUNT                             PROD_COUNT_HIST                
+       PROD_EAN                               PROD_PROFILE                   
+       PROD_SUPPLIER                          PROD_TYPE                      
+       PROJECT                                PURCHASE_LINE_CANCEL           
+       PURCHASE_LINE_DETAIL                   PURCHASE_LINE_REVISED          
+       PURCHASE_ORDER                         PURCHASE_ORDER_LINE            
+       PURCHASE_ORDER_LINE_TEMP               PURCHASE_SUB_LINE              
+       QTY_EAN                                QUERY_LAYOUT                   
+       REPORTS                                REPORTS_DETAIL                 
+       REPORT_TEMP                            RESUME_TEST                    
+       RETICULATION                           RETURN_ORDER                   
+       RETURN_ORDER_LINE                      RUN_PROCEDURES                 
+       SALE_ORDER                             SALE_ORDER_LINE                
+       SESSION                                SHELFS                         
+       SKILL                                  SKILL_PASS                     
+       SSN                                    SSN_BATCH                      
+       SSN_GROUP                              SSN_HIST                       
+       SSN_ITEM_CLASS                         SSN_LEGACY                     
+       SSN_MOVES                              SSN_MOVES_REF                  
+       SSN_PRODUCT                            SSN_SERIAL                     
+       SSN_SUB_TYPE                           SSN_TEST                       
+       SSN_TEST_RESULTS                       SSN_TYPE                       
+       SSN_TYPE_COND                          STARTRACK_DEPOT                
+       STATUS_DEFS                            STOCKTAKE                      
+       STORE_AREA                             STORE_METHOD                   
+       STORE_TYPE                             SYS_ASCII                      
+       SYS_EQUIP                              SYS_HH                         
+       SYS_LABEL                              SYS_LABEL_VAR                  
+       SYS_MOVES                              SYS_SCREEN                     
+       SYS_SCREEN_ORDER                       SYS_SCREEN_TABLE               
+       SYS_SCREEN_VAR                         SYS_USER                       
+       TASK_SCHEDULE                          TERMS                          
+       TEST_QUESTIONS                         TOG                            
+       TRAINING_SKILL                         TRAINING_SKILL_CODES           
+       TRANSACTIONS                           TRANSACTIONS4                  
+       TRANSACTIONS4_ARCHIVE                  TRANSACTIONS_ARCHIVE           
+       TRANSACTIONS_WORK                      TRANSACTION_TYPES              
+       TRANSFER_REQUEST                       TRAN_ERROR                     
+       TYPE_HEADER                            TYPE_LINE                      
+       UDPATE_FIELDS                          UOM                            
+       UOM_TYPE                               USER_ENV                       
+       VALID_RESPONSES                        VARIANCE                       
+       WAREHOUSE                              WARRANTY                       
+       WEB_REQUESTS                           WEB_REQUESTS_ARCHIVE           
+       WORK_FILE                              WORK_PROD                      
+       XREF                                   ZONE                           
+

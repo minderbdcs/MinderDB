@@ -1,0 +1,3 @@
+alter table control add pick_order_max_weight weight_decimal;
+alter table control add PICK_IMPORT_CALC_ZONE_LOCN value_tf;
+

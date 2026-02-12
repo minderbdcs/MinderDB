@@ -1,0 +1,5 @@
+alter table control drop legacy_url;
+alter table control drop legacy_url2;
+alter table control add legacy_url varchar(100);
+alter table control add legacy_url2 varchar(100);
+

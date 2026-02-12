@@ -1,0 +1,36 @@
+/*
+in pick order have
+        S_FIRST_NAME FIRST_NAME,
+        S_LAST_NAME LAST_NAME,
+        S_CITY CITY,
+        S_STATE STATE,
+        S_POST_CODE POST_CODE,
+        S_COUNTRY COUNTRY,
+        S_PHONE PHONE_NO,
+        S_ADDRESS_LINE1 VARCHAR(100),
+        S_ADDRESS_LINE2 ADDRESS_LINE,
+        S_ADDRESS_LINE3 ADDRESS_LINE,
+        S_ADDRESS_LINE4 ADDRESS_LINE,
+        S_ADDRESS_LINE5 ADDRESS_LINE,
+*/
+
+alter table pick_despatch add SENT_FROM_FIRST_NAME FIRST_NAME;
+alter table pick_despatch add SENT_FROM_LAST_NAME  LAST_NAME;
+alter table pick_despatch add SENT_FROM_ADDRESS_1  VARCHAR(100);
+alter table pick_despatch add SENT_FROM_ADDRESS_2  ADDRESS_LINE;
+alter table pick_despatch add SENT_FROM_CITY       CITY;
+alter table pick_despatch add SENT_FROM_SUBURB     CITY;
+alter table pick_despatch add SENT_FROM_STATE      STATE;
+alter table pick_despatch add SENT_FROM_POST_CODE  POST_CODE;
+alter table pick_despatch add SENT_FROM_COUNTRY    COUNTRY;
+
+alter table pick_despatch_dx add SENT_FROM_FIRST_NAME FIRST_NAME;
+alter table pick_despatch_dx add SENT_FROM_LAST_NAME  LAST_NAME;
+alter table pick_despatch_dx add SENT_FROM_ADDRESS_1  VARCHAR(100);
+alter table pick_despatch_dx add SENT_FROM_ADDRESS_2  ADDRESS_LINE;
+alter table pick_despatch_dx add SENT_FROM_CITY       CITY;
+alter table pick_despatch_dx add SENT_FROM_SUBURB     CITY;
+alter table pick_despatch_dx add SENT_FROM_STATE      STATE;
+alter table pick_despatch_dx add SENT_FROM_POST_CODE  POST_CODE;
+alter table pick_despatch_dx add SENT_FROM_COUNTRY    COUNTRY;
+

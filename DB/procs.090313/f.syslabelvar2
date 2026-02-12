@@ -1,0 +1,18 @@
+drop index sys_label_var_name_idx;
+commit;
+
+alter table sys_label_var add save_name descr;
+update sys_label_var set save_name = slv_name;
+
+  alter table sys_label_var drop slv_name; 
+/* alter table sys_label_var add sl_name code not null; */
+commit;
+
+alter table sys_label_var add slv_name descr;
+
+update sys_label_var set slv_name = save_name ;
+commit;
+
+ alter table sys_label_var drop save_name; 
+
+CREATE INDEX SYS_LABEL_VAR_NAME_IDX ON SYS_LABEL_VAR (SL_NAME, SLV_SEQUENCE, SLV_NAME);

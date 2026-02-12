@@ -1,0 +1,9 @@
+when partial pick is T
+
+pick short but also pick some stock
+have the picked items go to dx
+
+picked short item stays as DS zero 0 pick_item_detail
+pick_item stays as DC
+
+expected the zero qty to go to DX and the line to go to OP or AS

@@ -1,0 +1,6 @@
+
+update or insert into warehouse(wh_id, description) values('NF','Not Found');
+update ssn set wh_id ='NF' where not exists(select warehouse.wh_id from warehouse where warehouse.wh_id = ssn.wh_id);
+commit;
+
+alter table SSN add  CONSTRAINT SSN_FK_WH_ID foreign key (WH_ID) references WAREHOUSE(WH_ID);

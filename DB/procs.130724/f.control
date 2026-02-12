@@ -1,0 +1,4 @@
+alter table control add remote_system_id smallint;
+alter table control add is_remote value_tf;
+
+

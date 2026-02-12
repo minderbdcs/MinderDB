@@ -1,0 +1,8 @@
+for apcd
+ when import sales order and order field is empty
+  want to ignore the line in all 3 import proces
+
+for pinpoint
+ when import a sales order to status CN
+   then update the AS and OP status lines to CN
+ 

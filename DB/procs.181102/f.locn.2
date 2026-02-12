@@ -1,0 +1,7 @@
+alter table location drop  locn_short_name ;
+commit;
+alter table location add locn_hr name not null;
+update location set locn_hr='' ;
+commit;
+alter table location alter locn_hr position 3;
+

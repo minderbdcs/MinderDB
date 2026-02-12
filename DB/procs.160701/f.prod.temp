@@ -1,0 +1,4 @@
+create domain GRN_LEGACY_ID VARCHAR(40);
+alter table prod_profile_temp add S_CREATE_GRN_LEGACY_ID GRN_LEGACY_ID;
+alter table grn alter GRN_LEGACY_INTERNAL_ID type GRN_LEGACY_ID;
+alter table grn_dx alter GRN_LEGACY_INTERNAL_ID type GRN_LEGACY_ID;

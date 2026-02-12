@@ -1,0 +1,181 @@
+
+ALTER PROCEDURE UPDATE_SSN (OBJECT VARCHAR(30) ,
+TRN_TYPE VARCHAR(4) ,
+FIELD_VALUE VARCHAR(40) )
+AS 
+ 
+  DECLARE VARIABLE strCODE VARCHAR(40);       
+  DECLARE VARIABLE strTYPE VARCHAR(40);
+  DECLARE VARIABLE strGENERIC VARCHAR(40);
+  DECLARE VARIABLE strBRAND VARCHAR(40);
+  DECLARE VARIABLE strMODEL VARCHAR(40);
+  DECLARE VARIABLE strPROD_ID VARCHAR(30);
+  DECLARE VARIABLE strSUPPLIER VARCHAR(40);
+  DECLARE VARIABLE strOTHER6 VARCHAR(50);
+  DECLARE VARIABLE strOTHER7 VARCHAR(50);
+  DECLARE VARIABLE strOTHER8 VARCHAR(50);
+  DECLARE VARIABLE strOTHER9 VARCHAR(50);
+  DECLARE VARIABLE strOTHER10 VARCHAR(50);
+  DECLARE VARIABLE strDESCRIPTION VARCHAR(50);  
+  
+BEGIN
+    /* Update SSN table */   
+    IF (:TRN_TYPE = 'NITP') THEN      /* Update Type */
+    BEGIN
+      UPDATE SSN
+      SET SSN_TYPE = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIOB') THEN  /* Update Generic */
+    BEGIN
+      UPDATE SSN
+      SET GENERIC = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIBC') THEN  /* Update Brand */
+    BEGIN
+      UPDATE SSN
+      SET BRAND = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIMO') THEN  /* Update Model */
+    BEGIN
+      UPDATE SSN
+      SET MODEL = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'PSRF') THEN  /* Update GRN */
+    BEGIN
+      UPDATE SSN
+      SET GRN = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NISN') THEN  /* Update Serial Number */
+    BEGIN
+      UPDATE SSN
+      SET SERIAL_NUMBER = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NICC') THEN  /* Update Cost Center */
+    BEGIN
+      UPDATE SSN
+      SET COST_CENTER = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIO1') THEN  /* Update Other1 */ 
+    BEGIN
+      UPDATE SSN
+      SET OTHER1 = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIO2') THEN  /* Update Other2 */
+    BEGIN
+      UPDATE SSN
+      SET OTHER2 = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIO3') THEN  /* Update Other3 */
+    BEGIN
+      UPDATE SSN
+      SET OTHER3 = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIO4') THEN  /* Update Other4 */ 
+    BEGIN
+      UPDATE SSN
+      SET OTHER4 = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIO5') THEN  /* Update Other5 */
+    BEGIN
+      UPDATE SSN
+      SET OTHER5 = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIO6') THEN  /* Update Other6 */
+    BEGIN
+      UPDATE SSN
+      SET OTHER6 = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIO7') THEN  /* Update Other7 */
+    BEGIN
+      UPDATE SSN
+      SET OTHER7 = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIO8') THEN  /* Update Other8 */
+    BEGIN
+      UPDATE SSN
+      SET OTHER8 = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIO9') THEN  /* Update Other9 */
+    BEGIN
+      UPDATE SSN
+      SET OTHER9 = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIOA') THEN  /* Update Other10 */
+    BEGIN
+      UPDATE SSN
+      SET OTHER10 = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NILG') THEN  /* Update LegacyID */
+    BEGIN
+      UPDATE SSN
+      SET LEGACY_ID = :FIELD_VALUE
+      WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIST') THEN  /* Update Status Code */
+    BEGIN
+          UPDATE SSN
+          SET STATUS_CODE = :FIELD_VALUE
+          WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NILX') THEN  /* Update Label Location */
+    BEGIN
+          UPDATE SSN
+          SET LABEL_LOCN = :FIELD_VALUE
+          WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIOK') THEN  /* Update Other19 */
+    BEGIN
+          UPDATE SSN
+          SET OTHER19 = :FIELD_VALUE
+          WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIPC') THEN  /* Update Product */
+    BEGIN
+          UPDATE SSN
+          SET PROD_ID = :FIELD_VALUE
+          WHERE SSN_ID = :OBJECT;
+          UPDATE ISSN
+          SET PROD_ID = :FIELD_VALUE
+          WHERE ORIGINAL_SSN = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIOL') THEN  /* Update Other20 */
+    BEGIN
+          UPDATE SSN
+          SET OTHER20 = :FIELD_VALUE
+          WHERE SSN_ID = :OBJECT;
+    END
+    ELSE IF (:TRN_TYPE = 'NIGC') THEN  /* Group copy */
+    BEGIN
+
+        SELECT CODE, SSN_TYPE, GENERIC, BRAND, MODEL, PROD_ID, SUPPLIER_ID, OTHER6, OTHER7, OTHER8, OTHER9, OTHER10, DESCRIPTION 
+        FROM GROUP_COPY 
+        WHERE CODE = :FIELD_VALUE
+        INTO :strCODE, :strTYPE, :strGENERIC, :strBRAND, :strMODEL, :strPROD_ID, :strSUPPLIER, :strOTHER6, :strOTHER7, :strOTHER8, :strOTHER9, :strOTHER10, :strDESCRIPTION; 
+    
+/*                            
+        IF (strCODE <> "") THEN
+        BEGIN 
+          EXECUTE PROCEDURE PC_GROUP_COPY :OBJECT, :strTYPE, :strGENERIC, :strBRAND, :strMODEL,  :strPROD_ID, :strSUPPLIER, :strOTHER6, :strOTHER7, :strOTHER8, :strOTHER9, :strOTHER10, :strDESCRIPTION; 
+        END
+ */     
+    END
+    
+END ^
+

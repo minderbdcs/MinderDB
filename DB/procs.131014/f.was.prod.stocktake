@@ -1,0 +1,2 @@
+update stocktake set st_ssn_id = (select first 1 ssn_id from issn where issn.wh_id=st_wh_id and issn.locn_id=st_locn_id and issn.prod_id=st_prod_id) where st_ssn_id is null;
+commit;

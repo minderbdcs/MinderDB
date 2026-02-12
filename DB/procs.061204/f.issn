@@ -1,0 +1,6 @@
+alter table issn add prev_prod_id product;
+alter table issn add prev_prev_prod_id product;
+alter table issn add prod_id_update timestamp ;
+alter table issn add prev_prod_id_update timestamp ;
+alter table issn add prev_prev_prod_id_update timestamp ;
+

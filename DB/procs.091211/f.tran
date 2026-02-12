@@ -1,0 +1,3 @@
+alter table transaction_types add soap_method descr;
+alter table transaction_types add soap_procedure descr;
+

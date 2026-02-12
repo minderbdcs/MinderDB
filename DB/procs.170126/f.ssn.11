@@ -1,0 +1,3 @@
+
+update ssn set LOCN_ID = upper(LOCN_ID) where upper(LOCN_ID) <> LOCN_ID;
+update issn set LOCN_ID = upper(LOCN_ID) where upper(LOCN_ID) <> LOCN_ID;

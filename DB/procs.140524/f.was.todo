@@ -1,0 +1,11 @@
+ have external sscc in pack_sscc table PS_EXTERNAL_SSCC
+lookup customer edi no in edi_customer table
+     have a external sscc population method field
+     value 'P' =  1 per order product carton deliver to in_house_no
+           'O' =  1 per order carton   deliver to in_house no
+           default to value 'P'
+
+Since the PS_SSCC is calculated in the insert trigger of PACK_SSCC
+	then if value is 'P' use the PS_SSCC in the PS_EXTERNAL_SSCC
+	     if value is 'O' use the first PS_SSCC  for the PS_PICK_ORDER and PS_DEL_TO_STORE_IN_HOUSE_NO in the PS_EXTERNAL_SSCC
+	

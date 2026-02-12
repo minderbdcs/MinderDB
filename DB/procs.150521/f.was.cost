@@ -1,0 +1,2 @@
+alter table cost_centre add wh_id wh_id;
+

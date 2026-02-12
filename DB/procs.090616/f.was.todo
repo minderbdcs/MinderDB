@@ -1,0 +1,25 @@
+	pick by transfer
+	case one a confirmed issn. Then only that pick item used.
+		APCD , reboot, ALS 
+	case two (at the moment)
+		if site does not confirm orders but imports them as confirmed
+		(these sites use orders of products - so no pick_order in issn)
+		then take the 1st pick_item that matches
+		BHP, FPG 
+
+	so what we have done is only allowed confirmed issns in pick by transfer
+
+
+	confirm
+		must stop the same ssn being allowed through twice on this sales order
+		ie use the issns pick_order to stop confirm onto another line
+
+	then must allow transfer from a despatch location to a 'ST' location will 
+	i) unpick item
+	ii) unallocate item
+	iii) leave pick_item in a state not 'OP'
+		eg 'UC'  or 'CN' 
+
+	what about staging areas ???
+	these must have a null or 'DS' move_stat
+	at FPG they have staging area 'ST' status

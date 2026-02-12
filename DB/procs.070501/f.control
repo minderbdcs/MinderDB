@@ -1,0 +1,2 @@
+alter table control add ssn_id_by_lot_line char(1) ;
+

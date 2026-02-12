@@ -1,0 +1,8 @@
+ see in firebird 2.1
+can use extract(month from datetime) instead of mer_month(datetime)
+        extract(year from datetime) instead of mer_year(datetime)
+        extract(day from datetime) instead of mer_day(datetime)
+        extract(hour from datetime) instead of mer_hour(datetime)
+        extract(minute from datetime) instead of mer_minute(datetime)
+however the seconds is a float .
+        extract(second from datetime) instead of mer_second(datetime)

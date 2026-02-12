@@ -1,0 +1,2 @@
+alter table purchase_order add po_shipping_account freight_account_no;
+

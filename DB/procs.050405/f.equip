@@ -1,0 +1,3 @@
+insert into sys_equip (device_id, device_type) values ('T1','TR');
+insert into sys_equip (device_id, device_type) values ('T2','TR');
+insert into sys_equip (device_id, device_type) values ('T3','TR');

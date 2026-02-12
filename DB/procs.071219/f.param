@@ -1,0 +1,2 @@
+update param set symbology_prefix=']A0#;#;' where data_id='DEVICE';
+

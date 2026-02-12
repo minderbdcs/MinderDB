@@ -1,0 +1,88 @@
+change 	
+
+	gen_id(sequence,1) to next value for sequence
+	  !!!  or for getting current value have to stay with gen_id
+	  !!!  or for adding a variable no to the current value  have to stay with gen_id
+	note mysql uses  lastval(sequence)
+                   or    previous value for sequence
+	           also  next value for sequence
+
+	note mysql uses char and ascii for ascii_char and ascii_val
+====================================
+done
+change
+	padleft	to LPAD (str, endlen [, padstr])
+	blob_substr to substring
+
+		in procs.190827 
+	diffdate to datediff
+	vpad	to RPAD (str, endlen [, padstr])
+
+		in procs.190828 
+                note the internal fdb lpad not the fud lpad
+	lpad	to VLPAD (str,  padstr, endlen)
+		in procs.190829 
+	vlpad	to LPAD (str, endlen [, padstr])
+		in procs.190830 
+	lefts	to left
+	modquot	to floor (a/b)
+	modrem (a,b)	to mod(a,b)
+		in procs.190901 
+	v6substr 	to substring(str from b [for c])
+	vsubstring 	to substring(str from b [for c])
+		in procs.190903 
+	v4substring 	to substring(str from b [for c]) or left(str, length)
+		in procs.190904 
+	v6substring 	to substring(str from b [for c]) or left(str, length)
+		in procs.190905 
+	makedate to  cast or dateadd
+		in procs.190906 
+	rights	to right
+		in procs.190907 
+	mer_day to extract(day from x)
+	mer_month to extract(month from x)
+	mer_year to extract(year from x)
+	mer_hour to extract(hour from x)
+	mer_minute to extract(minute from x)
+	sec	to extract(second from x) - note this returns xx.yyyy
+		might need  cast(extract(second from x) as int)
+		in procs.190908 
+	squotedstr write these two out
+	dquotedstr
+		in procs.190909 
+	parse, vparse, v4parse to  v6parse  
+
+		in procs.190910 
+		in procs.190911 
+		in procs.190912 
+	pos	to position(str, longstr [, startpos] )
+	v4pos	to position(str, longstr [, startpos] )
+	vpos	to position(str, longstr [, startpos] )
+		in procs.190913 
+		in procs.190914 
+		in procs.190915 
+		in procs.190916 
+		in procs.190917 
+		in procs.190918 
+	substr 	to substring(str from b [for c])
+		in procs.190920 
+		in procs.190921 
+		in procs.190922 
+	v4alltrim to trim
+	also  alltrim and v6alltrim to trim
+		in procs.190923
+	chr to ascii_char
+	ascii to ascii_val
+		in procs.190924
+		in procs.190926
+		in procs.190927
+		in procs.190928
+		in procs.190929
+		in procs.190930
+		in procs.191001
+       	len      to char_length
+       	strlen   to char_length
+
+	gen_id(sequence,1) to next value for sequence
+		in procs.191004
+		in procs.191005

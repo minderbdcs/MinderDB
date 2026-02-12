@@ -1,0 +1,170 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/* create a print request for Connote of Outgoing SSCC  */
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_DSPC FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 167 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE DEVICE_ID;
+DECLARE VARIABLE WK_USER USER_ID;
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_WH_ID WH_ID;
+DECLARE VARIABLE WK_LOCN_ID LOCN_ID;
+DECLARE VARIABLE WK_OBJECT OBJECT;
+DECLARE VARIABLE WK_REF REFERENCE;
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+
+DECLARE VARIABLE WK_FILENAME VARCHAR(255);
+DECLARE VARIABLE WK_RESULT INTEGER;
+DECLARE VARIABLE WK_RESPONSE_FINAL ERROR_TEXT;
+DECLARE VARIABLE WK_ERROR_TEXT VARCHAR(1024);
+
+DECLARE VARIABLE WK_PD_ID INTEGER;
+
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_AT_END  VARCHAR(1);
+DECLARE VARIABLE WK_WORK_RESULT VARCHAR(80);
+DECLARE VARIABLE WK_WORK_END                      CHAR(1);
+DECLARE VARIABLE WK_WORK_LABEL                    VARCHAR(255);
+DECLARE VARIABLE WK_WORK_DATA                     VARCHAR(255);
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_PS_SSCC_ID VARCHAR(20);
+DECLARE VARIABLE WK_PS_ORDER VARCHAR(25);
+DECLARE VARIABLE WK_STMT       VARCHAR(255);
+
+DECLARE VARIABLE WK_LABEL_DATA   VARCHAR(32000);
+DECLARE VARIABLE WK_IS_OK    INTEGER;
+DECLARE VARIABLE WK_IS_ERROR VARCHAR(1024);
+DECLARE VARIABLE WK_LABEL_PRINTER  DEVICE_ID;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'DSPC') THEN
+  BEGIN
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_OBJECT = NEW.OBJECT;
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     WK_USER = NEW.PERSON_ID;
+/*   WK_REF = ALLTRIM(NEW.REFERENCE); */
+     WK_REF = TRIM(NEW.REFERENCE);
+     WK_QTY = NEW.QTY;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_FILENAME = '/data/tmp/DSPC.log';
+     /* reference has '|SYS_EQUIP.DEVICE_ID=PB|’ printer to use */
+     /* qty has qty of labels for each sscc */
+     /* company_id has the company to work on */
+/* have           
+     for the print request include fields from
+     pick_despatch
+     pack_id
+     carrier
+     pick_order
+     pick_item
+     postcode_depot
+*/
+
+WK_RESULT = FILE_WRITELN(WK_FILENAME, 'in DSPC start'); 
+     WK_PS_ORDER = NEW.ORDER_NO;
+     WK_IS_OK = 0;
+     WK_IS_ERROR = '';
+/* get the printer to use */
+     WK_FIELD_NO = 1;
+     WK_WORK_AT_END = 'F';
+     WK_LABEL_PRINTER = 'PA';
+WK_RESULT = FILE_WRITELN(WK_FILENAME, 'start loop for printer'); 
+     WHILE (WK_WORK_AT_END = 'F') DO
+     BEGIN
+        SELECT WK_FIELD_TEXT , WK_AT_END
+        FROM GET_REFERENCE_FIELD4 (:WK_REF, :WK_FIELD_NO, '|') 
+        INTO :WK_WORK_FIELD, :WK_WORK_AT_END;
+        /* now for this field get the label and data */
+        SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+        FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '=')
+        INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+        IF (WK_WORK_LABEL = 'SYS_EQUIP.DEVICE_ID') THEN
+        BEGIN
+           WK_LABEL_PRINTER = WK_WORK_DATA;
+        END
+        WK_FIELD_NO = WK_FIELD_NO + 1;
+     END
+WK_RESULT = FILE_WRITELN(WK_FILENAME, 'end   loop for printer'); 
+     IF (NEW.TRN_CODE = 'R') THEN
+     BEGIN
+        /* reprint SSCC in object field */
+        WK_PS_SSCC_ID = WK_OBJECT;
+        BEGIN
+           SELECT WK_LABEL_DATA 
+           FROM ADD_SSCC_CONNOTE_LABEL(:WK_LABEL_PRINTER ,
+                               :WK_PS_SSCC_ID )
+           INTO :WK_LABEL_DATA;
+           EXECUTE  PROCEDURE PC_LABEL (:WK_LABEL_PRINTER ,
+                  'CONNOTE_CPLEASE_CARTON' , 
+                  :WK_QTY ,
+                  NULL ,
+                  :WK_LABEL_DATA ,
+                  :WK_USER ,
+                  :WK_DEVICE )
+           RETURNING_VALUES :WK_RESULT ,
+                           :WK_ERROR_TEXT ;
+           IF (WK_RESULT <> 0) THEN
+           BEGIN
+              WK_IS_OK = WK_RESULT;
+              WK_IS_ERROR = WK_ERROR_TEXT;
+           END
+        END
+        IF (WK_IS_OK = 0) THEN
+        BEGIN
+           IF (STRLEN(WK_ERROR_TEXT) <= 232) THEN 
+           WK_RESPONSE_FINAL = 'Processed successfully|' || WK_ERROR_TEXT;
+           ELSE
+           BEGIN
+/*         WK_RESPONSE_FINAL = 'Processed successfully|' || V6SUBSTRING(:WK_ERROR_TEXT,1,232); */
+           WK_RESPONSE_FINAL = 'Processed successfully|' || LEFT(:WK_ERROR_TEXT,232);
+           END
+        END
+        ELSE
+        BEGIN
+           IF (STRLEN(WK_IS_ERROR) <= 254) THEN 
+           WK_RESPONSE_FINAL =  WK_IS_ERROR;
+           ELSE
+           BEGIN
+/*         WK_RESPONSE_FINAL =  V6SUBSTRING(WK_IS_ERROR,1,254); */
+           WK_RESPONSE_FINAL =  LEFT(WK_IS_ERROR,254);
+           END
+        END
+     END
+     ELSE
+     BEGIN
+        WK_RESPONSE_FINAL = 'Failed in Check of TRN_CODE';
+        WK_RESPONSE_FINAL = WK_RESPONSE_FINAL ||  '|||'  ;
+     END
+
+WK_RESULT = FILE_WRITELN(WK_FILENAME, 'at end eror text is'); 
+WK_RESULT = FILE_WRITELN(WK_FILENAME, :WK_ERROR_TEXT); 
+     IF (WK_IS_OK = 0) THEN
+     BEGIN
+        EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'T', :WK_RESPONSE_FINAL);
+     END
+     ELSE
+     BEGIN
+        EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'F', :WK_RESPONSE_FINAL);
+     END
+
+   /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+WK_RESULT = FILE_WRITELN(WK_FILENAME, 'at end of DSPC'); 
+  END
+ END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,9 @@
+PACK_ID_DX:
+PACK_X_OF_LABELS                (QTY) INTEGER Nullable 
+PACK_OF_Y_LABELS                (QTY) INTEGER Nullable 
+CUBIC_WEIGHT                    (CUBIC_WEIGHT) NUMERIC(15, 3) Nullable 
+CHARGE_WEIGHT                   (CHARGE_WEIGHT) NUMERIC(9, 3) Nullable 
+PICK_ORDER_DX:
+ P_SUBURB                        (CITY) VARCHAR(25) Nullable
+ D_SUBURB                        (CITY) 
+trigger add_pick_item_time duplicate products line 81

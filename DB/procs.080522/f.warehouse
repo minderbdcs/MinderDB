@@ -1,0 +1,5 @@
+
+
+alter table warehouse add wh_legacy_wh_id wh_id;
+alter table warehouse add wh_legacy_wh_name description;
+

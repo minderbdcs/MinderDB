@@ -1,0 +1,85 @@
+
+/*
+add to postcode_depot carriers fields .
+5 - 11
+*/
+
+alter table postcode_depot add  carrier_01_col_05  code;
+alter table postcode_depot add  carrier_01_col_06  code;
+alter table postcode_depot add  carrier_01_col_07  code;
+alter table postcode_depot add  carrier_01_col_08  code;
+alter table postcode_depot add  carrier_01_col_09  code;
+alter table postcode_depot add  carrier_01_col_10  code;
+alter table postcode_depot add  carrier_01_col_11  code;
+
+alter table postcode_depot add  carrier_02_COL_05  code;
+alter table postcode_depot add  carrier_02_COL_06  code;
+alter table postcode_depot add  carrier_02_COL_07  code;
+alter table postcode_depot add  carrier_02_COL_08  code;
+alter table postcode_depot add  carrier_02_col_09  code;
+alter table postcode_depot add  carrier_02_col_10  code;
+alter table postcode_depot add  carrier_02_col_11  code;
+
+alter table postcode_depot add  carrier_03_COL_05  code;
+alter table postcode_depot add  carrier_03_COL_06  code;
+alter table postcode_depot add  carrier_03_COL_07  code;
+alter table postcode_depot add  carrier_03_COL_08  code;
+alter table postcode_depot add  carrier_03_col_09  code;
+alter table postcode_depot add  carrier_03_col_10  code;
+alter table postcode_depot add  carrier_03_col_11  code;
+
+alter table postcode_depot add  carrier_04_COL_05  code;
+alter table postcode_depot add  carrier_04_COL_06  code;
+alter table postcode_depot add  carrier_04_COL_07  code;
+alter table postcode_depot add  carrier_04_COL_08  code;
+alter table postcode_depot add  carrier_04_col_09  code;
+alter table postcode_depot add  carrier_04_col_10  code;
+alter table postcode_depot add  carrier_04_col_11  code;
+
+alter table postcode_depot add  carrier_05_COL_05  code;
+alter table postcode_depot add  carrier_05_COL_06  code;
+alter table postcode_depot add  carrier_05_COL_07  code;
+alter table postcode_depot add  carrier_05_COL_08  code;
+alter table postcode_depot add  carrier_05_col_09  code;
+alter table postcode_depot add  carrier_05_col_10  code;
+alter table postcode_depot add  carrier_05_col_11  code;
+
+alter table postcode_depot add  carrier_06_COL_05  code;
+alter table postcode_depot add  carrier_06_COL_06  code;
+alter table postcode_depot add  carrier_06_COL_07  code;
+alter table postcode_depot add  carrier_06_COL_08  code;
+alter table postcode_depot add  carrier_06_col_09  code;
+alter table postcode_depot add  carrier_06_col_10  code;
+alter table postcode_depot add  carrier_06_col_11  code;
+
+alter table postcode_depot add  carrier_07_COL_05  code;
+alter table postcode_depot add  carrier_07_COL_06  code;
+alter table postcode_depot add  carrier_07_COL_07  code;
+alter table postcode_depot add  carrier_07_COL_08  code;
+alter table postcode_depot add  carrier_07_col_09  code;
+alter table postcode_depot add  carrier_07_col_10  code;
+alter table postcode_depot add  carrier_07_col_11  code;
+
+alter table postcode_depot add  carrier_08_COL_05  code;
+alter table postcode_depot add  carrier_08_COL_06  code;
+alter table postcode_depot add  carrier_08_COL_07  code;
+alter table postcode_depot add  carrier_08_COL_08  code;
+alter table postcode_depot add  carrier_08_col_09  code;
+alter table postcode_depot add  carrier_08_col_10  code;
+alter table postcode_depot add  carrier_08_col_11  code;
+
+alter table postcode_depot add  carrier_09_COL_05  code;
+alter table postcode_depot add  carrier_09_COL_06  code;
+alter table postcode_depot add  carrier_09_COL_07  code;
+alter table postcode_depot add  carrier_09_COL_08  code;
+alter table postcode_depot add  carrier_09_col_09  code;
+alter table postcode_depot add  carrier_09_col_10  code;
+alter table postcode_depot add  carrier_09_col_11  code;
+
+alter table postcode_depot add  carrier_10_COL_05  code;
+alter table postcode_depot add  carrier_10_COL_06  code;
+alter table postcode_depot add  carrier_10_COL_07  code;
+alter table postcode_depot add  carrier_10_COL_08  code;
+alter table postcode_depot add  carrier_10_col_09  code;
+alter table postcode_depot add  carrier_10_col_10  code;
+alter table postcode_depot add  carrier_10_col_11  code;

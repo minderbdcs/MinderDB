@@ -1,0 +1,3 @@
+alter table print_requests add send_copy qty default 1;
+alter table print_requests_archive add send_copy qty default 1;
+

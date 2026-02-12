@@ -1,0 +1,3 @@
+alter table grn add other_qty1 qty;
+alter table grn add other_qty2 qty;
+alter table grn add other_qty3 qty;

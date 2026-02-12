@@ -1,0 +1,15 @@
+update pick_order set p_state = (
+            SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (pick_order.p_address_line3 , 1, ' ' ) );
+update pick_order set p_post_code = (
+            SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (pick_order.p_address_line3, 2, ' ' ) ) ;
+update pick_order set d_state = (
+            SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (pick_order.p_address_line3 , 1, ' ' ) );
+update pick_order set d_post_code = (
+            SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (pick_order.p_address_line3, 2, ' ' ) ) ;
+/*
+update pick_order set d_city = 
+            p_address_line2 where len(p_address_line2 ) < 25 ;
+update pick_order set p_city = 
+            p_address_line2 where len(p_address_line2 ) < 25 ;
+*/
+update pick_order set d_city = null,p_city = null;

@@ -1,0 +1,69 @@
+      Feature #6584: New Screen to display PICK_ORDER Status's - refreshed
+                     every x seconds and does nothing else
+
+ *  Author: Glen Nairn
+ *  Status: New
+ *  Priority: Immediate
+ *  Assignee: Sergey Golovin
+ *  Category:
+ *  Target version:
+
+APCD currently use MS Access to redisplay our Sales orders such that it
+is constantly being refreshed every 60 seconds so that certain changes to
+a number of fields results in change of colour.
+
+How can we achieve the following please:
+1. Screen is always opened in maximum mode i.e no SHORTCUTS or LIMITS
+region is displayed at left side:
+We need new SYS_SCREEN fields = SS_SHORTCUTS ='F' and SS_LIMIT = 'F' (defaults to 'T') and
+SS_VIEW_BY_DISPLAY ='F' (defaults to 'T') and SS_PAGE_NO_DISPLAY ='F' (Defaults to 'T') and
+We also add new field = 'SS_VIEW_BY_VALUE' = '15' (INTEGER) - Defines the
+screen View by 15 rows of SR search results.
+
+2. We need in the SYS_MENU a new field = SM_REFRESH INTEGER
+This holds number of seconds between each refresh - Defaults to 0 which
+means its never refreshed.
+
+3. We need in SYS_SCREEN new field = 'SS_BUTTONS' = 'F' (defaults = 'T')
+Yes I know we have a SYS_BUTTON table but that is about type of button
+whereas this is about yes/no buttons to be displayed anywhere on the
+screen.
+
+4. Can I even suppress the Main Menus so we can maximise the number of
+data rows displayed?
+We may need new SYS_SCREEN field = 'MENUS_DISPLAYED' ='F' (defaults to
+'T')
+I want to keep and use the Global Input field ='EXIT' or 'MENU=HOME' to
+get Home Menu and hence enable to get back to see the Main Menu again.
+
+5. Then will need to create a new SYS_SCREEN.SS_NAME ='ORDER_WIP' to
+display the Search results of SYS_SCREEN_VAR.SSV_INPUT_TYPE ='RO' and the
+SSV_TITLE = blank and the SSV_EXPRESSION is used to select required
+Records e.g PICK_ORDERs.
+See next step on how to select this screen....
+6. Then can we have an actual User in the SYS_USER.USER_ID ='Orders'
+(this is not an SS_NAME) and then we have in its
+SYS_USER.MINDER_START_MENU ='ORDER_STAT' (this is the SS_NAME) such that
+when the User ID = 'Orders' logs in the system immediately starts the
+SS_NAME ='ORDER_STAT' screen to display Sales Order details.
+Similarly we could add another User ID = 'Warehouse' for displaying
+warehouse related details.
+The displayed details include multiple fields with colour coding e.g.
+PICK_ORDER.SHIP_VIA goes to green once the PICK_ORDER.PICK_STATUS='DC'
+and the SHIP_VIA ='PICKUP'.
+This alerts the Sales person responsible for their Orders and which their
+customer has elected to Pickup their Order to call the customer to say
+its ready for pickup - Yes we should also offer to send an email, sms or
+fax as other options but not now.
+7. APCD have this running now using MS Access - we need to replace this
+ASAP.
+8. APCd also have displayed in a number of boxes the Totals Orders by
+Status i.e. 'UC', 'CF', 'OP', 'DA', 'DC' as well as total of the
+PICK_ITEM lines. I would ask Frank to prepare a stored procedure for
+returning these.
+We need this to be added onto one row at the bottom of the screen. How
+can we use SYS_SCREEN_VAR to do this? Can I suggest that the
+SSV_EXPRESSION has the name of the Stored procedure used to return these
+totals and then use another SYS_SCREEN.SS_NAME to display these.
+
+

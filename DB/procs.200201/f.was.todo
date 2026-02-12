@@ -1,0 +1,2 @@
+add id column to tables person
+this is a uuid field for the laravel maintenance - also is populared via a trigger 

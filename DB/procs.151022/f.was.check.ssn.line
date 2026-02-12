@@ -1,0 +1,36 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+ALTER PROCEDURE CHECK_SSN_SALE_LINES (PICK_ORDER VARCHAR(15) CHARACTER SET NONE,
+SSN_ID VARCHAR(20) CHARACTER SET NONE)
+RETURNS (VALID_SSN CHAR(1) CHARACTER SET NONE)
+AS 
+     
+
+DECLARE VARIABLE iCount INTEGER;
+
+BEGIN
+    iCount = 0;
+    VALID_SSN = 'T';    
+    
+    /* Check SSN in Sale Order Lines */
+    SELECT COUNT(*)
+    FROM PICK_ITEM
+    WHERE PICK_ORDER = :PICK_ORDER               
+    AND SSN_ID = :SSN_ID
+    INTO :iCount;
+    
+    IF (:iCount > 0) THEN
+    BEGIN
+       VALID_SSN = 'F';
+       EXIT;
+    END         
+   
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

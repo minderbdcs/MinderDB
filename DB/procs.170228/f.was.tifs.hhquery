@@ -1,0 +1,15 @@
+/*
+insert into query_layout(code,label,description,sequence) values('1ssn','Label Prtd'," mer_day(issn.label_date) || '/' || mer_month(issn.label_date) || '/' || mer_year(issn.label_date) || ' ' || mer_hour(issn.label_date) || ':' || mer_minute(issn.label_date) ",12);
+update  query_layout set description = 
+" extract(day from issn.label_date) || '/' || extract(month from issn.label_date) || '/' || extract(year from issn.label_date) || ' ' || extract(hour from issn.label_date) || ':' || extract(minute from issn.label_date) "
+where code='1ssn' and sequence=12 and label='Label Prtd';
+*/
+/*
+insert into query_layout(code,label,description,sequence) values('1ssn','Label Prtd2'," issn.label_date ",13);
+*/
+update  query_layout set description = 
+' issn.label_date '
+where code='1ssn' and sequence=12 and label='Label Prtd';
+
+delete from query_layout
+where code='1ssn' and sequence=13 and label='Label Prtd2';

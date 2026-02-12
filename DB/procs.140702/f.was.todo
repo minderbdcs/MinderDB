@@ -1,0 +1,9 @@
+ssn_type generic ssn_sub_type add last_update_date and last_update by
+for alstom report of missing ssn_types,generics, ssn_types
+	excluding UNKNOWN.
+
+report of 1900 dates
+	purchase_price 0
+	purchase_qty 0
+	prod_id ''
+	

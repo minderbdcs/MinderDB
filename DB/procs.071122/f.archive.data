@@ -1,0 +1,46 @@
+
+/*
+
+archive method is 'DT' a date based archival using the archival field
+                  'AR' take all - eg the log table
+                  'DQ' using a date field based anded with a query in the archive query 
+archive status is 'AR' for do the archive
+                  'RM' for removing the older data
+                  'CM' for a commented out line
+archive field is the field in the table to compare for the archiving
+archive days is the number of days to keep
+archive query is the query to and with the date query to reduce the set 
+
+CREATE TABLE ARCHIVE_LAYOUT (
+        SEQUENCE INTEGER DEFAULT 1,
+        ARCHIVE_TABLE CODE NOT NULL,
+        ARCHIVE_FIELD CODE,
+        ARCHIVE_METHOD STATUS,
+        ARCHIVE_STATUS STATUS,
+        ARCHIVE_QUERY VARCHAR(1024),
+        ARCHIVE_DAYS INTEGER);
+*/
+
+insert into archive_layout(sequence,archive_table,archive_status,archive_method) values(1, 'LOG','RM','AR');
+insert into archive_layout(sequence,archive_table,archive_status,archive_method) values(2, 'PICK_ORDER_ITEM_TEMP','RM','AR');
+insert into archive_layout(sequence,archive_table,archive_status,archive_method) values(3, 'PURCHASE_ORDER_LINE_TEMP','RM','AR');
+insert into archive_layout(sequence,archive_table,archive_status,archive_method) values(4, 'PICK_QUEUE','RM','AR');
+
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days) values(10, 'PICK_FORM','AR','DT','CREATE_DATE',90);
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days) values(12, 'PACK_ID','AR','DT','CREATE_DATE',90);
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days) values(14, 'PICK_DESPATCH','AR','DT','CREATE_DATE',90);
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days) values(16, 'PICK_ITEM_CANCEL','AR','DT','CREATE_DATE',90);
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days) values(18, 'PICK_ITEM_DETAIL','AR','DT','CREATE_DATE',90);
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days) values(20, 'PICK_ITEM','AR','DT','CREATE_DATE',90);
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days) values(22, 'PICK_ORDER','AR','DT','APPROVED_DESP_DATE',90);
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days) values(24, 'PICK_ITEM_LINE_NO','AR','DT','LAST_UPDATE_DATE',90);
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days) values(26, 'TRANSACTIONS4_ARCHIVE','AR','DT','TRN_DATE',90);
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days) values(28, 'TRANSACTIONS_ARCHIVE','AR','DT','TRN_DATE',366);
+
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days,archive_query) values(100, 'ISSN','AR','DQ','INTO_DATE',90,"wh_id starting 'X'");
+/*
+insert into archive_layout(sequence,archive_table,archive_status,archive_method,archive_field,archive_days,archive_query) values(102, 'ISSN','AR','DQ','LAST_UPDATE_DATE',90,"wh_id = 'NR' and locn_id = 'DS010000' and pick_line_status = 'DS'");
+*/
+
+alter trigger save_pick_order inactive;
+

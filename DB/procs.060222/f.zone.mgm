@@ -1,0 +1,24 @@
+insert into zone(code, description,default_device_id) values ('A0','Conveyor 1 - Zone 0','C1');
+insert into zone(code, description,default_device_id) values ('A1','Conveyor 1 - Zone 1','C1');
+insert into zone(code, description,default_device_id) values ('A2','Conveyor 1 - Zone 2','C1');
+insert into zone(code, description,default_device_id) values ('A3','Conveyor 1 - Zone 3','C1');
+insert into zone(code, description,default_device_id) values ('A4','Conveyor 1 - Zone 4','C1');
+insert into zone(code, description,default_device_id) values ('A5','Conveyor 1 - Zone 5','C1');
+insert into zone(code, description,default_device_id) values ('A6','Conveyor 1 - Zone 6','C1');
+insert into zone(code, description,default_device_id) values ('A7','Conveyor 1 - Zone 7','C1');
+insert into zone(code, description,default_device_id) values ('A8','Conveyor 1 - Zone 8','C1');
+insert into zone(code, description,default_device_id) values ('B0','Conveyor 2 - Zone 0','C2');
+insert into zone(code, description,default_device_id) values ('B1','Conveyor 2 - Zone 1','C2');
+insert into zone(code, description,default_device_id) values ('B2','Conveyor 2 - Zone 2','C2');
+insert into zone(code, description,default_device_id) values ('B3','Conveyor 2 - Zone 3','C2');
+insert into zone(code, description,default_device_id) values ('B4','Conveyor 2 - Zone 4','C2');
+insert into zone(code, description,default_device_id) values ('B5','Conveyor 2 - Zone 5','C2');
+insert into zone(code, description,default_device_id) values ('B6','Conveyor 2 - Zone 6','C2');
+insert into zone(code, description,default_device_id) values ('B7','Conveyor 2 - Zone 7','C2');
+insert into zone(code, description,default_device_id) values ('B8','Conveyor 2 - Zone 8','C2');
+insert into zone(code, description,default_device_id) values ('AU','Conveyor 1 - Uglies Zone ','C1');
+insert into zone(code, description,default_device_id) values ('BU','Conveyor 2 - Uglies Zone ','C2');
+
+insert into sys_equip (device_id, device_type, equipment_description_code) values('C1','HH','Conveyor 1');
+insert into sys_equip (device_id, device_type, equipment_description_code) values('C2','HH','Conveyor 2');
+

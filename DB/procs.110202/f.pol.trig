@@ -1,0 +1,86 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER SAVE_PURCHASE_ORDER_LINE FOR PURCHASE_ORDER_LINE 
+ACTIVE BEFORE DELETE POSITION 0 
+AS
+DECLARE VARIABLE WK_SAVE_PURCHASE_ITEM CHAR(1);
+BEGIN
+   BEGIN
+      INSERT INTO PURCHASE_LINE_CANCEL(
+        PURCHASE_ORDER ,
+        PO_LINE ,
+        REQUISITION_NO ,
+        PROD_ID ,
+        PO_LINE_QTY ,
+        UNIT_PRICE ,
+        UOM_ORDER ,
+        PO_LINE_DUE_DATE ,
+        PO_LINE_STATUS ,
+        COMMENTS ,
+        GST_VALUE ,
+        GST_RATE ,
+        GST_CODE ,
+        ORIGINAL_QTY ,
+        PO_LINE_DESCRIPTION ,
+        PO_LINE_OPTIONS ,
+        PO_LINE_QTY_F ,
+        PO_LINE_LOTNO_LIST ,
+        PO_LINE_STATUS_TF ,
+        PO_LINE_CUSTOMER_ID ,
+        PO_LINE_CUSTOMER_NAME ,
+        PO_CURRENCY ,
+        LAST_UPDATE_DATE ,
+        PO_LEGACY_RECV_ID ,
+        PO_REVISION_STATUS ,
+        PO_LEGACY_LINE ,
+        EARLIEST_DATE ,
+        PO_LINE_EXTERNAL_NOTES ,
+        PO_LINE_DISCOUNT ,
+        PO_LINE_TOTAL ,
+        LAST_UPDATE_BY ,
+        REASON ,
+        CANCEL_METHOD )
+      VALUES (
+        OLD.PURCHASE_ORDER ,
+        OLD.PO_LINE ,
+        OLD.REQUISITION_NO ,
+        OLD.PROD_ID ,
+        OLD.PO_LINE_QTY ,
+        OLD.UNIT_PRICE ,
+        OLD.UOM_ORDER ,
+        OLD.PO_LINE_DUE_DATE ,
+        OLD.PO_LINE_STATUS ,
+        OLD.COMMENTS ,
+        OLD.GST_VALUE ,
+        OLD.GST_RATE ,
+        OLD.GST_CODE ,
+        OLD.ORIGINAL_QTY ,
+        OLD.PO_LINE_DESCRIPTION ,
+        OLD.PO_LINE_OPTIONS ,
+        OLD.PO_LINE_QTY_F ,
+        OLD.PO_LINE_LOTNO_LIST ,
+        OLD.PO_LINE_STATUS_TF ,
+        OLD.PO_LINE_CUSTOMER_ID ,
+        OLD.PO_LINE_CUSTOMER_NAME ,
+        OLD.PO_CURRENCY ,
+        OLD.LAST_UPDATE_DATE ,
+        OLD.PO_LEGACY_RECV_ID ,
+        OLD.PO_REVISION_STATUS ,
+        OLD.PO_LEGACY_LINE ,
+        OLD.EARLIEST_DATE ,
+        OLD.PO_LINE_EXTERNAL_NOTES ,
+        OLD.PO_LINE_DISCOUNT ,
+        OLD.PO_LINE_TOTAL ,
+        OLD.LAST_UPDATE_BY ,
+        'Purchase Order Line Record Deleted' ,
+        'l' );
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

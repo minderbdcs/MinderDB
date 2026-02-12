@@ -1,0 +1,2 @@
+alter table sys_equip ADD DEFAULT_LP_PRINTER CHAR(2) ;
+alter table sys_equip ADD DEFAULT_PR_PRINTER CHAR(2) ;

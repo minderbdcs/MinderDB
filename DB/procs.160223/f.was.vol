@@ -1,0 +1,6 @@
+alter domain despatched_vol type numeric(9,4);
+
+create domain despatched_weight numeric(9,3);
+
+alter table pick_despatch alter pickd_wt_actual type despatched_weight;
+

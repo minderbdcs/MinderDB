@@ -1,0 +1,30 @@
+drop  TRIGGER RUN_TRANSACTION_DSOT ;
+
+alter table pick_despatch_dx drop  PICKD_POST_CODE_DEPOT_RECORD_ID  ;
+alter table pick_despatch    drop  PICKD_POST_CODE_DEPOT_RECORD_ID  ;
+
+alter table pick_despatch    add PICKD_STATE                      STATE;
+alter table pick_despatch    add PICKD_COUNTRY                    COUNTRY;
+alter table pick_despatch    add PICKD_OTHER1                     CODE;
+alter table pick_despatch    add PICKD_OTHER2                     CODE;
+alter table pick_despatch    add PICKD_OTHER3                     CODE;
+alter table pick_despatch    add PICKD_OTHER4                     CODE;
+alter table pick_despatch    add PICKD_OTHER5                     CODE;
+alter table pick_despatch    add PICKD_OTHER6                     CODE;
+alter table pick_despatch    add PICKD_OTHER7                     CODE;
+alter table pick_despatch    add PICKD_OTHER8                     CODE;
+alter table pick_despatch    add PICKD_OTHER9                     CODE;
+alter table pick_despatch    add PICKD_OTHER10                    CODE;
+
+alter table pick_despatch_dx    add PICKD_STATE                      STATE;
+alter table pick_despatch_dx    add PICKD_COUNTRY                    COUNTRY;
+alter table pick_despatch_dx    add PICKD_OTHER1                     CODE;
+alter table pick_despatch_dx    add PICKD_OTHER2                     CODE;
+alter table pick_despatch_dx    add PICKD_OTHER3                     CODE;
+alter table pick_despatch_dx    add PICKD_OTHER4                     CODE;
+alter table pick_despatch_dx    add PICKD_OTHER5                     CODE;
+alter table pick_despatch_dx    add PICKD_OTHER6                     CODE;
+alter table pick_despatch_dx    add PICKD_OTHER7                     CODE;
+alter table pick_despatch_dx    add PICKD_OTHER8                     CODE;
+alter table pick_despatch_dx    add PICKD_OTHER9                     CODE;
+alter table pick_despatch_dx    add PICKD_OTHER10                    CODE;

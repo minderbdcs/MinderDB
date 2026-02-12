@@ -1,0 +1,1 @@
+update issn set wh_id = 'XD', issn_status = 'DX'  where ssn_id in (select ssn_id from pick_item_detail where pick_detail_status = 'DX');

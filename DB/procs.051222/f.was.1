@@ -1,0 +1,14 @@
+/*
+select count(*),issn.prod_id 
+from ssn_hist 
+join issn on issn.ssn_id=ssn_hist.ssn_id 
+where issn.prod_id in ('9320075044480','9320075028886','9320075017965')
+and ssn_hist.trn_date between cast('2006-JAN-19' as timestamp) and cast('2006-JAN-19 23:59:59.9999' as timestamp)
+group by issn.prod_id;
+*/
+select issn.prod_id, ssn_hist.trn_type,sum(ssn_hist.qty)
+from ssn_hist 
+join issn on issn.ssn_id=ssn_hist.ssn_id 
+where issn.prod_id in ('9320075044480','9320075028886','9320075017965')
+and ssn_hist.trn_date between cast('2006-JAN-19' as timestamp) and cast('2006-JAN-19 23:59:59.9999' as timestamp)
+group by issn.prod_id, ssn_hist.trn_type;

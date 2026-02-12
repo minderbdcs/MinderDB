@@ -1,0 +1,9 @@
+/*
+for apcd dont want to allow printer PD to do despatch labels
+so make these an ET status
+
+add update the options record for the printer and prn_type description2 to have DISABLED
+then in add to print_requests set the prn_status as ET when not allowed
+
+note than any options records for printers need the description2 cleared
+*/

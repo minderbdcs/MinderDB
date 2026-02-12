@@ -1,0 +1,123 @@
+END ^
+
+CREATE TRIGGER UPDATE_PICK_ITEM_TIME FOR PICK_ITEM 
+ACTIVE BEFORE UPDATE POSITION 20 
+AS
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LEGACY_WH_ID VARCHAR(2);
+DECLARE VARIABLE WK_DUMMY INTEGER;
+DECLARE VARIABLE WK_ISSN_SSN VARCHAR(20);
+DECLARE VARIABLE WK_ISSN_WH CHAR(2);
+DECLARE VARIABLE WK_ISSN_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_ISSN_QTY INTEGER;
+DECLARE VARIABLE WK_REFERENCE VARCHAR(40);
+BEGIN
+   NEW.LAST_UPDATE_DATE = 'NOW';
+  
+   /* if not product NOPROD but a product ( and new status DS and zero qty picked then release back as OP) */
+  IF ((NEW.PROD_ID IS NOT NULL) AND (NEW.PROD_ID <> 'NOPROD')) THEN
+  BEGIN
+     IF (NEW.PICK_LINE_STATUS = 'DS' AND NEW.PICKED_QTY = 0) THEN
+     BEGIN
+        NEW.PICK_LINE_STATUS = 'OP';
+        NEW.DEVICE_ID = NULL;
+        NEW.REASON = '';
+     END
+  END
+/*
+  WK_WH_ID = NEW.WH_ID;
+  SELECT WH_LEGACY_WH_ID FROM WAREHOUSE WHERE WH_ID = :WK_WH_ID INTO :WK_LEGACY_WH_ID;
+  IF (WK_LEGACY_WH_ID IS NOT NULL) THEN
+  BEGIN
+     NEW.WH_ID = :WK_LEGACY_WH_ID;
+  END
+*/
+   /* now if the line is for an ssn
+      and the issn.pick_item matches - ie confirmed
+      then cannot change the ssn */
+   IF (NEW.SSN_ID IS NOT NULL) THEN
+   BEGIN
+      FOR SELECT SSN_ID, WH_ID, LOCN_ID, CURRENT_QTY
+          FROM ISSN
+          WHERE ISSN.PICK_ORDER = NEW.PICK_LABEL_NO
+          INTO :WK_ISSN_SSN, :WK_ISSN_WH, :WK_ISSN_LOCN, :WK_ISSN_QTY
+      DO
+      BEGIN
+         IF (OLD.SSN_ID IS NULL) THEN
+         BEGIN
+            /* allow this */
+            WK_DUMMY = 1;
+         END
+         ELSE
+         BEGIN
+            IF (NEW.SSN_ID <> OLD.SSN_ID) THEN
+            BEGIN
+               /* cannot change the ssn since its confirmed */
+               NEW.SSN_ID = OLD.SSN_ID;
+               NEW.REASON = 'Cannot change the ssn on a confirmed line';
+            END
+         END
+      END
+   END
+   ELSE
+   BEGIN
+      /* new ssn is null */
+      IF (OLD.SSN_ID IS NULL) THEN
+      BEGIN
+         /* allow this */
+         WK_DUMMY = 1;
+      END
+      ELSE
+      BEGIN
+         FOR SELECT SSN_ID, WH_ID, LOCN_ID, CURRENT_QTY
+             FROM ISSN
+             WHERE ISSN.PICK_ORDER = NEW.PICK_LABEL_NO
+             INTO :WK_ISSN_SSN, :WK_ISSN_WH, :WK_ISSN_LOCN, :WK_ISSN_QTY
+         DO
+         BEGIN
+            /* cannot change the ssn since its confirmed */
+            NEW.SSN_ID = OLD.SSN_ID;
+            NEW.REASON = 'Cannot change the ssn on a confirmed line';
+         END
+      END
+   END
+   IF (NEW.PICK_LINE_STATUS = 'CN') THEN
+   BEGIN
+      IF (NEW.SSN_ID IS NOT NULL) THEN
+      BEGIN
+         FOR SELECT SSN_ID, WH_ID, LOCN_ID, CURRENT_QTY
+             FROM ISSN
+             WHERE ISSN.PICK_ORDER = NEW.PICK_LABEL_NO
+             INTO :WK_ISSN_SSN, :WK_ISSN_WH, :WK_ISSN_LOCN, :WK_ISSN_QTY
+         DO
+         BEGIN
+            /* unconfirm current order line */
+            UPDATE ISSN 
+               SET PREV_PREV_PICK_ORDER = PREV_PICK_ORDER,
+                   PREV_PICK_ORDER = PICK_ORDER,
+                   PICK_ORDER = NULL,
+                   PREV_PREV_PACK_ID = PREV_PACK_ID,
+                   PREV_PACK_ID = PACK_ID,
+                   PACK_ID = NULL,
+                   PREV_PREV_DESPATCH_ID = PREV_DESPATCH_ID,
+                   PREV_DESPATCH_ID = DESPATCH_ID,
+                   DESPATCH_ID = NULL 
+             WHERE ISSN.SSN_ID = :WK_ISSN_SSN;
+             WK_REFERENCE = OLD.PICK_ORDER || ' ' || OLD.PICK_LABEL_NO;
+             EXECUTE PROCEDURE ADD_SSN_HIST (:WK_ISSN_WH ,
+                     :WK_ISSN_LOCN ,
+                     :WK_ISSN_SSN ,
+                     '' ,
+                     '' ,
+                     'NOW',
+                     'Unconfirm ISSN on Cancelled Pick Item',
+                     :WK_REFERENCE,
+                     :WK_ISSN_QTY,
+                     '' ,
+                     '' );
+         END
+      END
+   END
+END ^
+
+CREATE TRIGGER SAVE_PICK_ITEM FOR PICK_ITEM 

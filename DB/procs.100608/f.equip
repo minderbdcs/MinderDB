@@ -1,0 +1,2 @@
+alter table sys_equip add locn_id locn_id;
+

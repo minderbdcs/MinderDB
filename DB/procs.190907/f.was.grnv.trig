@@ -1,0 +1,107 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_GRNV FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 42 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_SAVE_DIRECTORY VARCHAR(75);
+DECLARE VARIABLE WK_SAVE_FILENAME VARCHAR(255);
+DECLARE VARIABLE WK_LABEL_LINE    VARCHAR(255);
+DECLARE VARIABLE WK_TRN_DATE      VARCHAR(25);
+DECLARE VARIABLE WK_RESULT        INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF (NEW.TRN_TYPE = 'GRNV') THEN
+      BEGIN
+         WK_SAVE_DIRECTORY = '/data/tmp/';
+         WK_SAVE_FILENAME = WK_SAVE_DIRECTORY || 'GRNVTRAN.log';
+         /* WK_TRN_DATE = MER_YEAR(NEW.TRN_DATE) || VLPAD(MER_MONTH(NEW.TRN_DATE),'0',2) || VLPAD(MER_DAY(NEW.TRN_DATE),'0',2) || VLPAD(MER_HOUR(NEW.TRN_DATE),'0',2) || VLPAD(MER_MINUTE(NEW.TRN_DATE),'0',2) || VLPAD(SEC(NEW.TRN_DATE),'0',2); */
+         WK_TRN_DATE = MER_YEAR(NEW.TRN_DATE) || LPAD(MER_MONTH(NEW.TRN_DATE),2,'0') || LPAD(MER_DAY(NEW.TRN_DATE),2,'0') || LPAD(MER_HOUR(NEW.TRN_DATE),2,'0') || LPAD(MER_MINUTE(NEW.TRN_DATE),2,'0') || LPAD(SEC(NEW.TRN_DATE),2,'0');
+/*
+         WK_LABEL_LINE = NEW.TRN_TYPE  || NEW.TRN_CODE || :WK_TRN_DATE ||
+                VPAD(NEW.OBJECT,' ',30) || 
+                VPAD(NEW.WH_ID,' ',2) || 
+                VPAD(NEW.LOCN_ID,' ',8) || 
+                VPAD(NEW.SUB_LOCN_ID,' ',10) ||
+                VPAD(NEW.REFERENCE,' ',40) || 
+                VLPAD(NEW.QTY,'0',10) || 
+                VPAD(NEW.PERSON_ID,' ',8) || 
+                VPAD(NEW.DEVICE_ID,' ',2) ||
+                VPAD(NEW.INPUT_SOURCE,' ',9);
+*/
+         WK_LABEL_LINE = NEW.TRN_TYPE  || NEW.TRN_CODE || :WK_TRN_DATE ||
+                RPAD(NEW.OBJECT,     30, ' ') || 
+                RPAD(NEW.WH_ID,       2, ' ') || 
+                RPAD(NEW.LOCN_ID,     8, ' ') || 
+                RPAD(NEW.SUB_LOCN_ID,10, ' ') ||
+                RPAD(NEW.REFERENCE,  40, ' ') ||        
+                /* VLPAD(NEW.QTY,        '0', 10) || */ 
+                LPAD(NEW.QTY,        10, '0') || 
+                RPAD(NEW.PERSON_ID,  10, ' ') || 
+                RPAD(NEW.DEVICE_ID,   2, ' ') ||
+                RPAD(NEW.INPUT_SOURCE,9, ' ');
+
+         WK_RESULT = FILE_WRITELN(WK_SAVE_FILENAME, WK_LABEL_LINE);
+         IF ((NEW.TRN_CODE = 'S') OR 
+             (NEW.TRN_CODE = 'I')) THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_NAMED_SSN_ISSN_GRNV
+            NEW.WH_ID,
+            NEW.LOCN_ID,
+            NEW.OBJECT,
+            NEW.TRN_DATE,
+            NEW.QTY,
+            NEW.SUB_LOCN_ID,    
+            NEW.REFERENCE,    
+            NEW.INPUT_SOURCE,    
+            NEW.RECORD_ID,    
+            NEW.TRN_CODE;    
+         END
+         ELSE
+         BEGIN
+            IF ((NEW.TRN_CODE = 'G') OR 
+                (NEW.TRN_CODE = 'P')) THEN
+            BEGIN 
+               EXECUTE PROCEDURE ADD_SSN_ISSN_GRNV     
+               NEW.WH_ID,
+               NEW.LOCN_ID,
+               NEW.OBJECT,
+               NEW.TRN_DATE,
+               NEW.QTY,
+               NEW.SUB_LOCN_ID,    
+               NEW.REFERENCE,    
+               NEW.INPUT_SOURCE,    
+               NEW.RECORD_ID;    
+            END
+            ELSE
+            BEGIN
+               IF ((NEW.TRN_CODE = 'H') OR 
+                   (NEW.TRN_CODE = 'Q')) THEN
+               BEGIN 
+                  EXECUTE PROCEDURE ADD_SSN_ISSN_GRNV_WEIGHT     
+                  NEW.WH_ID,
+                  NEW.LOCN_ID,
+                  NEW.OBJECT,
+                  NEW.TRN_DATE,
+                  NEW.QTY,
+                  NEW.SUB_LOCN_ID,    
+                  NEW.REFERENCE,    
+                  NEW.INPUT_SOURCE,    
+                  NEW.RECORD_ID;    
+               END
+            END
+         END
+         /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+      END
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

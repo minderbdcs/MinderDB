@@ -1,0 +1,2 @@
+create index pick_item_legacy_wh_idx on pick_item(pi_legacy_wh_name);
+

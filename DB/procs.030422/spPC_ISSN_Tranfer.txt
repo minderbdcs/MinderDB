@@ -1,0 +1,27 @@
+set term ^;
+CREATE PROCEDURE PC_ISSN_TRANSFER (  
+  SSN_ID CHAR(20),
+  TO_WH_ID CHAR(2),
+  TO_LOCN_ID CHAR(10),  
+  UPDATE_SSN CHAR(1)
+)  AS   
+              
+BEGIN   
+   /* Update ISSN */
+   UPDATE ISSN
+   SET WH_ID = :TO_WH_ID,
+       LOCN_ID = :TO_LOCN_ID          
+   WHERE SSN_ID = :SSN_ID;
+
+   /* Update SSN */
+   if (:UPDATE_SSN = 'T') then
+   begin
+     UPDATE SSN
+     SET WH_ID = :TO_WH_ID,
+         PREV_LOCN_ID = LOCN_ID, 
+         LOCN_ID = :TO_LOCN_ID             
+     WHERE SSN_ID = :SSN_ID;
+   end
+   
+END ^
+

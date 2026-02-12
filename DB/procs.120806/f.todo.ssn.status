@@ -1,0 +1,19 @@
+/*
+TABLE = SSN_STATUS 
+This table is designed to hold all Status type data including Hazard status and which has the following fields (again can we prefix all field names with SSN_?):
+
+*SSN_ID
+STATUS_SSN    		-> SSN_STATUS
+STATUS_SSN_DATE   	-> SSN_STATUS_DATE
+STATUS_CODE		-> SSN_STATUS_CODE
+STATUS_CODE_DATE	-> SSN_STATUS_CODE_DATE
+LOAN_STATUS		-> SSN_LOAN_STATUS
+HAZARD_STATUS		-> SSN_HAZARD_STATUS
+HAZARD_WARNING	-> SSN_HAZARD_WARNING
+SSN_INOPERABLE  VALUE_TF 	-> New Field for Museum Object - e.g. 'T' = weapon has been made inoperable. I do not wish to mix with OTHER3 fields
+OBJECT_STATUS   	-> SSN_OBJECT_STATUS 
+Need to use for Museum reporting where Object is Accessioned (i.e. part of Collection) or DeAccessioned
+SSN_STATUS_LAST_UPDTD_BY
+SSN_STATUS_LAST_UPDTD_DATE
+SSN_STATUS_LAST_UPDTD_DEVICE  /* length = 28 characters */
+*/

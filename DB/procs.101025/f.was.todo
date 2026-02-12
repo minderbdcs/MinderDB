@@ -1,0 +1,9 @@
+in import of sales orders
+components have a pick_item.exported_despatch of 'K'
+
+kits must have 
+	a pick_item_detail 
+	and pick_item.picked_qty = pick_item.pick_order_qty
+		no ssn is required
+		and a status of 'XD'
+

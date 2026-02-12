@@ -1,0 +1,2 @@
+alter table reports add report_sub_menu code;
+

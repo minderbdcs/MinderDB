@@ -1,0 +1,16 @@
+/*
+pick menu options
+// ",VIEWopen,VIEWORDER,"
+// ",VIEWSLO,"; 
+// ",VIEWORDER2,"
+// ",VIEWISSN,"
+// "CONTINUE,MOVEDESPATCH,"
+// "STATUS,WIP,CANCEL,"
+// "REVDS2PL,"
+*/
+insert into options(group_code,code,description) values('PICK_OPT','VIEW','VIEWopen,VIEWORDER,');
+insert into options(group_code,code,description) values('PICK_OPT','VIEW2','VIEWSLO,VIEWORDER2,');
+insert into options(group_code,code,description) values('PICK_OPT','VIEW3','VIEWISSN,');
+insert into options(group_code,code,description) values('PICK_OPT','CONTINUE','CONTINUE,MOVEDESPATCH,');
+insert into options(group_code,code,description) values('PICK_OPT','ADMIN','STATUS,WIP,CANCEL,REVDS2PL,');
+

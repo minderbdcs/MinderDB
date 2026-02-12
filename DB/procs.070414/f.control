@@ -1,0 +1,2 @@
+alter table control add pick_order_weight_calc char(1) ;
+

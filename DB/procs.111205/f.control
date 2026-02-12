@@ -1,0 +1,3 @@
+alter table control add pick_time_upd_details value_tf;
+update control set pick_time_upd_details = 'T';
+

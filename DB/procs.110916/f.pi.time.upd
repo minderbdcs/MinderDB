@@ -1,0 +1,349 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER UPDATE_PICK_ITEM_TIME FOR PICK_ITEM 
+ACTIVE BEFORE UPDATE POSITION 20 
+AS
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LEGACY_WH_ID VARCHAR(2);
+DECLARE VARIABLE WK_DUMMY INTEGER;
+DECLARE VARIABLE WK_ISSN_SSN VARCHAR(20);
+DECLARE VARIABLE WK_ISSN_WH CHAR(2);
+DECLARE VARIABLE WK_ISSN_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_ISSN_QTY INTEGER;
+DECLARE VARIABLE WK_REFERENCE VARCHAR(255);
+DECLARE VARIABLE WK_COMPANY_ID VARCHAR(20);
+DECLARE VARIABLE WK_HELD_STATUS VARCHAR(40);
+DECLARE VARIABLE WK_SO_COUNTRY  VARCHAR(35);
+DECLARE VARIABLE WK_SO_TYPE     VARCHAR(2);
+DECLARE VARIABLE WK_CN_TAX_RATE DOUBLE PRECISION ;
+DECLARE VARIABLE WK_PI_PROD_ID  VARCHAR(30) ;
+DECLARE VARIABLE WK_PP_APPLY_TAX CHAR(1) ;
+DECLARE VARIABLE WK_LOG_RESULT INTEGER;
+DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(80);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_DO_PL CHAR(1);
+DECLARE VARIABLE WK_STANDARD_COST DOUBLE PRECISION ;
+BEGIN
+   WK_LOG_FILENAME = '/tmp/update.pi.log';
+   NEW.LAST_UPDATE_DATE = 'NOW';
+  
+   /* if not product NOPROD but a product ( and new status DS and zero qty picked then release back as OP) */
+  IF ((NEW.PROD_ID IS NOT NULL) AND (NEW.PROD_ID <> 'NOPROD')) THEN
+  BEGIN
+     IF (NEW.PICK_LINE_STATUS = 'DS' AND NEW.PICKED_QTY = 0) THEN
+     BEGIN
+        /* 260710 - check whether have a held status
+        if do then use that status  rather than OP 
+        also dont clear the reason field */
+        WK_COMPANY_ID = NULL;
+        SELECT COMPANY_ID 
+        FROM PICK_ORDER
+        WHERE PICK_ORDER = NEW.PICK_ORDER
+        INTO :WK_COMPANY_ID;
+        WK_HELD_STATUS = NULL;
+        SELECT DESCRIPTION
+        FROM OPTIONS
+        WHERE GROUP_CODE = 'CMPPKHELD'
+        AND CODE = :WK_COMPANY_ID
+        INTO :WK_HELD_STATUS;
+        IF (WK_HELD_STATUS IS NULL) THEN
+        BEGIN
+           NEW.PICK_LINE_STATUS = 'OP';
+        END
+        ELSE
+        BEGIN
+           NEW.PICK_LINE_STATUS = :WK_HELD_STATUS;
+        END
+        NEW.DEVICE_ID = NULL;
+        /* NEW.REASON = ''; */
+     END
+  END
+/*
+  WK_WH_ID = NEW.WH_ID;
+  SELECT WH_LEGACY_WH_ID FROM WAREHOUSE WHERE WH_ID = :WK_WH_ID INTO :WK_LEGACY_WH_ID;
+  IF (WK_LEGACY_WH_ID IS NOT NULL) THEN
+  BEGIN
+     NEW.WH_ID = :WK_LEGACY_WH_ID;
+  END
+*/
+   /* now if the line is for an ssn
+      and the issn.pick_item matches - ie confirmed
+      then cannot change the ssn */
+   IF (NEW.SSN_ID IS NOT NULL) THEN
+   BEGIN
+      FOR SELECT SSN_ID, WH_ID, LOCN_ID, CURRENT_QTY
+          FROM ISSN
+          WHERE ISSN.PICK_ORDER = NEW.PICK_LABEL_NO
+          INTO :WK_ISSN_SSN, :WK_ISSN_WH, :WK_ISSN_LOCN, :WK_ISSN_QTY
+      DO
+      BEGIN
+         IF (OLD.SSN_ID IS NULL) THEN
+         BEGIN
+            /* allow this */
+            WK_DUMMY = 1;
+         END
+         ELSE
+         BEGIN
+            IF (NEW.SSN_ID <> OLD.SSN_ID) THEN
+            BEGIN
+               /* cannot change the ssn since its confirmed */
+               NEW.SSN_ID = OLD.SSN_ID;
+               NEW.REASON = 'Cannot change the ssn on a confirmed line';
+            END
+         END
+      END
+   END
+   ELSE
+   BEGIN
+      /* new ssn is null */
+      IF (OLD.SSN_ID IS NULL) THEN
+      BEGIN
+         /* allow this */
+         WK_DUMMY = 1;
+      END
+      ELSE
+      BEGIN
+         FOR SELECT SSN_ID, WH_ID, LOCN_ID, CURRENT_QTY
+             FROM ISSN
+             WHERE ISSN.PICK_ORDER = NEW.PICK_LABEL_NO
+             INTO :WK_ISSN_SSN, :WK_ISSN_WH, :WK_ISSN_LOCN, :WK_ISSN_QTY
+         DO
+         BEGIN
+            /* cannot change the ssn since its confirmed */
+            NEW.SSN_ID = OLD.SSN_ID;
+            NEW.REASON = 'Cannot change the ssn on a confirmed line';
+         END
+      END
+   END
+   IF (NEW.PICK_LINE_STATUS = 'CN') THEN
+   BEGIN
+      IF (NEW.SSN_ID IS NOT NULL) THEN
+      BEGIN
+         FOR SELECT SSN_ID, WH_ID, LOCN_ID, CURRENT_QTY
+             FROM ISSN
+             WHERE ISSN.PICK_ORDER = NEW.PICK_LABEL_NO
+             INTO :WK_ISSN_SSN, :WK_ISSN_WH, :WK_ISSN_LOCN, :WK_ISSN_QTY
+         DO
+         BEGIN
+            /* unconfirm current order line */
+            UPDATE ISSN 
+               SET PREV_PREV_PICK_ORDER = PREV_PICK_ORDER,
+                   PREV_PICK_ORDER = PICK_ORDER,
+                   PICK_ORDER = NULL,
+                   PREV_PREV_PACK_ID = PREV_PACK_ID,
+                   PREV_PACK_ID = PACK_ID,
+                   PACK_ID = NULL,
+                   PREV_PREV_DESPATCH_ID = PREV_DESPATCH_ID,
+                   PREV_DESPATCH_ID = DESPATCH_ID,
+                   DESPATCH_ID = NULL 
+             WHERE ISSN.SSN_ID = :WK_ISSN_SSN;
+             WK_REFERENCE = OLD.PICK_ORDER || ' ' || OLD.PICK_LABEL_NO;
+             EXECUTE PROCEDURE ADD_SSN_HIST (:WK_ISSN_WH ,
+                     :WK_ISSN_LOCN ,
+                     :WK_ISSN_SSN ,
+                     '' ,
+                     '' ,
+                     'NOW',
+                     'Unconfirm ISSN on Cancelled Pick Item',
+                     :WK_REFERENCE,
+                     :WK_ISSN_QTY,
+                     '' ,
+                     '' );
+         END
+      END
+   END
+   IF (NEW.PICK_ORDER_LINE_NO <> OLD.PICK_ORDER_LINE_NO) THEN
+   BEGIN
+      /* NEW.PREV_PREV_PICK_ORDER_LINE_NO = NEW.PREV_PICK_ORDER_LINE_NO;
+      NEW.PREV_PICK_ORDER_LINE_NO = OLD.PICK_ORDER_LINE_NO; */
+      /* stop changing the line no */
+      NEW.PICK_ORDER_LINE_NO = OLD.PICK_ORDER_LINE_NO;
+   END
+   IF (NEW.PROD_ID <> OLD.PROD_ID) THEN
+   BEGIN
+      NEW.PREV_PREV_PROD_ID = NEW.PREV_PROD_ID;
+      NEW.PREV_PROD_ID = OLD.PROD_ID ;
+   END
+   IF (NEW.SSN_ID <> OLD.SSN_ID ) THEN
+   BEGIN
+      NEW.PREV_PREV_SSN_ID = NEW.PREV_SSN_ID ;
+      NEW.PREV_SSN_ID = OLD.SSN_ID ;
+   END
+   /* IF ((NEW.PICK_LINE_STATUS IS NULL) OR (NEW.PICK_LINE_STATUS IN ('UC','CF','OP'))) THEN */
+   BEGIN
+      IF (NEW.DISCOUNT IS NULL) THEN
+      BEGIN
+         NEW.DISCOUNT = 0;
+      END
+      /* now set the gst rate */
+      /* SELECT D_COUNTRY, PICK_ORDER_TYPE */
+      SELECT P_COUNTRY, PICK_ORDER_TYPE 
+      FROM PICK_ORDER
+      WHERE PICK_ORDER = NEW.PICK_ORDER
+      INTO :WK_SO_COUNTRY, :WK_SO_TYPE;
+      IF (WK_SO_COUNTRY IS NULL) THEN
+      BEGIN
+         WK_SO_COUNTRY = '';
+      END
+      WK_SO_COUNTRY = UPPER(WK_SO_COUNTRY);
+      IF (WK_SO_TYPE IS NULL) THEN
+      BEGIN
+         WK_SO_TYPE = 'SO';
+      END
+      IF (WK_SO_COUNTRY = '' OR WK_SO_COUNTRY = 'AUSTRALIA' OR WK_SO_COUNTRY = 'AU') THEN
+      BEGIN
+         SELECT DEFAULT_GST_RATE 
+         FROM CONTROL
+         INTO :WK_CN_TAX_RATE;
+         IF (WK_CN_TAX_RATE IS NULL) THEN
+         BEGIN
+            WK_CN_TAX_RATE = 0;
+         END
+         WK_PI_PROD_ID = NULL;
+         IF (NEW.PROD_ID IS NOT NULL) THEN
+         BEGIN
+            WK_PI_PROD_ID = NEW.PROD_ID;
+            IF (WK_PI_PROD_ID = '') THEN
+            BEGIN
+               WK_PI_PROD_ID = NULL;
+            END
+         END
+         IF (WK_PI_PROD_ID IS NULL) THEN
+         BEGIN
+            SELECT FIRST 1 PROD_ID 
+            FROM ISSN
+            WHERE SSN_ID = NEW.SSN_ID
+            OR    ORIGINAL_SSN = NEW.SSN_ID
+            INTO :WK_PI_PROD_ID;
+         END
+         IF (WK_PI_PROD_ID = '') THEN
+         BEGIN
+            WK_PI_PROD_ID = NULL;
+         END
+         IF (WK_PI_PROD_ID IS NULL) THEN
+         BEGIN
+            WK_PP_APPLY_TAX = 'T';
+         END
+         ELSE
+         BEGIN
+            SELECT TAX_APPLICABLE
+            FROM PROD_PROFILE
+            WHERE PROD_ID = :WK_PI_PROD_ID
+            INTO :WK_PP_APPLY_TAX;
+         END
+         IF (WK_PP_APPLY_TAX IS NULL) THEN
+         BEGIN
+            WK_PP_APPLY_TAX = 'T';
+         END
+         IF (WK_PP_APPLY_TAX = 'T') THEN
+         BEGIN
+            NEW.TAX_RATE = WK_CN_TAX_RATE;
+         END
+         ELSE
+         BEGIN
+            NEW.TAX_RATE = 0;
+         END
+      END
+      ELSE
+      BEGIN
+         /* not au country */
+         /* IF (NEW.TAX_RATE IS NULL) THEN */
+            NEW.TAX_RATE = 0;
+      END
+      IF (WK_SO_TYPE = 'SO') THEN
+      BEGIN
+         IF (NEW.SALE_PRICE IS NULL) THEN
+         BEGIN
+            NEW.SALE_PRICE = 0;
+         END
+         /* calc the line total */
+         /* NEW.LINE_TOTAL = COALESCE(NEW.SALE_PRICE, 0.00) * COALESCE(NEW.PICK_ORDER_QTY,0) * (1 - COALESCE(NEW.DISCOUNT, 0.00)/100) ; */
+         /* use floor to ensure only 2 digits */
+         /* NEW.LINE_TOTAL = FLOOR(COALESCE(NEW.SALE_PRICE, 0.00) * COALESCE(NEW.PICK_ORDER_QTY,0) * (1 - COALESCE(NEW.DISCOUNT, 0.00)/100) * 100) / 100 ; */
+         /* use round for rounding */
+         NEW.LINE_TOTAL = ROUND(COALESCE(NEW.SALE_PRICE, 0.00) * COALESCE(NEW.PICK_ORDER_QTY,0) * (1 - COALESCE(NEW.DISCOUNT, 0.00)/100), 2) ; 
+
+         WK_STANDARD_COST = 0;
+         IF (NEW.PROD_ID IS NOT NULL) THEN
+         BEGIN
+            SELECT STANDARD_COST 
+            FROM PROD_PROFILE
+            WHERE PROD_ID = NEW.PROD_ID
+            INTO :WK_STANDARD_COST;
+         END
+         ELSE
+         BEGIN
+            /*  get from issn the prod if it has one */
+            WK_PI_PROD_ID = NULL;
+            SELECT PROD_ID 
+            FROM ISSN 
+            WHERE SSN_ID = NEW.SSN_ID
+            INTO :WK_PI_PROD_ID;
+            IF (WK_PI_PROD_ID IS NULL) THEN
+            BEGIN
+               /* if no prod then */
+               /* have to use the ssns  purchase cost  */
+               SELECT PURCHASE_PRICE
+               FROM SSN
+               WHERE SSN_ID = NEW.SSN_ID
+               INTO :WK_STANDARD_COST;
+            END
+            ELSE
+            BEGIN
+               /* then get from the prod_profile */
+               SELECT STANDARD_COST 
+               FROM PROD_PROFILE
+               WHERE PROD_ID = :WK_PI_PROD_ID
+               INTO :WK_STANDARD_COST;
+            END
+         END
+         NEW.LINE_COST_AMOUNT = ROUND(COALESCE(:WK_STANDARD_COST, 0.00) * COALESCE(NEW.PICK_ORDER_QTY,0)  , 2) ; 
+         /* if a product line use the cost in the prod profile
+            if an ssn line use the cost in the order */
+         /* calc the gst amount */
+         /* NEW.TAX_AMOUNT = NEW.LINE_TOTAL * ( COALESCE(NEW.TAX_RATE,0.00)/100); */
+         /* NEW.TAX_AMOUNT = FLOOR(NEW.LINE_TOTAL * ( COALESCE(NEW.TAX_RATE,0.00)/100) * 100) / 100; */
+         NEW.TAX_AMOUNT = ROUND(NEW.LINE_TOTAL * ( COALESCE(NEW.TAX_RATE,0.00)/100) , 2); 
+      END
+   END
+   BEGIN
+      /*
+      if  all lines DX or DC or HD or AS or CN
+      then update all the pick_location to be 'DC' that were 'DS'
+      */
+      WK_DO_PL = 'F';
+      IF (NEW.PICK_LINE_STATUS IS NOT NULL) THEN
+      BEGIN
+         IF (POS(',DX,DC,HD,AS,CN,CR,DI,',NEW.PICK_LINE_STATUS,0,1) > -1) THEN
+         BEGIN
+            WK_FOUND = 0;
+            SELECT FIRST 1 1
+            FROM PICK_ITEM P2
+            WHERE P2.PICK_ORDER = NEW.PICK_ORDER
+            AND P2.PICK_LABEL_NO <> NEW.PICK_LABEL_NO
+            AND  (POS(',DX,DC,HD,AS,CN,CR,DI,',P2.PICK_LINE_STATUS,0,1) =  -1) 
+            INTO :WK_FOUND;
+            IF (WK_FOUND IS NULL) THEN
+            BEGIN
+               WK_FOUND = 0;
+            END
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               WK_DO_PL = 'T';
+               UPDATE PICK_LOCATION
+               SET PICK_LOCATION_STATUS = 'DC'
+               WHERE PICK_ORDER = NEW.PICK_ORDER
+               AND PICK_LOCATION_STATUS IN ( 'DS','OP');
+            END
+         END
+      END
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

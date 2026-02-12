@@ -1,0 +1,2 @@
+update control set  max_pick_lines = 500;
+

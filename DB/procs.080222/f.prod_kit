@@ -1,0 +1,16 @@
+
+CREATE DOMAIN KIT_QTY AS DOUBLE PRECISION;
+
+alter table product_kit add save_qty integer;
+update product_kit set save_qty = prod_qty;
+commit;
+alter table product_kit drop prod_qty;
+commit;
+alter table product_kit add prod_qty kit_qty;
+update product_kit set prod_qty = save_qty;
+commit;
+alter table product_kit drop save_qty;
+
+/* alter table product_kit alter column prod_qty type kit_qty; */
+
+

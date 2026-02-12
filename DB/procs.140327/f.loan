@@ -1,0 +1,4 @@
+create domain job_no varchar(25);
+
+alter table loan_order alter job_no type job_no;
+

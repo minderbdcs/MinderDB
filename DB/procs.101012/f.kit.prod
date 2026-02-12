@@ -1,0 +1,2 @@
+alter table product_kit add kit_line_no integer;
+alter table product_kit add total_lines integer;

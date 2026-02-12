@@ -1,0 +1,18 @@
+ALTER TABLE SSN_GROUP
+  ADD FIELD41                   FIELD, 
+  ADD FIELD42                   FIELD, 
+  ADD FIELD43                   FIELD, 
+  ADD FIELD44                   FIELD, 
+  ADD FIELD45                   FIELD, 
+
+  ADD DD_OTHER41                TRUEFALSE,
+  ADD DD_OTHER42                TRUEFALSE,
+  ADD DD_OTHER43                TRUEFALSE,
+  ADD DD_OTHER44                TRUEFALSE,
+  ADD DD_OTHER45                TRUEFALSE,
+
+  ADD RM_OTHER41                TRUEFALSE,
+  ADD RM_OTHER42                TRUEFALSE,
+  ADD RM_OTHER43                TRUEFALSE,
+  ADD RM_OTHER44                TRUEFALSE,
+  ADD RM_OTHER45                TRUEFALSE;

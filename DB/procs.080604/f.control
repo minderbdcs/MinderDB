@@ -1,0 +1,3 @@
+alter table control add pick_detail_dsdx_status code;
+update control set pick_detail_dsdx_status = 'DX';
+

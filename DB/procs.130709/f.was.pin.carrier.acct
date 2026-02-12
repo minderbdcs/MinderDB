@@ -1,0 +1,7 @@
+ insert into carrier_service(carrier_id,service_type,description,service_service_code,cs_label_type,cs_manifest_name,service_account) values('CPLEASE','X31','Jiffy X31','X31','CPLEASE',null,'112899570');
+ insert into carrier_service(carrier_id,service_type,description,service_service_code,cs_label_type,cs_manifest_name,service_account) values('CPLEASE','X33','Jiffy X33','X33','CPLEASE',null,'112899570');
+ insert into carrier_service(carrier_id,service_type,description,service_service_code,cs_label_type,cs_manifest_name,service_account) values('CPLEASE','X35','Jiffy X35','X35','CPLEASE',null,'112899570');
+ insert into carrier_service(carrier_id,service_type,description,service_service_code,cs_label_type,cs_manifest_name,service_account) values('CPLEASE','X31','Rewards X31','X31','CPLEASE',null,'112899596');
+ insert into carrier_service(carrier_id,service_type,description,service_service_code,cs_label_type,cs_manifest_name,service_account) values('CPLEASE','X33','Rewards X33','X35','CPLEASE',null,'112899596');
+ insert into carrier_service(carrier_id,service_type,description,service_service_code,cs_label_type,cs_manifest_name,service_account) values('CPLEASE','X35','Rewards X35','X35','CPLEASE',null,'112899596');
+

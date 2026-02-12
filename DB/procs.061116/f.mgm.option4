@@ -1,0 +1,7 @@
+
+insert into options(group_code, code,description) values('REPLENPRIS','HIGHEST','Highest');
+insert into options(group_code, code,description) values('REPLENPRIS','NORMAL','Next');
+insert into options(group_code, code,description) values('REPLENPRI','HIGHEST|START','0005');
+insert into options(group_code, code,description) values('REPLENPRI','HIGHEST|END','0009');
+insert into options(group_code, code,description) values('REPLENPRI','NORMAL|START','0010');
+insert into options(group_code, code,description) values('REPLENPRI','NORMAL|END','9999');

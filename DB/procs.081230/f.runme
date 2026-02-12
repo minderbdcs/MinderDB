@@ -1,0 +1,14 @@
+/* turn update to location type off */
+in f.nilt.off;
+/* change the 2 triggers */
+in f.nilt.trig;
+/* now can change the locn type */
+in f.locn;
+/* now put the pc_nilt back */
+in f.nilt.back;
+/* change the 2 triggers */
+in f.nilt.trig;
+/* change the version */
+in f.control.sql;
+
+

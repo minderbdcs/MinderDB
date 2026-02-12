@@ -1,0 +1,2 @@
+
+insert into options(group_code,code,description) values('REF_CODE','PINV_SHIP','PICK_INVOICE.SHIPPING_METHOD');

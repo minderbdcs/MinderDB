@@ -1,0 +1,430 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+
+CREATE TRIGGER RUN_TRANSACTION_PKUA FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 50 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_PI_LABEL VARCHAR(7);
+DECLARE VARIABLE WK_PI_SSN VARCHAR(20);
+DECLARE VARIABLE WK_PI_PROD VARCHAR(30);
+DECLARE VARIABLE WK_PI_ORDER PICK_ORDER;
+DECLARE VARIABLE WK_PI_WH CHAR(2);
+DECLARE VARIABLE WK_PI_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_PI_LASTLOCN VARCHAR(10);
+DECLARE VARIABLE WK_PI_DESP_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_PI_QTY INTEGER;
+DECLARE VARIABLE WK_PI_STATUS CHAR(2);
+DECLARE VARIABLE WK_IS_STATUS CHAR(2);
+DECLARE VARIABLE WK_DIRECTORY VARCHAR(80);
+DECLARE VARIABLE WK_FILENAME VARCHAR(80);
+DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(80);
+DECLARE VARIABLE WK_LABEL_LINE VARCHAR(200);
+DECLARE VARIABLE WK_RESULT INTEGER;
+DECLARE VARIABLE WK_LOG_RESULT INTEGER;
+DECLARE VARIABLE WK_PROD_SSN VARCHAR(20);
+DECLARE VARIABLE WK_DO_PKUA CHAR(1);
+DECLARE VARIABLE WK_PI_OVER_SIZED CHAR(1);
+DECLARE VARIABLE WK_LI_LOCN_SEQ DECIMAL(7,3);
+DECLARE VARIABLE WK_LOG VARCHAR(100);
+DECLARE VARIABLE WK_DATE VARCHAR(30);
+DECLARE VARIABLE WK_SESS_LAST_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_SESS_LAST_LOCN_SEQ DECIMAL(7,3);
+DECLARE VARIABLE WK_SESS_LAST_DIRECTION VARCHAR(1);
+DECLARE VARIABLE WK_SESS_WH_ID VARCHAR(2);
+DECLARE VARIABLE WK_SESS_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_PROD_SIZE_TYPE VARCHAR(40);
+DECLARE VARIABLE WK_PO_WH_ID VARCHAR(2);
+DECLARE VARIABLE WK_PO_COMPANY_ID VARCHAR(20);
+DECLARE VARIABLE WK_CN_SEPERATE_ZONE VARCHAR(1);
+DECLARE VARIABLE WK_CN_ALLOWED_STATUS CODE;
+DECLARE VARIABLE WK_PO_ZONE_C VARCHAR(10);
+DECLARE VARIABLE WK_PO_ALTERNATE_COMPANYS COMPANY_GROUP;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKUA') THEN
+  BEGIN
+     WK_DEVICE = NEW.WH_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_LOG_FILENAME = '/data/tmp/pkua.log';
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'Start PKUA'); 
+     /*
+         This transaction updates the pick_item to the 
+         current location for the 1st issn possible
+     */
+
+      /* clear devices file */
+   /*
+    no change to pick_location
+         WK_RESULT = FILE_WRITELN(WK_FILENAME, 'DELETE FROM PICK_LOCATIONS'); 
+   */
+   /*               WHERE PICK_LINE_STATUS IN ('AL', 'PG', 'PL') */
+      /*          WHERE PICK_LINE_STATUS IN ('AL', 'PG' ) */
+       WK_CN_SEPERATE_ZONE = 'F';
+       WK_CN_ALLOWED_STATUS = ',,';
+      SELECT PICK_RESTRICT_BY_ZONE , PICK_IMPORT_SSN_STATUS
+      FROM CONTROL INTO :WK_CN_SEPERATE_ZONE, :WK_CN_ALLOWED_STATUS;
+      IF (WK_CN_SEPERATE_ZONE IS NULL) THEN
+      BEGIN
+         WK_CN_SEPERATE_ZONE = 'F';
+      END
+      IF (WK_CN_ALLOWED_STATUS IS NULL) THEN
+      BEGIN
+         WK_CN_ALLOWED_STATUS = ',';
+      END
+      WK_CN_ALLOWED_STATUS = WK_CN_ALLOWED_STATUS || 'RS,AL,';
+      FOR 
+         SELECT PICK_LABEL_NO, 
+                PROD_ID,
+                SSN_ID,
+                PICK_LINE_STATUS,
+                DESPATCH_LOCATION,
+                PICK_ORDER,
+                OVER_SIZED
+                FROM PICK_ITEM
+                WHERE PICK_LINE_STATUS IN ('AL', 'PG' , 'PL', 'Al', 'Pg','Pl')
+                  AND DEVICE_ID = :WK_DEVICE
+                  AND COALESCE(PICKED_QTY, 0) < PICK_ORDER_QTY
+                INTO :WK_PI_LABEL, :WK_PI_PROD, :WK_PI_SSN, :WK_PI_STATUS, :WK_PI_DESP_LOCN, :WK_PI_ORDER,:WK_PI_OVER_SIZED
+      DO
+      BEGIN
+         WK_LOG = 'Got label ' || :WK_PI_LABEL ;
+         WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_LOG); 
+           /* check whether order allows pkua */
+         SELECT COMPANY_ID, WH_ID ,ZONE_C ,ALTERNATE_COMPANYS
+           FROM PICK_ORDER 
+           WHERE PICK_ORDER.PICK_ORDER = :WK_PI_ORDER
+           INTO :WK_PO_COMPANY_ID, :WK_PO_WH_ID, :WK_PO_ZONE_C, :WK_PO_ALTERNATE_COMPANYS ;
+         IF (WK_PO_COMPANY_ID IS NULL) THEN
+         BEGIN
+            WK_PO_COMPANY_ID = '';
+         END
+         IF (WK_PO_COMPANY_ID = '') THEN
+         BEGIN
+            WK_PO_COMPANY_ID = 'ALL';
+         END
+         IF (WK_PO_ZONE_C IS NULL) THEN
+         BEGIN
+            WK_PO_ZONE_C = '';
+         END
+         IF (WK_PO_ZONE_C = '') THEN
+         BEGIN
+            WK_PO_ZONE_C = 'ALL';
+         END
+         IF (WK_PO_ZONE_C = 'AZ') THEN
+         BEGIN
+            WK_PO_ZONE_C = 'ALL';
+         END
+         WK_PO_ZONE_C = 'ALL'; /* forget specified zone */
+         IF (WK_PO_ALTERNATE_COMPANYS = '') THEN
+         BEGIN
+            WK_PO_ALTERNATE_COMPANYS = NULL;
+         END
+         IF (WK_PO_ALTERNATE_COMPANYS IS NULL) THEN
+         BEGIN
+            WK_PO_ALTERNATE_COMPANYS = WK_PO_COMPANY_ID;
+         END
+         WK_DO_PKUA = 'U';
+         SELECT OPTIONS.DESCRIPTION
+           FROM PICK_ORDER 
+           JOIN OPTIONS ON OPTIONS.GROUP_CODE = 'CMPPKUA'
+           AND OPTIONS.CODE = (PICK_ORDER.COMPANY_ID || '|' || PICK_ORDER.P_COUNTRY)
+           WHERE PICK_ORDER.PICK_ORDER = :WK_PI_ORDER
+           INTO :WK_DO_PKUA;
+         IF (WK_DO_PKUA IS NULL) THEN
+         BEGIN
+            WK_DO_PKUA = 'U';
+         END
+         IF ((WK_DO_PKUA = 'T' AND WK_PI_OVER_SIZED = 'T')
+             OR (WK_DO_PKUA = 'U')) THEN
+         BEGIN
+   /*
+    must get
+                  WH_ID,
+                  LOCN_ID,
+                  QTY_AVAIL,
+                  ISSN_STATUS
+   */
+           WK_PI_WH = '';
+           WK_PI_LOCN = '';
+           WK_PI_LASTLOCN = '';
+           WK_PI_QTY = 0;
+           /* WK_PI_STATUS = ''; */
+           IF (WK_PI_SSN IS NULL) THEN
+           BEGIN
+              /* a product */
+              WK_SESS_LAST_LOCN = '';
+              SELECT DESCRIPTION FROM SESSION 
+              WHERE DEVICE_ID = :WK_DEVICE
+              AND   CODE = 'picklocation'
+              INTO :WK_SESS_LAST_LOCN;
+              IF (WK_SESS_LAST_LOCN IS NULL) THEN
+              BEGIN
+                 WK_SESS_LAST_LOCN = '';
+              END
+              WK_SESS_LAST_DIRECTION = 'A';
+              SELECT DESCRIPTION FROM SESSION 
+              WHERE DEVICE_ID = :WK_DEVICE
+              AND   CODE = 'CURRENT_PICK_DIR'
+              INTO :WK_SESS_LAST_DIRECTION;
+              IF (WK_SESS_LAST_DIRECTION IS NULL) THEN
+              BEGIN
+                 WK_SESS_LAST_DIRECTION = 'A';
+              END
+              IF (WK_SESS_LAST_DIRECTION = '') THEN
+              BEGIN
+                 WK_SESS_LAST_DIRECTION = 'A';
+              END
+         WK_LOG = 'Got last_locn ' || :WK_SESS_LAST_LOCN  || ' Dir ' || :WK_SESS_LAST_DIRECTION;
+         WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_LOG); 
+              WK_PROD_SIZE_TYPE = '';
+              SELECT SIZE_TYPE
+              FROM PROD_PROFILE
+              WHERE PROD_ID = :WK_PI_PROD 
+              AND COMPANY_ID = :WK_PO_COMPANY_ID
+              INTO :WK_PROD_SIZE_TYPE;
+              IF (WK_PROD_SIZE_TYPE IS NULL) THEN
+              BEGIN
+                 WK_PROD_SIZE_TYPE = '';
+              END
+              /* IF (WK_SESS_LAST_LOCN > '') THEN */ /* - this stops this running until after a PKOL */
+              IF (WK_SESS_LAST_DIRECTION = 'A') THEN
+              BEGIN
+
+                 WK_SESS_LAST_LOCN_SEQ = 0;
+                 WK_SESS_WH_ID = SUBSTR(WK_SESS_LAST_LOCN,1,2);
+                 WK_SESS_LOCN_ID = SUBSTR(WK_SESS_LAST_LOCN,3,10);
+                 SELECT LOCN_SEQ FROM LOCATION 
+                 WHERE WH_ID  = :WK_SESS_WH_ID
+                 AND LOCN_ID = :WK_SESS_LOCN_ID
+                 INTO :WK_SESS_LAST_LOCN_SEQ;
+                 IF (WK_SESS_LAST_LOCN_SEQ IS NULL) THEN
+                 BEGIN
+                    WK_SESS_LAST_LOCN_SEQ = 0;
+                 END
+         WK_LOG = 'Got last_locn seq ' || :WK_SESS_LAST_LOCN_SEQ   ;
+         WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_LOG); 
+                 IF (WK_PROD_SIZE_TYPE = '') THEN
+                 BEGIN
+                    /* use only this product */
+                    /*   AND (ISSN.WH_ID < 'X' OR ISSN.WH_ID >'X~') AND ISSN.ISSN_STATUS IN ('RS','AL','ST','PA') */
+                    IF (WK_PO_ZONE_C = 'ALL') THEN
+                    BEGIN
+/*                        SELECT FIRST 1 ISSN.WH_ID, ISSN.LOCN_ID, ISSN.CURRENT_QTY, ISSN.ISSN_STATUS, ISSN.SSN_ID, LOCATION.LOCN_SEQ  
+                          ORDER BY LOCATION.LOCN_SEQ, ISSN.WH_ID, ISSN.LOCN_ID  
+                            AND ISSN.ISSN_STATUS IN ('RS','AL','ST','PA') */
+                       FOR
+                          SELECT FIRST 1 ISSN.WH_ID, ISSN.LOCN_ID, ISSN.CURRENT_QTY, ISSN.ISSN_STATUS, ISSN.SSN_ID, COALESCE(LOCATION.LOCN_SEQ, 999999) L3 
+                          FROM ISSN 
+                          LEFT OUTER JOIN LOCATION ON LOCATION.WH_ID = ISSN.WH_ID AND LOCATION.LOCN_ID = ISSN.LOCN_ID
+                          WHERE ISSN.PROD_ID = :WK_PI_PROD 
+                            AND ISSN.WH_ID = :WK_PO_WH_ID
+                            AND (ISSN.COMPANY_ID = :WK_PO_COMPANY_ID 
+                            OR   (V4POS(:WK_PO_ALTERNATE_COMPANYS,ISSN.COMPANY_ID,0,1) > -1))
+                            AND ISSN.CURRENT_QTY > 0
+                            AND (POS(:WK_CN_ALLOWED_STATUS, ISSN.ISSN_STATUS ,0,1 ) > -1)
+                            AND COALESCE(LOCATION.LOCN_SEQ,999999) >= :WK_SESS_LAST_LOCN_SEQ
+                          ORDER BY L3, ISSN.WH_ID, ISSN.LOCN_ID 
+                          INTO :WK_PI_WH, :WK_PI_LOCN, :WK_PI_QTY, :WK_IS_STATUS, :WK_PROD_SSN, :WK_LI_LOCN_SEQ 
+                       DO
+                       BEGIN
+                          /* update status */
+                          IF (WK_PI_LASTLOCN = '') THEN
+                          BEGIN
+                             UPDATE PICK_ITEM SET PICK_LOCATION = :WK_PI_LOCN, 
+                                WH_ID = :WK_PI_WH,
+                                PICK_LOCN_SEQ = :WK_LI_LOCN_SEQ 
+                             WHERE PICK_LABEL_NO = :WK_PI_LABEL; 
+                             WK_PI_LASTLOCN = WK_PI_LOCN;
+         WK_LOG = 'Got last pi_lastlocn ' || :WK_PI_LASTLOCN   ;
+         WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_LOG); 
+                          END
+                       END
+                    END
+
+                 END
+                 ELSE
+                 BEGIN
+                    /* use the products from this size_type */
+                    /*   AND (ISSN.WH_ID < 'X' OR ISSN.WH_ID >'X~') AND ISSN.ISSN_STATUS IN ('RS','AL','ST','PA') 
+                            AND ISSN.ISSN_STATUS IN ('RS','AL','ST','PA') 
+                          WHERE ISSN.PROD_ID IN (SELECT PROD_ID FROM PROD_PROFILE WHERE SIZE_TYPE = :WK_PROD_SIZE_TYPE AND COMPANY_ID = :WK_PO_COMPANY_ID) 
+                          */
+                    IF (WK_PO_ZONE_C = 'ALL') THEN
+                    BEGIN
+                       FOR
+                          SELECT FIRST 1 ISSN.WH_ID, ISSN.LOCN_ID, ISSN.CURRENT_QTY, ISSN.ISSN_STATUS, ISSN.SSN_ID, COALESCE(LOCATION.LOCN_SEQ, 999999) L3 
+                          FROM ISSN 
+                          LEFT OUTER JOIN LOCATION ON LOCATION.WH_ID = ISSN.WH_ID AND LOCATION.LOCN_ID = ISSN.LOCN_ID
+                          WHERE ISSN.PROD_ID IN (SELECT PROD_ID FROM PROD_PROFILE WHERE SIZE_TYPE = :WK_PROD_SIZE_TYPE AND ( PROD_PROFILE.COMPANY_ID = :WK_PO_COMPANY_ID OR (V4POS(:WK_PO_ALTERNATE_COMPANYS,PROD_PROFILE.COMPANY_ID,0,1) > -1))) 
+                            AND ISSN.WH_ID = :WK_PO_WH_ID
+                            AND (ISSN.COMPANY_ID = :WK_PO_COMPANY_ID 
+                            OR   (V4POS(:WK_PO_ALTERNATE_COMPANYS,ISSN.COMPANY_ID,0,1) > -1))
+                            AND ISSN.CURRENT_QTY > 0
+                            AND (POS(:WK_CN_ALLOWED_STATUS, ISSN.ISSN_STATUS ,0,1 ) > -1)
+                            AND COALESCE(LOCATION.LOCN_SEQ,999999) >= :WK_SESS_LAST_LOCN_SEQ
+                          ORDER BY L3, ISSN.WH_ID, ISSN.LOCN_ID 
+                          INTO :WK_PI_WH, :WK_PI_LOCN, :WK_PI_QTY, :WK_IS_STATUS, :WK_PROD_SSN, :WK_LI_LOCN_SEQ 
+                       DO
+                       BEGIN
+                          /* update status */
+                          IF (WK_PI_LASTLOCN = '') THEN
+                          BEGIN
+                             UPDATE PICK_ITEM SET PICK_LOCATION = :WK_PI_LOCN, 
+                                WH_ID = :WK_PI_WH,
+                                PICK_LOCN_SEQ = :WK_LI_LOCN_SEQ 
+                             WHERE PICK_LABEL_NO = :WK_PI_LABEL; 
+                             WK_PI_LASTLOCN = WK_PI_LOCN;
+         WK_LOG = 'Got sizetype last pi_lastlocn ' || :WK_PI_LASTLOCN   ;
+         WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_LOG); 
+                          END
+                       END
+                    END
+
+                 END
+
+              END
+              IF (WK_PI_LASTLOCN = '') THEN
+              BEGIN
+         WK_LOG = 'Got none found try reverse dir '   ;
+         WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_LOG); 
+                /* none found so try prev direction */
+                /* AND (ISSN.WH_ID < 'X' OR ISSN.WH_ID >'X~') AND ISSN.ISSN_STATUS IN ('RS','AL','ST','PA') */
+                 WK_SESS_LAST_LOCN_SEQ = 999999;
+                 IF (WK_SESS_LAST_DIRECTION = 'A') THEN
+                 BEGIN
+                    WK_SESS_LAST_DIRECTION = 'D';
+                    UPDATE SESSION SET DESCRIPTION = 'D' WHERE CODE = 'CURRENT_PICK_DIR' AND DEVICE_ID = :WK_DEVICE;
+                 END
+                 IF (WK_PO_ZONE_C = 'ALL') THEN
+                 BEGIN
+                    /*   AND ISSN.ISSN_STATUS IN ('RS','AL','ST','PA') */
+                    FOR
+                    SELECT FIRST 1 ISSN.WH_ID, ISSN.LOCN_ID, ISSN.CURRENT_QTY, ISSN.ISSN_STATUS, ISSN.SSN_ID, COALESCE(LOCATION.LOCN_SEQ, 999999) L3
+                    FROM ISSN 
+                    LEFT OUTER JOIN LOCATION ON LOCATION.WH_ID = ISSN.WH_ID AND LOCATION.LOCN_ID = ISSN.LOCN_ID
+                    WHERE ISSN.PROD_ID = :WK_PI_PROD 
+                         AND ISSN.WH_ID = :WK_PO_WH_ID
+                         AND (ISSN.COMPANY_ID = :WK_PO_COMPANY_ID 
+                         OR   (V4POS(:WK_PO_ALTERNATE_COMPANYS,ISSN.COMPANY_ID,0,1) > -1))
+                         AND ISSN.CURRENT_QTY > 0
+                         AND (POS(:WK_CN_ALLOWED_STATUS, ISSN.ISSN_STATUS ,0,1 ) > -1)
+                      AND COALESCE(LOCATION.LOCN_SEQ,999999) <= :WK_SESS_LAST_LOCN_SEQ
+                    ORDER BY L3 DESC, ISSN.WH_ID, ISSN.LOCN_ID 
+                    INTO :WK_PI_WH, :WK_PI_LOCN, :WK_PI_QTY, :WK_IS_STATUS, :WK_PROD_SSN, :WK_LI_LOCN_SEQ 
+                    DO
+                    BEGIN
+                       /* update status */
+                       IF (WK_PI_LASTLOCN = '') THEN
+                       BEGIN
+                          UPDATE PICK_ITEM SET PICK_LOCATION = :WK_PI_LOCN, 
+                             WH_ID = :WK_PI_WH,
+                             PICK_LOCN_SEQ = :WK_LI_LOCN_SEQ 
+                          WHERE PICK_LABEL_NO = :WK_PI_LABEL; 
+                          WK_PI_LASTLOCN = WK_PI_LOCN;
+                       END
+   /*
+    no change to pick_location
+   */
+                    END
+                 END
+
+              END
+              IF (WK_PI_LASTLOCN = '') THEN
+              BEGIN
+                /* none found so try prev direction */
+                /* either came in as A direction and found none A
+                   tried D and found none */
+                /* came in as D and found none D
+                   so want to try A */
+                 IF (WK_SESS_LAST_DIRECTION = 'D') THEN
+                 BEGIN
+                    WK_SESS_LAST_DIRECTION = 'A';
+                    UPDATE SESSION SET DESCRIPTION = 'A' WHERE CODE = 'CURRENT_PICK_DIR' AND DEVICE_ID = :WK_DEVICE;
+                 END
+                 WK_SESS_LAST_LOCN_SEQ = 0;
+                 WK_SESS_WH_ID = SUBSTR(WK_SESS_LAST_LOCN,1,2);
+                 WK_SESS_LOCN_ID = SUBSTR(WK_SESS_LAST_LOCN,3,10);
+                 SELECT LOCN_SEQ FROM LOCATION 
+                 WHERE WH_ID  = :WK_SESS_WH_ID
+                 AND LOCN_ID = :WK_SESS_LOCN_ID
+                 INTO :WK_SESS_LAST_LOCN_SEQ;
+                 IF (WK_SESS_LAST_LOCN_SEQ IS NULL) THEN
+                 BEGIN
+                    WK_SESS_LAST_LOCN_SEQ = 0;
+                 END
+                 BEGIN
+                    /* use only this product */
+                    /*   AND (ISSN.WH_ID < 'X' OR ISSN.WH_ID >'X~') AND ISSN.ISSN_STATUS IN ('RS','AL','ST','PA') 
+                            AND ISSN.ISSN_STATUS IN ('RS','AL','ST','PA') */
+                    IF (WK_PO_ZONE_C = 'ALL') THEN
+                    BEGIN
+                       FOR
+                          SELECT FIRST 1 ISSN.WH_ID, ISSN.LOCN_ID, ISSN.CURRENT_QTY, ISSN.ISSN_STATUS, ISSN.SSN_ID, COALESCE(LOCATION.LOCN_SEQ, 999999) L3 
+                          FROM ISSN 
+                          LEFT OUTER JOIN LOCATION ON LOCATION.WH_ID = ISSN.WH_ID AND LOCATION.LOCN_ID = ISSN.LOCN_ID
+                          WHERE ISSN.PROD_ID = :WK_PI_PROD 
+                            AND ISSN.WH_ID = :WK_PO_WH_ID
+                            AND (ISSN.COMPANY_ID = :WK_PO_COMPANY_ID 
+                            OR   (V4POS(:WK_PO_ALTERNATE_COMPANYS,ISSN.COMPANY_ID,0,1) > -1))
+                            AND ISSN.CURRENT_QTY > 0
+                            AND (POS(:WK_CN_ALLOWED_STATUS, ISSN.ISSN_STATUS ,0,1 ) > -1)
+                            AND COALESCE(LOCATION.LOCN_SEQ,999999) >= :WK_SESS_LAST_LOCN_SEQ
+                          ORDER BY L3, ISSN.WH_ID, ISSN.LOCN_ID 
+                          INTO :WK_PI_WH, :WK_PI_LOCN, :WK_PI_QTY, :WK_IS_STATUS, :WK_PROD_SSN, :WK_LI_LOCN_SEQ 
+                       DO
+                       BEGIN
+                          /* update status */
+                          IF (WK_PI_LASTLOCN = '') THEN
+                          BEGIN
+                             UPDATE PICK_ITEM SET PICK_LOCATION = :WK_PI_LOCN, 
+                                WH_ID = :WK_PI_WH,
+                                PICK_LOCN_SEQ = :WK_LI_LOCN_SEQ 
+                             WHERE PICK_LABEL_NO = :WK_PI_LABEL; 
+                             WK_PI_LASTLOCN = WK_PI_LOCN;
+                          END
+                       END
+                    END
+
+                 END
+              END
+           END
+           ELSE
+           BEGIN
+              /* an ssn */
+                 /* update status */
+              UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS WHERE SSN_ID = :WK_PI_SSN;
+              SELECT ISSN.WH_ID, ISSN.LOCN_ID, ISSN.CURRENT_QTY  
+              FROM ISSN 
+              WHERE ISSN.SSN_ID = :WK_PI_SSN 
+              INTO :WK_PI_WH, :WK_PI_LOCN, :WK_PI_QTY ;
+              UPDATE PICK_ITEM SET PICK_LOCATION = :WK_PI_LOCN 
+              WHERE PICK_LABEL_NO = :WK_PI_LABEL; 
+   /*
+    no change to pick_location
+   */
+           END
+           /* add to devices file */
+        END
+     END
+     /* WK_DATE = CAST(CAST("NOW" AS TIMESTAMP) AS VARCHAR(24)); */
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'End PKUA'); 
+
+   EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+   /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+  END
+ END
+END  ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

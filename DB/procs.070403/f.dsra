@@ -1,0 +1,87 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP TRIGGER RUN_TRANSACTION_DSRA ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_DSRA FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 133 
+AS
+/* Consume queue in pick_queue table */
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_ORDER VARCHAR(30);
+DECLARE VARIABLE WK_PICK_QTY INTEGER;
+DECLARE VARIABLE WK_LINE_CNT INTEGER;
+DECLARE VARIABLE WK_COMPANY VARCHAR(30);
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'DSRA') THEN
+  BEGIN
+     WK_USER = NEW.PERSON_ID;
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     IF (NEW.TRN_CODE = 'O') THEN
+     BEGIN
+        /* consume it */
+        WK_ORDER = NEW.OBJECT;
+        IF (WK_ORDER IS NULL) THEN
+        BEGIN
+           WK_ORDER = '';
+        END
+        UPDATE PICK_QUEUE 
+           SET PICK_QUEUE_STATUS = 'SN',
+               SEEN_DATE = :WK_DATE,
+               USER_ID = :WK_USER
+        WHERE PICK_ORDER = :WK_ORDER
+        AND PICK_QUEUE_STATUS = 'LB';
+        EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+     END
+     ELSE
+     BEGIN
+        IF (NEW.TRN_CODE = 'X') THEN
+        BEGIN
+           /* cancel  all or 1 in queue it */
+           WK_ORDER = NEW.OBJECT;
+           IF (WK_ORDER IS NULL) THEN
+           BEGIN
+              WK_ORDER = '';
+           END
+           IF (WK_ORDER = '') THEN
+           BEGIN
+              UPDATE PICK_QUEUE 
+                 SET PICK_QUEUE_STATUS = 'CN',
+                     SEEN_DATE = :WK_DATE,
+                     USER_ID = :WK_USER
+              WHERE PICK_QUEUE_STATUS = 'LB';
+           END
+           ELSE
+           BEGIN
+              UPDATE PICK_QUEUE 
+                 SET PICK_QUEUE_STATUS = 'CN',
+                     SEEN_DATE = :WK_DATE,
+                     USER_ID = :WK_USER
+              WHERE PICK_ORDER = :WK_ORDER
+              AND   PICK_QUEUE_STATUS = 'LB';
+           END
+           EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+        END
+     END
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+  END
+ END
+END ^
+ 
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,11 @@
+delete from transactions_archive;
+update issn set issn_status='DS' where issn_status='DC';
+update pick_item_detail set pick_detail_status='DS' where pick_detail_status='DC';
+update pick_item_detail set despatch_id=NULL where pick_detail_status='DS';
+update pick_item_detail set pick_detail_status='DS' where pick_detail_status='DX';
+update pick_item_detail set despatch_id=NULL where pick_detail_status='DS';
+update pick_item set pick_line_status='DS' where pick_line_status='DX';
+update issn set wh_id='RP',issn_status='DS' where issn_status='DX';
+delete from pack_id;
+delete from pick_despatch;
+delete from log;

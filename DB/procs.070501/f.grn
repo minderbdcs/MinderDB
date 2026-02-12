@@ -1,0 +1,6 @@
+create domain crate_owner as  varchar(10);
+alter table grn add container_type code_two;
+alter table grn add shipping_crate_owner crate_owner;
+alter table grn add shipping_crate_type code_two;
+alter table grn add shipping_crate_qty qty;
+

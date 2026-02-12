@@ -1,0 +1,2 @@
+alter table import_map add map_ims_prefix varchar(40);
+alter table import_map add map_ims_suffix varchar(40);

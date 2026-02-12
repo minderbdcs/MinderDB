@@ -1,0 +1,34 @@
+/*
+web_requests
+MESSAGE_ID MESSAGE_ID NOT NULL,
+        TRN_VERSION CODE_TWO  DEFAULT 'V4',
+        TRN_TYPE TRN_TYPE,
+        TRN_CLASS TRN_CODE,
+        TRN_DATE TRN_DATE,
+        PERSON_ID PERSON,
+        DEVICE_ID DEVICE_ID,
+        TRN_PRIORITY PICK_PRIORITY,
+        TRN_REPLY_DATE TRN_DATE,
+        REQUEST_STATUS STATUS,
+        ERROR_TEXT ERROR_TEXTV4,
+*/
+
+insert into sys_screen(ss_name,ss_sequence,ss_type) values('WEB_REQUESTS','0','WEB_REQUESTS');
+
+insert into sys_screen_table(sst_table,sst_sequence,ss_name,sst_table_status) values('WEB_REQUESTS','0','WEB_REQUESTS','OK');
+
+insert into options(group_code,code,description) values('SCN_FORMAT','WEB_REQUESTS','WEB_REQUESTS');
+
+insert into sys_screen_order(sso_order,sso_sequence,sso_order_status,ss_name) values(' ORDER BY WEB_REQUESTS.TRN_PRIORITY ','1','OK','WEB_REQUESTS');
+
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table,ssv_primary_id) values('MESSAGE_ID','0','Message #','SR','OK','WEB_REQUESTS','WEB_REQUESTS','T');
+
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('TRN_TYPE','1','Type','SR','OK','WEB_REQUESTS','WEB_REQUESTS');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('PERSON_ID','2','User ID','SR','OK','WEB_REQUESTS','WEB_REQUESTS');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('TRN_CLASS','3','Class','SR','OK','WEB_REQUESTS','WEB_REQUESTS');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('TRN_DATE','4','When_Date','SR','OK','WEB_REQUESTS','WEB_REQUESTS');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('DEVICE_ID','5','Device','SR','OK','WEB_REQUESTS','WEB_REQUESTS');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('REQUEST_STATUS','6','Status','SR','OK','WEB_REQUESTS','WEB_REQUESTS');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_table) values('ERROR_TEXT','7','Response','SR','OK','WEB_REQUESTS','WEB_REQUESTS');
+
+

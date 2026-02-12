@@ -1,0 +1,5 @@
+commit;
+
+ALTER DOMAIN PERSON TYPE VARCHAR(36);
+
+commit;

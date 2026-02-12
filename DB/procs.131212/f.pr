@@ -1,0 +1,2 @@
+alter table print_requests add prn_url descr;
+alter table print_requests_archive add prn_url descr;

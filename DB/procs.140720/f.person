@@ -1,0 +1,8 @@
+alter table company add invoice_cc_email email;
+
+alter table person add email_invoice_ti value_tf;
+alter table person add email_invoice_ps value_tf;
+alter table person add email_invoice_pi value_tf;
+
+create domain archive_days integer;
+alter table control add cancel_after_days archive_days;

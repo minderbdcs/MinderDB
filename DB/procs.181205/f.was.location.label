@@ -1,0 +1,121 @@
+
+ALTER PROCEDURE PC_LABEL_LOCATION (REFERENCE VARCHAR(40) CHARACTER SET NONE)
+RETURNS (RES INTEGER)
+AS 
+    
+  DECLARE VARIABLE sFilePath VARCHAR(70);
+  DECLARE VARIABLE sFilePath2 VARCHAR(70);
+  DECLARE VARIABLE sPrinterName CHAR(2);
+  DECLARE VARIABLE sRef VARCHAR(40);  
+  DECLARE VARIABLE WK_1ST_FIELD VARCHAR(40);  
+  DECLARE VARIABLE WK_2ND_FIELD VARCHAR(40);  
+  DECLARE VARIABLE sLabel VARCHAR(256);
+  DECLARE VARIABLE WK_HAVE_FILE_1 INTEGER;
+  DECLARE VARIABLE WK_HAVE_FILE_2 INTEGER;
+  DECLARE VARIABLE WK_FILENAME VARCHAR(100);  
+  DECLARE VARIABLE WK_FILENAME2 VARCHAR(100);  
+  DECLARE VARIABLE WK_LOCN_NAME VARCHAR(50);  
+  DECLARE VARIABLE WK_WH_ID VARCHAR(2);  
+  DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);  
+  DECLARE VARIABLE WK_STORE_AREA VARCHAR(2);  
+  DECLARE VARIABLE WK_WH_FROM VARCHAR(2);  
+  DECLARE VARIABLE WK_WH_TO VARCHAR(2);  
+  DECLARE VARIABLE WK_LOCN_FROM VARCHAR(10);  
+  DECLARE VARIABLE WK_LOCN_TO VARCHAR(10);  
+  
+BEGIN 
+  
+  WK_HAVE_FILE_1 = 0;
+  WK_HAVE_FILE_2 = 0;
+  /* Get the printer dir */
+  sPrinterName = SUBSTR(:REFERENCE,1,2);
+  sRef = SUBSTR(:REFERENCE,3,STRLEN(:REFERENCE));
+  
+   WK_1ST_FIELD = '';
+   WK_2ND_FIELD = '';
+   SELECT WK_FIELD_TEXT 
+   FROM GET_REFERENCE_FIELD4 (:sRef, 1, '|') 
+   INTO :WK_1ST_FIELD;
+   SELECT WK_FIELD_TEXT 
+   FROM GET_REFERENCE_FIELD4 (:sRef, 2, '|') 
+   INTO :WK_2ND_FIELD;
+  /* Need the directory for this label set */
+  SELECT WORKING_DIRECTORY FROM SYS_EQUIP 
+  WHERE DEVICE_ID = :sPrinterName
+  INTO :sFilePath;
+  
+       
+  IF (WK_2ND_FIELD > '') THEN
+  BEGIN
+     WK_WH_FROM = SUBSTR(WK_1ST_FIELD, 1, 2);
+     WK_WH_TO = SUBSTR(WK_2ND_FIELD, 1, 2);
+     WK_LOCN_FROM = SUBSTR(WK_1ST_FIELD, 3, 10);
+     WK_LOCN_TO = SUBSTR(WK_2ND_FIELD, 3, 10);
+
+     FOR SELECT WH_ID, LOCN_ID, LOCN_NAME, STORE_AREA
+     FROM LOCATION 
+     WHERE
+        (((WH_ID > :WK_WH_FROM) OR (WH_ID = :WK_WH_FROM AND LOCN_ID >= :WK_LOCN_FROM)) AND
+         ((WH_ID < :WK_WH_TO) OR (WH_ID = :WK_WH_TO AND LOCN_ID <= :WK_LOCN_TO)))
+     ORDER BY WH_ID, LOCN_ID
+     INTO :WK_WH_ID, :WK_LOCN_ID, :WK_LOCN_NAME, :WK_STORE_AREA
+     DO 
+     BEGIN
+        IF (WK_LOCN_NAME IS NULL) THEN
+        BEGIN
+           WK_LOCN_NAME = WK_LOCN_ID;
+        END
+        IF (WK_STORE_AREA IS NULL) THEN
+        BEGIN
+           WK_STORE_AREA = '';
+        END
+        sFilePath2 = sFilePath || 'Location.2xt';
+        sLabel = '"' || WK_WH_ID || WK_LOCN_ID || '","' || :sPrinterName || '","' || :WK_STORE_AREA || '","' || :WK_LOCN_NAME || '"';
+        RES = FILE_WRITELN(:sFilePath2, :sLabel);
+        IF (RES <> 0) THEN
+        BEGIN
+           sFilePath2 = sFilePath || 'Location.uxt';
+           RES = FILE_WRITELN(:sFilePath2, :sLabel);
+           WK_HAVE_FILE_2 = 1;
+        END   
+        ELSE
+        BEGIN
+           WK_HAVE_FILE_1 = 1;
+        END
+     END
+  END
+  ELSE
+  BEGIN
+     sLabel = DQUOTEDSTR(:sRef) || ',' || DQUOTEDSTR(:sPrinterName);
+     RES = FILE_WRITELN(:sFilePath2, :sLabel);
+     IF (RES <> 0) THEN
+     BEGIN
+        sFilePath2 = sFilePath || 'Location.uxt';
+        RES = FILE_WRITELN(:sFilePath2, :sLabel);
+        WK_HAVE_FILE_2 = 1;
+     END   
+     ELSE
+     BEGIN
+        WK_HAVE_FILE_1 = 1;
+     END
+
+  END
+  
+  /* do renames */
+   IF (WK_HAVE_FILE_1 = 1) THEN
+   BEGIN
+      /* rename load.2xt to load.txt */
+      WK_FILENAME = sFilePath || 'Location.2xt';
+      WK_FILENAME2 = sFilePath || 'Location.txt';
+      RES = FILE_RENAME(WK_FILENAME, WK_FILENAME2);
+   END
+   IF (WK_HAVE_FILE_2 = 1) THEN
+   BEGIN
+      /* rename load.uxt to load.txt */
+      WK_FILENAME = sFilePath || 'Location.uxt';
+      WK_FILENAME2 = sFilePath || 'Location2.txt';
+      RES = FILE_RENAME(WK_FILENAME, WK_FILENAME2);
+   END
+  
+END ^
+

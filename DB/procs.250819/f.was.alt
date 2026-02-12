@@ -1,0 +1,7 @@
+/*
+alter table ssn add alternate_id code_128;
+
+ALTER TABLE SSN_DX ADD ALTERNATE_ID CODE_128;
+
+CREATE INDEX SSN_FK_ALTERNATE INDEX ON SSN(ALTERNATE_ID);
+*/

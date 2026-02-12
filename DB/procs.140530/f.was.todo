@@ -1,0 +1,3 @@
+modify poal to allow adding product, customer_edi_no and ps_del_to_store_in_house_no
+	to pick_location record
+

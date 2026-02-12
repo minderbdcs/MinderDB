@@ -1,0 +1,3 @@
+/* drop external function lower; */
+delete  from rdb$functions where rdb$function_name = 'LOWER';
+commit;

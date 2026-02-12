@@ -1,0 +1,4 @@
+select p1.prod_id,pick_order_qty,picked_qty,p1.pick_order,p2.company_id,p2.pick_status,p1.pick_line_status,p1.wh_id,p1.pick_location,l3.locn_seq,p1.pick_locn_seq from pick_item p1 join pick_order p2 on p2.pick_order=p1.pick_order left outer join location l3 on p1.wh_id=l3.wh_id and l3.locn_id=p1.pick_location where p1.device_id='ML';
+/*
+select wh_id,locn_id,ssn_id,issn_status,current_qty from issn where prod_id='DIN3411' and current_qty > 0 and issn_status in ('PA','ST','AL','RS');
+*/

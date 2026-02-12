@@ -1,0 +1,43 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+/*
+product_kit_temp has
+KIT_ID                          (PRODUCT) VARCHAR(30) Not Null 
+PROD_ID                         (PRODUCT) VARCHAR(30) Not Null 
+CREATED_BY                      (USER_ID) VARCHAR(10) Nullable 
+CREATE_DATE                     (CREATE_DATE) TIMESTAMP Nullable 
+STATUS                          (STATUS) CHAR(2) Nullable 
+PROD_QTY                        (KIT_QTY) DOUBLE PRECISION Nullable 
+LAST_UPDATED_BY                 (USER_ID) VARCHAR(10) Nullable 
+LAST_UPDATE_DATE                (CREATE_DATE) TIMESTAMP Nullable 
+*/
+
+CREATE OR ALTER PROCEDURE IMPORT_PRODUCT_KIT  (
+K_KIT_ID                        PRODUCT , 
+K_PROD_ID                       PRODUCT , 
+K_STATUS                        STATUS , 
+K_PROD_QTY                      KIT_QTY , 
+K_LAST_UPDATE_BY                USER_ID  
+ )
+
+AS 
+
+BEGIN 
+   INSERT INTO PRODUCT_KIT_TEMP( KIT_ID, PROD_ID , CREATED_BY, CREATE_DATE, 
+STATUS, PROD_QTY, LAST_UPDATED_BY, LAST_UPDATE_DATE
+ )
+      VALUES( :K_KIT_ID, :K_PROD_ID , :K_LAST_UPDATE_BY, 'NOW',  
+:K_STATUS, :K_PROD_QTY, :K_LAST_UPDATE_BY, 'NOW'
+ );
+
+   SUSPEND; 
+END ^
+
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

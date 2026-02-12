@@ -1,0 +1,177 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/*
+return the next prod id
+use OPTIONS record for GROUP_CODE 'PROD_ID_GN'
+in the CODE field is '|' seperated type of product and whether to use a check digit
+eg 'GTIN=PROD_13|CHECK_DIGIT=T'
+then the PARAM table DATA_ID of PROD_13 is used
+supplying the generator to use and length
+
+the prefix comes from the COMPANY.GS1_COMPANY_ID
+if this is null then use '20'
+
+*/
+
+CREATE OR ALTER PROCEDURE NEXT_PROD_ID (COMPANY_ID VARCHAR(20))
+RETURNS (PROD_ID VARCHAR(30))
+AS
+                                                       
+  DECLARE VARIABLE WK_IS_OK          CHAR(1);
+  DECLARE VARIABLE WK_DOIT           CHAR(1);
+  DECLARE VARIABLE WK_USER           VARCHAR(10);
+  DECLARE VARIABLE WK_DEVICE_ID      VARCHAR(2);
+  DECLARE VARIABLE WK_DUMMY          INTEGER;
+  DECLARE VARIABLE WK_OP_CODE        VARCHAR(40);
+  DECLARE VARIABLE WK_PROD_DATA_ID   VARCHAR(1024);
+  DECLARE VARIABLE WK_DO_CHECK_DIGIT VARCHAR(1024);
+  DECLARE VARIABLE WK_PARAM_LENGTH   INTEGER;
+  DECLARE VARIABLE WK_PARAM_GENERATOR VARCHAR(31);
+  DECLARE VARIABLE WK_COMPANY        VARCHAR(20);
+  DECLARE VARIABLE WK_GS1_COMPANY    VARCHAR(10);
+  DECLARE VARIABLE WK_PROD_PREFIX    VARCHAR(10);
+  DECLARE VARIABLE WK_PROD_CMD       VARCHAR(80);
+  DECLARE VARIABLE WK_RECORD_ID      INTEGER;
+  DECLARE VARIABLE WK_PROD_SUFFIX    VARCHAR(10);
+  DECLARE VARIABLE WK_PROD_VALUE     INTEGER;
+  DECLARE VARIABLE WK_PROD_VALUE_X   VARCHAR(30);
+  DECLARE VARIABLE WK_PROD_ID        VARCHAR(30);
+  DECLARE VARIABLE WK_GET_LENGTH     INTEGER;
+  DECLARE VARIABLE WK_FIELD_NO       INTEGER;
+  DECLARE VARIABLE WK_WORK_END       VARCHAR(2); 
+  DECLARE VARIABLE WK_WORK_FIELD     VARCHAR(1024); 
+  DECLARE VARIABLE WK_WORK_DATA      VARCHAR(1024); 
+  DECLARE VARIABLE WK_WORK_LABEL     VARCHAR(1024); 
+     
+BEGIN
+   /* get next prod_id  */   
+         
+   PROD_ID  = NULL; 
+   WK_OP_CODE = NULL;
+   WK_GS1_COMPANY = NULL;
+   WK_COMPANY = NULL;
+   WK_PROD_PREFIX = '';
+   WK_PROD_SUFFIX = '';
+   IF (COMPANY_ID IS NULL) THEN
+   BEGIN
+      SELECT COMPANY_ID FROM CONTROL INTO :WK_COMPANY;
+   END
+   ELSE
+   BEGIN
+      WK_COMPANY = COMPANY_ID;
+   END
+   SELECT GS1_COMPANY_ID FROM COMPANY
+   WHERE COMPANY_ID = :WK_COMPANY
+   INTO :WK_GS1_COMPANY;
+   IF (WK_GS1_COMPANY IS NULL) THEN
+   BEGIN
+      WK_PROD_PREFIX = '20';
+   END
+   ELSE
+   BEGIN
+      WK_PROD_PREFIX = :WK_GS1_COMPANY;
+   END
+   SELECT CODE
+   FROM OPTIONS
+   WHERE GROUP_CODE = 'PROD_ID_GN'
+   INTO :WK_OP_CODE;
+  
+   IF (WK_OP_CODE IS NULL) THEN
+   BEGIN
+      WK_DUMMY = 1;
+   END
+   ELSE
+   BEGIN
+      /* now split this into 2 parts */
+      WK_PROD_DATA_ID = '';
+      WK_DO_CHECK_DIGIT = 'F';
+      WK_FIELD_NO = 1;
+      WK_WORK_END = 'F';
+      WHILE (WK_WORK_END = 'F') DO
+      BEGIN
+         SELECT WK_FIELD_TEXT , WK_AT_END
+         FROM GET_REFERENCE_FIELD4 (:WK_OP_CODE, :WK_FIELD_NO, '|') 
+         INTO :WK_WORK_FIELD, :WK_WORK_END;
+         /* now for this field get the label and data */
+         SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+         FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '=')
+         INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+         IF (WK_WORK_LABEL = 'GTIN') THEN
+         BEGIN
+            WK_PROD_DATA_ID = WK_WORK_DATA;
+         END
+         IF (WK_WORK_LABEL = 'CHECK_DIGIT') THEN
+         BEGIN
+            WK_DO_CHECK_DIGIT = WK_WORK_DATA;
+         END
+         WK_FIELD_NO = WK_FIELD_NO + 1;
+      END
+      IF (WK_PROD_DATA_ID <> '') THEN
+      BEGIN
+         SELECT MAX_LENGTH, DATA_GENERATOR
+         FROM PARAM
+         WHERE DATA_ID = :WK_PROD_DATA_ID
+         INTO :WK_PARAM_LENGTH, :WK_PARAM_GENERATOR;
+         IF (WK_PARAM_LENGTH IS NULL) THEN
+         BEGIN
+            WK_PARAM_LENGTH = 0;
+         END
+         IF (WK_PARAM_GENERATOR IS NULL) THEN
+         BEGIN
+            WK_PARAM_GENERATOR = '';
+         END
+      END
+      /* Get Next PROD_ID */                                                                      
+      IF (WK_PARAM_GENERATOR = '') THEN
+      BEGIN
+         WK_RECORD_ID = 0;
+      END
+      ELSE
+      BEGIN
+         WK_PROD_CMD = 'SELECT GEN_ID(' || :WK_PARAM_GENERATOR || ',1) FROM CONTROL';
+         EXECUTE STATEMENT WK_PROD_CMD INTO :WK_RECORD_ID;
+         WK_PROD_VALUE  = WK_RECORD_ID  ;
+         WK_PROD_VALUE_X  = WK_PROD_VALUE ;
+         IF (WK_DO_CHECK_DIGIT = 'T') THEN
+         BEGIN
+            WK_PROD_SUFFIX = 'X';
+         END
+         WK_GET_LENGTH = WK_PARAM_LENGTH - STRLEN(WK_PROD_PREFIX) - STRLEN(WK_PROD_SUFFIX);
+         WHILE (STRLEN(WK_PROD_VALUE_X) < WK_GET_LENGTH) DO
+         BEGIN
+            WK_PROD_VALUE_X = '0' || WK_PROD_VALUE_X;
+         END
+         IF (WK_DO_CHECK_DIGIT = 'T') THEN
+         BEGIN
+            WK_PROD_SUFFIX = '';
+            WK_PROD_ID = WK_PROD_PREFIX || WK_PROD_VALUE_X || WK_PROD_SUFFIX;
+            SELECT OUT_DATA FROM  CALC_CHECK_DIGIT_BDCS (:WK_PROD_ID , 'T'  )
+            INTO :PROD_ID ;
+         END
+         ELSE
+         BEGIN
+            PROD_ID = WK_PROD_PREFIX || WK_PROD_VALUE_X || WK_PROD_SUFFIX;
+         END
+      END
+   END
+   SUSPEND;
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+
+comment on procedure next_prod_id is "
+return the next prod id
+use OPTIONS record for GROUP_CODE 'PROD_ID_GN'
+in the CODE field is '|' seperated type of product and whether to use a check digit
+eg 'GTIN=PROD_13|CHECK_DIGIT=T'
+then the PARAM table DATA_ID of PROD_13 is used
+supplying the generator to use and length
+
+the prefix comes from the COMPANY.GS1_COMPANY_ID
+if this is null then use '20'
+";
+

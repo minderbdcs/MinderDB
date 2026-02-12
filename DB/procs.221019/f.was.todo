@@ -1,0 +1,1 @@
+grnv gets owner from substr(object,11,20 - not from company_id

@@ -1,0 +1,2 @@
+alter table purchase_order add po_receive_locn_id locn_id;
+

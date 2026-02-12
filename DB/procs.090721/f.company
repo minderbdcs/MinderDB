@@ -1,0 +1,4 @@
+alter table company add legacy_internal_id integer;
+alter table company add legacy_name description;
+alter table company add minder_wh_id description;
+

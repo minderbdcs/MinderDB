@@ -1,0 +1,98 @@
+/*
+ALTER  PROCEDURE PC_STLO (RECORD_ID INTEGER,
+*/
+CREATE PROCEDURE PC_STLO (RECORD_ID INTEGER,
+WH_ID CHAR(2) ,
+LOCN_ID VARCHAR(10) ,
+DEVICE VARCHAR(10) ,
+TRN_DATE TIMESTAMP)
+AS 
+ 
+ 
+           
+  DECLARE VARIABLE LOCN_EXIST INTEGER; 
+  DECLARE VARIABLE WH_EXIST INTEGER;    
+  DECLARE VARIABLE LOCN_NAME VARCHAR(50); 
+  DECLARE VARIABLE LOCN_STAT CHAR(2); 
+  DECLARE VARIABLE LOCN_OWNER VARCHAR(10); 
+
+BEGIN
+  LOCN_EXIST = 0;   
+  WH_EXIST = 0;
+  LOCN_NAME = LEFTS(LOCN_ID || ' Created during audit ' || :TRN_DATE,50);
+
+  /* Check if Location exists */
+  LOCN_EXIST = 0;
+  SELECT 1,LOCN_STAT,LOCN_OWNER
+  FROM LOCATION
+  WHERE WH_ID = :WH_ID
+  AND LOCN_ID = :LOCN_ID 
+  INTO :LOCN_EXIST, :LOCN_STAT, :LOCN_OWNER;  
+  
+  /* Location exists, then update transaction and Last_Audited */
+  IF (LOCN_EXIST <> 0) THEN
+  BEGIN  
+       IF (LOCN_STAT = "OK") THEN
+       BEGIN
+               /* Update transactions table */
+               UPDATE TRANSACTIONS
+               SET COMPLETE = 'T', ERROR_TEXT = 'Processed successfully'
+               WHERE RECORD_ID = :RECORD_ID; 
+       
+              /* Update Last_Audited in LOCATION table */
+              UPDATE LOCATION
+              SET LAST_AUDITED_DATE = :TRN_DATE,
+                  LOCN_STAT = 'ST',
+                  LOCN_OWNER = :DEVICE
+              WHERE WH_ID = :WH_ID
+              AND LOCN_ID = :LOCN_ID;
+       END
+       ELSE
+       BEGIN
+               IF (LOCN_STAT = 'ST' AND LOCN_OWNER = DEVICE) THEN
+               BEGIN
+                       /* Update transactions table */
+                       UPDATE TRANSACTIONS
+                       SET COMPLETE = 'T', ERROR_TEXT = 'Processed successfully'
+                       WHERE RECORD_ID = :RECORD_ID; 
+               END
+               ELSE
+               BEGIN
+                       /* Update transactions table */
+                       UPDATE TRANSACTIONS
+                       SET COMPLETE = 'F', ERROR_TEXT = 'Cannot Stocktake - Not an Open Location'
+                       WHERE RECORD_ID = :RECORD_ID; 
+       
+               END
+       END
+  END
+  ELSE
+  BEGIN
+        /* Check WH_ID */     
+       WH_EXIST = 0;
+       SELECT 1 
+       FROM WAREHOUSE
+       WHERE WH_ID = :WH_ID       
+       INTO :WH_EXIST; 
+
+       IF (WH_EXIST <> 0) THEN
+       BEGIN
+              /* Add new Location record */
+              INSERT INTO LOCATION (LOCN_ID, WH_ID, LOCN_NAME, LAST_AUDITED_DATE,LOCN_STAT,LOCN_OWNER)
+              VALUES (:LOCN_ID, :WH_ID, :LOCN_NAME, :TRN_DATE,'ST',:DEVICE);
+
+              /* Update transactions table */
+              UPDATE TRANSACTIONS
+              SET COMPLETE = 'T', ERROR_TEXT = 'New location created'
+              WHERE RECORD_ID = :RECORD_ID; 
+       END
+       ELSE
+       BEGIN
+              /* Update transactions table */
+              UPDATE TRANSACTIONS
+              SET COMPLETE = 'F', ERROR_TEXT = 'Warehouse master not found'
+              WHERE RECORD_ID = :RECORD_ID;
+       END    
+  END
+END ^
+

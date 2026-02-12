@@ -1,0 +1,113 @@
+A Transfer Request is a request (a record is inserted into the TRANSFER_REQUEST Table) to transfer a quantity of Avaliable
+Product ('ST')    into a Despatch defined Zone ('DS' - Awaiting Despatch). The Pick/Forklift Operator transfers into any
+Location that will hold the Product and which belongs to the nominated Despatch Zone.
+Once the Product inside this location it cannot be used for Orders in other Despatch Zones unless it has been transferred
+to back to available ('ST')  and Open ('OK') Storage location (but then if done by mistake the Operator will be given a
+Transfer Requests to return back into the previous Despatch Zone as it violates the need for Product to be despatched on
+waiting Orders).
+???? not to a DS zone but a DS Store Type ????
+???? not from a ST zone but a ST Store Type ????
+The objective of the TRANSFER_REQUESTs is to create sets of instructions for Pick/Forklift Operators to pick bulk quantity
+of a Product and transfer into a nominated Despatch Zone so that the Pickers can go ahead and pick batches of waiting
+Orders.
+Bulk quantity means the system sums all waiting PICK_ITEM.PROD_ID's then subtracts any excess Product already at the
+Despatch Zone and which is not required for Orders and instructs the Picker to transfer sufficient quantity to meet all the
+waiting Orders. They may transfer in excess (because its a full Pallet etc).
+
+As I understand it but need Frank's confirmation - the PICK_ITEM records for the Orders that can now be picked from
+transferred Product should have its status changed from 'OP' to 'DS' and therefore will not be counted with next
+Transfer_Request. I suspect Frank you will want PICK_ITEM_DETAILS records created as part of the Bulk Transfer to become
+also 'DS'.
+???? Huh you are performing a pick within the transfer request - naughty ????
+
+Once TIDAMS updates the PICK_ORDER as having been Despatched then the Status of the PICK_ITEM and PICK_ITEM_DETAILS both
+becomes 'DX'.
+???? Tidams never does that  - only minder ????
+???? this is about transfer requests not order updates from Tidams ????
+
+
+These Requests are created whenever any of the following occur:
+ *  Orders are received from TIDAMS and have been inserted into the PICK_ORDER and PICK_ITEM where PICK_ORDER Status = 'DA'
+    (Despatch Approved) and which have a PICK_ORDER_SUB_TYPE listed as requiring Transfer Requests (i.e. excludes EDI
+    Orders).
+ *  Receive a Product (as there maybe shortages for waiting Orders) and need to be transferred from 'RC'/'PA' to the
+    Despatch Location directly.
+ *  Transfer a Product from a Location with 'ST' status to another Status e.g. 'QR' , 'TS',  'DS'. It may well be that an
+    Operator simply performs a transfer without a Transfer Request (because they want to clear storage for new receipts).
+ *  Despatch of a Product (need to qualify which PICK_ORDER_SUB_TYPE are involved).
+
+???? only done when a process or procedure is run ????
+
+If TIDAMS inserts into MINDER we need to delay running of the Transfer_Request until TIDAMS has inserted all Orders - Frank
+should we ask TIDAMS to execute the Transfer_Request when TIDAMS has finished inserting each Batch of orders rather than
+the discussed Crontask ever 30 minutes?
+It should not be too hard to add another API for TIDAMS to execute the procedure? I need to add a button onto Sergey's
+screens which also enables running the procedure any time Rikki wishes.
+
+???? the original replenish request was done as a set of triggers ????
+???? then a python script          ????
+???? now you want a procedure  -   ????
+We need to allow for transfer of faulty Product back from the Despatch Location  'DS' to 'QR'.
+It would be even nicer to have query whereby the Operator can scan the Product (that is inside the Despatch Zone) and the
+HH screen shows how much excess product there is so they can transfer that amount back into normal storage. 'Scan once to
+find out, scan twice to take out' - where have we heard that before!!
+We also need allow excess Product or Product from Orders that have been cancelled to be transferred back to normal storage
+or another Despatch Location.
+
+All Transfers instructed by the TRANSFER_REQUEST table still need to be qualified by Owner (COMPANY_ID).
+
+=================================================================
+
+ALTER PROCEDURE GET_ISSN_REPLENISH AS 
+
+CREATE TRIGGER ADD_ISSN_REPLENISH FOR ISSN 
+CREATE TRIGGER UPDATE_ISSN_REPLENISH FOR ISSN 
+CREATE TRIGGER UPDATE_ISSN_REPLENISH_FROM FOR ISSN 
+
+CREATE TRIGGER RUN_TRANSACTION_RTAL FOR TRANSACTIONS 
+CREATE TRIGGER RUN_TRANSACTION_TRRT FOR TRANSACTIONS 
+
+CREATE TRIGGER TRANSFER_REQUEST_TRN_LINE_NO FOR TRANSFER_REQUEST 
+
+used 
+   FOR  SELECT PROD_ID, WH_ID, LOCN_ID,  MIN_QTY, MAX_QTY, REORDER_QTY
+      FROM LOCATION
+      WHERE REPLENISH = 'T'
+      AND (PROD_ID IS NOT NULL)
+      AND (REORDER_QTY IS NOT NULL)
+      AND (MAX_QTY IS NOT NULL)
+that gives the location and product
+      SELECT FIRST 1 CURRENT_QTY
+      FROM ISSN
+      JOIN LOCATION L1 ON L1.WH_ID = ISSN.WH_ID AND L1.LOCN_ID = ISSN.LOCN_ID
+      WHERE ISSN.PROD_ID = :WK_PROD
+      AND CURRENT_QTY > 0
+      AND (POS(:IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1)
+      AND L1.STORE_TYPE <> 'PS'
+	that gives whether there is stock there
+	then get the stock level there
+
+now get the totals by company and product from 
+	pickorder and pick_item
+	join  the pick_order.pick_order_sub_type to pick_order_sub_type.code
+want pick_order_sub_type.replenish = 'T'
+that gives totals by  company and product requiring replenish
+get the current qty of that product in 'DS' store type locations
+substract the two gives the qty for the transfer request
+if its <=  0
+then no request = cancel any requests for this product
+else
+	want to place this somewhere in a location
+	what location goes in the transfer request ?
+	all we have is the store_type 'DS'
+	magnamail used the product in the location - using the location
+	then only certain fast moving locations where replenished
+	at tifs have 1 - 10 products in a location but most locations have 1 product - using the issn
+
+at 19/11/2014
+rather than using store_type 'DS' want to transfer to a zone
+eg want 500 of x
+200 fits in the location 
+transfer from the ST location 1000 units
+then put 800 units in close locations within the zone. These will be ST move stat locations.
+when required they will transfer the near locations to the fast moving one oversupply stay at PA or ST for a ST move state location.

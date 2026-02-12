@@ -1,0 +1,37 @@
+CREATE TABLE REPORTS
+(
+  REPORT_ID        INTEGER NOT NULL,
+  NAME                  VARCHAR(80) NOT NULL,
+  DESCRIPTION    BLOB SUB_TYPE TEXT SEGMENT SIZE 80 NOT NULL,
+  QUERY                BLOB SUB_TYPE TEXT SEGMENT SIZE 80 NOT NULL,
+ PRIMARY KEY (REPORT_ID)
+);
+SET TERM ^ ;
+
+
+/* Triggers only will work for SQL triggers */
+
+CREATE TRIGGER REPORTS_ID_INSERT FOR REPORTS
+ACTIVE BEFORE INSERT POSITION 0
+AS
+BEGIN
+    IF (NEW.REPORT_ID IS NULL) THEN
+        NEW.REPORT_ID = GEN_ID(REPORT_ID_GEN, 1);
+END
+------------------------------------------------------------------
+Can you add to the above REPORTS table the following please:
+-        COMPANY_ID - prefer NOT NULL Default to CONTROL.COMPANY_ID
+          This is to enable limiting which Reports Users can run
+-        CREATED_DATE - use trigger to populate
+-        CREATED_BY - use trigger to populate
+-        LAST_UPDATE_DATE - use trigger to populate
+-        LAST_UPDATED_BY - use trigger to populate
+
+I would like to add another Field or Fields please but need your 
+suggestion on how to best achieve these:
+- a Field that is a Flag for overnight running such as 'RUN_REPORT' 
+where ='O' = overnight, 'M' = monthly
+- a Field that Controls the overnight output format  'REPORT_FORMAT' eg 
+'CSV' = csv, 'XML' = XML, 'PDF' = PDF
+
+

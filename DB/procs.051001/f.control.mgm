@@ -1,0 +1,2 @@
+update control set export_tril_w = 'T', export_putaway_printer='PE';
+

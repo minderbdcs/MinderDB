@@ -1,0 +1,2 @@
+alter table pick_item add line_cost_amount float;
+

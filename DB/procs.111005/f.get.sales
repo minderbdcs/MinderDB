@@ -1,0 +1,107 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+ALTER PROCEDURE GET_SALE_LINES_NO (PICK_ORDER VARCHAR(15) CHARACTER SET NONE)
+RETURNS (PICK_ORDER_LINE_NO VARCHAR(4) CHARACTER SET NONE)
+AS 
+
+  DECLARE VARIABLE LINE_NO INTEGER; 
+  DECLARE VARIABLE iLenPickLineNo INTEGER;
+  DECLARE VARIABLE sPickLineNo VARCHAR(4);
+BEGIN
+  LINE_NO = 0;
+  sPickLineNo = '';
+
+  /* Get the maximum number of line no */
+  SELECT LAST_LINE_NO + 1 AS LAST_LINE_NO
+  FROM PICK_ITEM_LINE_NO
+  WHERE PICK_ORDER = :PICK_ORDER  
+  INTO :LINE_NO; 
+  
+  iLenPickLineNo = STRLEN(LINE_NO);
+    
+  /* Padding leading with 0 */
+    WHILE (iLenPickLineNo < 4) DO
+    BEGIN
+       sPickLineNo = sPickLineNo || '0';      
+       iLenPickLineNo = iLenPickLineNo + 1;
+    END
+    sPickLineNo = sPickLineNo || LINE_NO;       
+    
+    /* Return LoadNo to the caller */
+   PICK_ORDER_LINE_NO = sPickLineNo;
+   
+   /* update last line no */
+   UPDATE PICK_ITEM_LINE_NO
+   SET LAST_LINE_NO = :LINE_NO
+   WHERE PICK_ORDER = :PICK_ORDER; 
+   SUSPEND;
+END ^
+
+ALTER PROCEDURE GET_SALE_LINE_NO (SALE_ORDER_ID VARCHAR(15) CHARACTER SET NONE)
+RETURNS (SALE_ORDER_LINE_NO INTEGER)
+AS 
+ 
+  DECLARE VARIABLE LINE_NO INTEGER;  
+BEGIN
+  LINE_NO = 0; 
+
+  /* Get the maximum number of line no */
+  SELECT MAX(SALE_ORDER_LINE_NO)
+  FROM SALE_ORDER_LINE
+  WHERE SALE_ORDER_ID = :SALE_ORDER_ID  
+  INTO :LINE_NO; 
+  
+  IF (:LINE_NO IS NULL) THEN LINE_NO = 0;
+
+  /* Return the value of line no */
+  SALE_ORDER_LINE_NO = LINE_NO + 1;
+  
+END ^
+
+ALTER PROCEDURE GET_SALE_ORDER_NO (ORDER_PREFIX CHAR(1) CHARACTER SET NONE)
+RETURNS (SALE_ORDER_ID VARCHAR(15) CHARACTER SET NONE)
+AS 
+DECLARE VARIABLE iSaleNo INTEGER;
+DECLARE VARIABLE iLengthSaleNo INTEGER;
+DECLARE VARIABLE WK_MAX_LENGTH INTEGER;
+DECLARE VARIABLE sSaleNo VARCHAR(10);
+     
+BEGIN
+  iSaleNo = GEN_ID(SALE_ORDER_ID_GEN, 1) ;
+  iLengthSaleNo = STRLEN(iSaleNo);
+  
+  /*
+  sSaleNo = 'S'; /- Enter prefix number here -/
+  */
+  IF (ORDER_PREFIX IS NULL) THEN
+  BEGIN
+     sSaleNo = '';
+  END
+  ELSE
+  BEGIN
+     sSaleNo = ORDER_PREFIX; /* Enter prefix number here */
+  END
+  SELECT MAX_LENGTH FROM PARAM WHERE DATA_ID = 'SALESORDER' INTO :WK_MAX_LENGTH;
+  WK_MAX_LENGTH = WK_MAX_LENGTH - STRLEN(sSaleNo);
+  /* Padding leading with 0 */
+  /* WHILE (iLengthSaleNo < 9) DO */
+  WHILE (iLengthSaleNo < :WK_MAX_LENGTH) DO
+  BEGIN
+        sSaleNo = sSaleNo || '0';      
+        iLengthSaleNo = iLengthSaleNo + 1;
+  END
+  sSaleNo = sSaleNo || iSaleNo;
+  
+  /* Return LoadNo to the caller */
+  SALE_ORDER_ID = sSaleNo;
+  SUSPEND;
+  
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

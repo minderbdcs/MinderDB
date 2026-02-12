@@ -1,0 +1,7 @@
+alter table pick_order add net_total_amount float default 0.00;
+alter table pick_order add sum_total_amount float default 0.00;
+alter table pick_order add fees_amounts float default 0.00;
+alter table pick_order add fees_amounts_tax_amount float default 0.00;
+alter table pick_order add admin_fee_percent_amount float default 0.00;
+alter table pick_order add admin_fee_tax_amount float default 0.00;
+

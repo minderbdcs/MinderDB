@@ -1,0 +1,8 @@
+create table variance(
+company_id company not null,
+prod_id product not null,
+run_date upl_date not null,
+legacy_qty qty,
+available_qty qty,
+primary key (company_id, prod_id, run_date));
+

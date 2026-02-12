@@ -1,0 +1,3 @@
+insert into options(group_code,code,description) values('CMPPKDSDX','MM','T');
+insert into options(group_code,code,description) values('CMPPKDSDX','PM','F');
+

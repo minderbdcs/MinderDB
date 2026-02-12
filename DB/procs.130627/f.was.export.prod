@@ -1,0 +1,94 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+/* want export of prod_profile given a start date time and end date time  a null end date will mean until now
+or a prod_id
+or a short_description 
+or a long_description 
+
+*/
+
+CREATE OR ALTER PROCEDURE EXPORT_PROD_PROFILE  (
+IN_START_DATE      TIMESTAMP  ,
+IN_END_DATE        TIMESTAMP  ,
+IN_PROD_ID VARCHAR(30)  ) 
+RETURNS (
+PROD_ID              VARCHAR(30) ,
+LAST_UPDATE_DATE     TIMESTAMP ,
+SHORT_DESC           VARCHAR(255),
+LONG_DESC            VARCHAR(255),
+COMPANY_ID           VARCHAR(10),
+STOCK                VARCHAR(1) ,
+UOM                  VARCHAR(2) ,
+SPECIAL_INSTR        VARCHAR(50),
+PROD_TYPE            VARCHAR(2),
+SSN_TYPE             VARCHAR(40),
+TOG_C                VARCHAR(2),
+STOCK_ON_HAND        INTEGER,    
+DIMENSION_X                   NUMERIC(9, 3) , 
+DIMENSION_Y                   NUMERIC(9, 3) , 
+DIMENSION_Z                   NUMERIC(9, 3) , 
+DIMENSION_X_UOM               VARCHAR(2) , 
+DIMENSION_Y_UOM               VARCHAR(2) , 
+DIMENSION_Z_UOM               VARCHAR(2) , 
+ORDER_WEIGHT                  DECIMAL(6, 3)  
+ )
+AS 
+BEGIN 
+   /* =================================================================================================== */
+    IF (IN_START_DATE IS NULL) THEN
+    BEGIN
+       IN_START_DATE = CAST('2000-01-01' AS TIMESTAMP);
+    END
+    BEGIN
+       IF (IN_END_DATE IS NULL) THEN
+       BEGIN
+          IN_END_DATE = MAXTIME('TODAY');
+       END
+       IF (COALESCE(IN_PROD_ID,'')  = '') THEN
+       BEGIN
+             FOR SELECT T1.PROD_ID, T1.LAST_UPDATE_DATE, T1.SHORT_DESC, T1.LONG_DESC, T1.COMPANY_ID, T1.STOCK, 
+                        T1.UOM , T1.SPECIAL_INSTR, T1.PROD_TYPE, T1.SSN_TYPE, T1.TOG_C, T1.STOCK_ON_HAND  ,
+                        T1.DIMENSION_X, T1.DIMENSION_Y, T1.DIMENSION_Z, T1.DIMENSION_X_UOM, T1.DIMENSION_Y_UOM, T1.DIMENSION_Z_UOM, 
+                        T1.ORDER_WEIGHT
+             FROM PROD_PROFILE T1  
+             WHERE T1.LAST_UPDATE_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             ORDER BY T1.PROD_ID
+             INTO :PROD_ID, :LAST_UPDATE_DATE, :SHORT_DESC, :LONG_DESC, :COMPANY_ID, :STOCK, 
+                  :UOM , :SPECIAL_INSTR, :PROD_TYPE, :SSN_TYPE, :TOG_C, :STOCK_ON_HAND  ,
+                  :DIMENSION_X, :DIMENSION_Y, :DIMENSION_Z, :DIMENSION_X_UOM, :DIMENSION_Y_UOM, :DIMENSION_Z_UOM,
+                  :ORDER_WEIGHT
+             DO
+             BEGIN
+                SUSPEND;
+             END
+       END
+       ELSE
+       BEGIN
+             FOR SELECT T1.PROD_ID, T1.LAST_UPDATE_DATE, T1.SHORT_DESC, T1.LONG_DESC, T1.COMPANY_ID, T1.STOCK, 
+                        T1.UOM , T1.SPECIAL_INSTR, T1.PROD_TYPE, T1.SSN_TYPE, T1.TOG_C, T1.STOCK_ON_HAND  ,
+                        T1.DIMENSION_X, T1.DIMENSION_Y, T1.DIMENSION_Z, T1.DIMENSION_X_UOM, T1.DIMENSION_Y_UOM, T1.DIMENSION_Z_UOM,
+                        T1.ORDER_WEIGHT
+             FROM PROD_PROFILE T1  
+             WHERE T1.LAST_UPDATE_DATE BETWEEN :IN_START_DATE AND :IN_END_DATE
+             AND T1.PROD_ID LIKE :IN_PROD_ID
+             ORDER BY T1.PROD_ID
+             INTO :PROD_ID, :LAST_UPDATE_DATE, :SHORT_DESC, :LONG_DESC, :COMPANY_ID, :STOCK, 
+                  :UOM , :SPECIAL_INSTR, :PROD_TYPE, :SSN_TYPE, :TOG_C, :STOCK_ON_HAND  ,
+                  :DIMENSION_X, :DIMENSION_Y, :DIMENSION_Z, :DIMENSION_X_UOM, :DIMENSION_Y_UOM, :DIMENSION_Z_UOM,
+                  :ORDER_WEIGHT
+             DO
+             BEGIN
+                SUSPEND;
+             END
+       END
+    END
+
+END ^
+
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

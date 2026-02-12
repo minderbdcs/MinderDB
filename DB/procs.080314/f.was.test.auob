@@ -1,0 +1,4 @@
+/* 
+execute procedure add_tran_response('FX','NEWLABEL','','AUOB','C','NOW','',1,'F','','MASTER    ',0,'','SSSSSSSSS','me','mc');
+*/
+execute procedure add_tran_response('FX','NEWLABEL','','AUOB','C','NOW','',1,'F','','MASTER    ',0,'','SSSSSSSSS','me','mc');

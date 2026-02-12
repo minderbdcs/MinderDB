@@ -1,0 +1,27 @@
+/*
+downer.minderseries record 491
+downer record 631
+         491 ISSN_100X23_TSC300                                 70 BARCODE 390,248,"128",182,0,180,5,10,"!105%ISSN.SSN_ID%"                                                                                                                                                                                                                   <null> TSC                                      366M                                     TSC                                                 130:1d 21-DEC-2016      <null>         
+*/
+/*
+first calc the first 6 bytes
+
+insert into sys_label_var
+%issn_pre6% = substr(%ISSN.SSN_ID%,1,6)
+%issn_post6% = assignIf(len(%ISSN.SSN_ID%)>6,substr(%ISSN.SSN_ID,7,7),'')
+%issn_post7% = assignIf(len(%ISSN.SSN_ID%)>6,'!101'+%issn_post6% ,'')
+
+then in sl_line for record #491 have
+"!105%issn_pre6%%issn_post7%"
+*/
+/*
+insert into sys_label_var(slv_name,slv_expression,slv_sequence,sl_name) values ('%issn_pre6%','substr(%ISSN.SSN_ID%,1,6)',1,'ISSN_100X23_TSC300');
+insert into sys_label_var(slv_name,slv_expression,slv_sequence,sl_name) values ('%issn_post6%',"assignIf(len(%ISSN.SSN_ID%)>6,substr(%ISSN.SSN_ID%,7,7),'')",1,'ISSN_100X23_TSC300');
+insert into sys_label_var(slv_name,slv_expression,slv_sequence,sl_name) values ('%issn_post7%',"assignIf(len(%ISSN.SSN_ID%)>6,'!101'+%issn_post6%,'')",2,'ISSN_100X23_TSC300');
+*/
+/*
+update sys_label set sl_line = 'BARCODE 390,248,"128",182,0,180,5,10,"!105%issn_pre6%%issn_post7%"' where record_id=491;
+*/
+/*
+insert into sys_label_var(slv_name,slv_expression,slv_sequence,sl_name) values ('%issn_symb6%',"assignIf(len(%ISSN.SSN_ID%)>6,'','M')",1,'ISSN_100X23_TSC300');
+*/

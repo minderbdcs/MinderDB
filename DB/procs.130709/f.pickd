@@ -1,0 +1,3 @@
+alter table pick_despatch_dx add PICKD_POST_CODE_DEPOT_RECORD_ID    RECORD_ID;
+alter table pick_despatch    add PICKD_POST_CODE_DEPOT_RECORD_ID    RECORD_ID;
+

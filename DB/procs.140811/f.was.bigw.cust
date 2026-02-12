@@ -1,0 +1,1 @@
+ update pack_customer set pc_populate_out_sscc_method='PRODUCT ORDER DELIVER TO' where pc_customer_edi_no='9377777134179';

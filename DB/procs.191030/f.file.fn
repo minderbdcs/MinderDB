@@ -1,0 +1,7 @@
+/*
+523:DECLARE EXTERNAL FUNCTION PADRIGHT
+526:ENTRY_POINT 'Padright' MODULE_NAME 'udf_file';
+*/
+drop external function padright;
+drop external function numberformat;
+drop external function strformat;

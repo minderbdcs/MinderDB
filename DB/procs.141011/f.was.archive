@@ -1,0 +1,2 @@
+alter trigger add_pick_item_time inactive;
+

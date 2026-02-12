@@ -1,0 +1,36 @@
+insert into options(group_code,code,description) values('REF_CODE','PINV_STA','PICK_INVOICE.SUB_TOTAL_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_STT','PICK_INVOICE.SUB_TOTAL_TAX');
+insert into options(group_code,code,description) values('REF_CODE','PINV_DESPID','PICK_INVOICE.x');
+insert into options(group_code,code,description) values('REF_CODE','PINV_LLAFC','PICK_INVOICE.LEGACY_LEDGER_ADMIN_FEE_CODE');
+insert into options(group_code,code,description) values('REF_CODE','PINV_LLDC','PICK_INVOICE.LEGACY_LEDGER_DEPOSIT_CODE');
+insert into options(group_code,code,description) values('REF_CODE','PINV_FREIGHT','PICK_INVOICE.FREIGHT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_FTA','PICK_INVOICE.FREIGHT_TAX_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_AFR','PICK_INVOICE.ADMIN_FEE_RATE');
+insert into options(group_code,code,description) values('REF_CODE','PINV_AFA','PICK_INVOICE.ADMIN_FEE_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_TAX','PICK_INVOICE.TAX_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_DUE','PICK_INVOICE.DUE_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_PAID','PICK_INVOICE.AMOUNT_PAID');
+insert into options(group_code,code,description) values('REF_CODE','PINV_TOTAL','PICK_INVOICE.INV_TOTAL_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_TAXRATE','PICK_INVOICE.TAX_RATE');
+insert into options(group_code,code,description) values('REF_CODE','PINV_LLFC','PICK_INVOICE.LEGACY_LEDGER_FREIGHT_CODE');
+insert into options(group_code,code,description) values('REF_CODE','PINV_IS','PICK_INVOICE.INVOICE_STATUS');
+insert into options(group_code,code,description) values('REF_CODE','PINV_ATA','PICK_INVOICE.ADMIN_TAX_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_COMPANY','PICK_INVOICE.COMPANY_ID');
+insert into options(group_code,code,description) values('REF_CODE','PINV_WH','PICK_INVOICE.WH_ID');
+
+
+insert into options(group_code,code,description) values('REF_CODE','PILN_PLN','PICK_INVOICE_LINE.INVLINE_PICK_LABEL_NO');
+insert into options(group_code,code,description) values('REF_CODE','PILN_ID','PICK_INVOICE_LINE.INVLINE_INVLINE_PICK_ID');
+insert into options(group_code,code,description) values('REF_CODE','PILN_TYPE','PICK_INVOICE_LINE.INVLINE_LINE_TYPE');
+insert into options(group_code,code,description) values('REF_CODE','PILN_UNITSALE','PICK_INVOICE_LINE.INVLINE_UNIT_COST');
+insert into options(group_code,code,description) values('REF_CODE','PILN_DISC','PICK_INVOICE_LINE.INVLINE_DISCOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PILN_TOTALSALE','PICK_INVOICE_LINE.INVLINE_LINE_TOTAL');
+insert into options(group_code,code,description) values('REF_CODE','PILN_TAXRATE','PICK_INVOICE_LINE.INVLINE_TAX_RATE');
+insert into options(group_code,code,description) values('REF_CODE','PILN_TOTAL_COST','PICK_INVOICE_LINE.INVLINE_TOTAL_COST');
+insert into options(group_code,code,description) values('REF_CODE','PILN_LLC','PICK_INVOICE_LINE.INVLINE_LEGACY_LEDGER_CODE');
+insert into options(group_code,code,description) values('REF_CODE','PILN_PICKTYPE','PICK_INVOICE_LINE.INVLINE_PICK_TYPE');
+insert into options(group_code,code,description) values('REF_CODE','PILN_SALE_PRICE','PICK_INVOICE_LINE.INVLINE_SALE_PRICE');
+insert into options(group_code,code,description) values('REF_CODE','PILN_TAX','PICK_INVOICE_LINE.INVLINE_TAX_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PILN_QTY','PICK_INVOICE_LINE.INVLINE_QTY');
+
+

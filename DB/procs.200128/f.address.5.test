@@ -1,0 +1,309 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/* create despatch address fields  */
+
+
+CREATE OR ALTER PROCEDURE ADDRESS_DESPATCH_BUBBLE (
+WK_FIRST_NAME         FIRST_NAME,
+WK_LAST_NAME          LAST_NAME,
+WK_CONTACT_NAME       CONTACT_NAME,
+WK_POSTCODE           POST_CODE,
+WK_SUBURB             SUBURB,
+WK_CITY               CITY,
+WK_STATE              STATE,
+WK_COUNTRY            VARCHAR(25),
+WK_ADDRESS_LINE1      VARCHAR(100),
+WK_ADDRESS_LINE2      VARCHAR(100),
+WK_ADDRESS_LINE3      VARCHAR(100),
+WK_ADDRESS_LINE4      VARCHAR(100),
+WK_ADDRESS_LINE5      VARCHAR(100))
+RETURNS (
+ADDRESS_LINE1         VARCHAR(100),
+ADDRESS_LINE2         VARCHAR(100),
+ADDRESS_LINE3         VARCHAR(100),
+ADDRESS_LINE4         VARCHAR(100),
+ADDRESS_LINE5         VARCHAR(100),
+ADDRESS_LINE6         VARCHAR(100),
+ADDRESS_LINE7         VARCHAR(100))
+AS
+
+DECLARE VARIABLE WK_BUFFER                   VARCHAR(1024);
+DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(80);
+DECLARE VARIABLE WK_LOG_RESULT INTEGER;
+
+DECLARE VARIABLE WK_PD_LAST_LINE             INTEGER;
+DECLARE VARIABLE WK_ADDRESS_LINE0            VARCHAR(100);
+DECLARE VARIABLE WK_ADDRESS_LINE6            VARCHAR(100);
+DECLARE VARIABLE WK_ADDRESS_LINE7            VARCHAR(100);
+DECLARE VARIABLE ADDRESS_LINE8               VARCHAR(100);
+BEGIN
+
+     WK_LOG_FILENAME = '/data/tmp/AddressFilter.log';
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'start of Address Filter');
+     ADDRESS_LINE1         = NULL;
+     ADDRESS_LINE2         = NULL;
+     ADDRESS_LINE3         = NULL;
+     ADDRESS_LINE4         = NULL;
+     ADDRESS_LINE5         = NULL;
+     ADDRESS_LINE6         = NULL;
+     ADDRESS_LINE7         = NULL;
+     ADDRESS_LINE8         = NULL;
+     /* ================================================================== */
+     WK_PD_LAST_LINE = 0;
+     /* WK_ADDRESS_LINE0 = COALESCE(WK_FIRST_NAME,'') || ' ' || COALESCE(WK_LAST_NAME, ''); */
+
+     WK_ADDRESS_LINE0 = COALESCE(WK_CONTACT_NAME,'') ||
+        ',' || COALESCE(WK_FIRST_NAME,'') || ' ' || COALESCE(WK_LAST_NAME, '');
+     /* IF (WK_ADDRESS_LINE0 <> ' ') THEN */
+     IF (WK_ADDRESS_LINE0 <> ', ') THEN
+     BEGIN
+        ADDRESS_LINE1 = WK_ADDRESS_LINE0;
+        WK_PD_LAST_LINE = 1;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 1 set to contact');
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, ADDRESS_LINE1);
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_PD_LAST_LINE);
+     END
+
+     IF (COALESCE(WK_ADDRESS_LINE1,'') <> '') THEN
+     BEGIN
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'passed line 1 not empty');
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_ADDRESS_LINE1);
+        IF (WK_PD_LAST_LINE = 0) THEN
+        BEGIN
+           ADDRESS_LINE1 = WK_ADDRESS_LINE1;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 1 set to addr 1');
+        END
+        IF (WK_PD_LAST_LINE = 1) THEN
+        BEGIN
+           ADDRESS_LINE2 = WK_ADDRESS_LINE1;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 2 set to addr 1');
+        END
+        WK_PD_LAST_LINE = WK_PD_LAST_LINE + 1;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_PD_LAST_LINE);
+     END
+
+     IF (COALESCE(WK_ADDRESS_LINE2,'') <> '') THEN
+     BEGIN
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'passed line 2 not empty');
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_ADDRESS_LINE2);
+        IF (WK_PD_LAST_LINE = 0) THEN
+        BEGIN
+           ADDRESS_LINE1 = WK_ADDRESS_LINE2;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 1 set to addr 2');
+        END
+        IF (WK_PD_LAST_LINE = 1) THEN
+        BEGIN
+           ADDRESS_LINE2 = WK_ADDRESS_LINE2;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 2 set to addr 2');
+        END
+        IF (WK_PD_LAST_LINE = 2) THEN
+        BEGIN
+           ADDRESS_LINE3 = WK_ADDRESS_LINE2;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 3 set to addr 2');
+        END
+        WK_PD_LAST_LINE = WK_PD_LAST_LINE + 1;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_PD_LAST_LINE);
+     END
+
+     IF (COALESCE(WK_ADDRESS_LINE3,'') <> '') THEN
+     BEGIN
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'passed line 3 not empty');
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_ADDRESS_LINE3);
+        IF (WK_PD_LAST_LINE = 0) THEN
+        BEGIN
+           ADDRESS_LINE1 = WK_ADDRESS_LINE3;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 1 set to addr 3');
+        END
+        IF (WK_PD_LAST_LINE = 1) THEN
+        BEGIN
+           ADDRESS_LINE2 = WK_ADDRESS_LINE3;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 2 set to addr 3');
+        END
+        IF (WK_PD_LAST_LINE = 2) THEN
+        BEGIN
+           ADDRESS_LINE3 = WK_ADDRESS_LINE3;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 3 set to addr 3');
+        END
+        IF (WK_PD_LAST_LINE = 3) THEN
+        BEGIN
+           ADDRESS_LINE4 = WK_ADDRESS_LINE3;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 4 set to addr 3');
+        END
+        WK_PD_LAST_LINE = WK_PD_LAST_LINE + 1;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_PD_LAST_LINE);
+     END
+
+     IF (COALESCE(WK_ADDRESS_LINE4,'') <> '') THEN
+     BEGIN
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'passed line 4 not empty');
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_ADDRESS_LINE4);
+        IF (WK_PD_LAST_LINE = 0) THEN
+        BEGIN
+           ADDRESS_LINE1 = WK_ADDRESS_LINE4;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 1 set to addr 4');
+        END
+        IF (WK_PD_LAST_LINE = 1) THEN
+        BEGIN
+           ADDRESS_LINE2 = WK_ADDRESS_LINE4;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 2 set to addr 4');
+        END
+        IF (WK_PD_LAST_LINE = 2) THEN
+        BEGIN
+           ADDRESS_LINE3 = WK_ADDRESS_LINE4;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 3 set to addr 4');
+        END
+        IF (WK_PD_LAST_LINE = 3) THEN
+        BEGIN
+           ADDRESS_LINE4 = WK_ADDRESS_LINE4;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 4 set to addr 4');
+        END
+        IF (WK_PD_LAST_LINE = 4) THEN
+        BEGIN
+           ADDRESS_LINE5 = WK_ADDRESS_LINE4;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 5 set to addr 4');
+        END
+        WK_PD_LAST_LINE = WK_PD_LAST_LINE + 1;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_PD_LAST_LINE);
+     END
+
+     IF (COALESCE(WK_ADDRESS_LINE5,'') <> '') THEN
+     BEGIN
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'passed line 5 not empty');
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_ADDRESS_LINE5);
+        IF (WK_PD_LAST_LINE = 0) THEN
+        BEGIN
+           ADDRESS_LINE1 = WK_ADDRESS_LINE5;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 1 set to addr 5');
+        END
+        IF (WK_PD_LAST_LINE = 1) THEN
+        BEGIN
+           ADDRESS_LINE2 = WK_ADDRESS_LINE5;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 2 set to addr 5');
+        END
+        IF (WK_PD_LAST_LINE = 2) THEN
+        BEGIN
+           ADDRESS_LINE3 = WK_ADDRESS_LINE5;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 3 set to addr 5');
+        END
+        IF (WK_PD_LAST_LINE = 3) THEN
+        BEGIN
+           ADDRESS_LINE4 = WK_ADDRESS_LINE5;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 4 set to addr 5');
+        END
+        IF (WK_PD_LAST_LINE = 4) THEN
+        BEGIN
+           ADDRESS_LINE5 = WK_ADDRESS_LINE5;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 5 set to addr 5');
+        END
+        IF (WK_PD_LAST_LINE = 5) THEN
+        BEGIN
+           ADDRESS_LINE6 = WK_ADDRESS_LINE5;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 6 set to addr 5');
+        END
+        WK_PD_LAST_LINE = WK_PD_LAST_LINE + 1;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_PD_LAST_LINE);
+     END
+
+     /* now add lines for suburb state postcode */
+     WK_ADDRESS_LINE6 = WK_SUBURB || ' ' || WK_STATE || ' ' || WK_POSTCODE;
+     BEGIN
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'passed line 6 not empty');
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_ADDRESS_LINE6);
+        IF (WK_PD_LAST_LINE = 0) THEN
+        BEGIN
+           ADDRESS_LINE1 = WK_ADDRESS_LINE6;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 1 set to addr 6');
+        END
+        IF (WK_PD_LAST_LINE = 1) THEN
+        BEGIN
+           ADDRESS_LINE2 = WK_ADDRESS_LINE6;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 2 set to addr 6');
+        END
+        IF (WK_PD_LAST_LINE = 2) THEN
+        BEGIN
+           ADDRESS_LINE3 = WK_ADDRESS_LINE6;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 3 set to addr 6');
+        END
+        IF (WK_PD_LAST_LINE = 3) THEN
+        BEGIN
+           ADDRESS_LINE4 = WK_ADDRESS_LINE6;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 4 set to addr 6');
+        END
+        IF (WK_PD_LAST_LINE = 4) THEN
+        BEGIN
+           ADDRESS_LINE5 = WK_ADDRESS_LINE6;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 5 set to addr 6');
+        END
+        IF (WK_PD_LAST_LINE = 5) THEN
+        BEGIN
+           ADDRESS_LINE6 = WK_ADDRESS_LINE6;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 6 set to addr 6');
+        END
+        IF (WK_PD_LAST_LINE = 6) THEN
+        BEGIN
+           ADDRESS_LINE7 = WK_ADDRESS_LINE6;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 6 set to addr 6');
+        END
+        WK_PD_LAST_LINE = WK_PD_LAST_LINE + 1;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_PD_LAST_LINE);
+     END
+
+     /* now add line for country */
+     WK_ADDRESS_LINE7 = WK_COUNTRY;
+     BEGIN
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'passed line 7 not empty');
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_ADDRESS_LINE7);
+        IF (WK_PD_LAST_LINE = 0) THEN
+        BEGIN
+           ADDRESS_LINE1 = WK_ADDRESS_LINE7;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 1 set to addr 7');
+        END
+        IF (WK_PD_LAST_LINE = 1) THEN
+        BEGIN
+           ADDRESS_LINE2 = WK_ADDRESS_LINE7;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 2 set to addr 7');
+        END
+        IF (WK_PD_LAST_LINE = 2) THEN
+        BEGIN
+           ADDRESS_LINE3 = WK_ADDRESS_LINE7;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 3 set to addr 7');
+        END
+        IF (WK_PD_LAST_LINE = 3) THEN
+        BEGIN
+           ADDRESS_LINE4 = WK_ADDRESS_LINE7;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 4 set to addr 7');
+        END
+        IF (WK_PD_LAST_LINE = 4) THEN
+        BEGIN
+           ADDRESS_LINE5 = WK_ADDRESS_LINE7;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 5 set to addr 7');
+        END
+        IF (WK_PD_LAST_LINE = 5) THEN
+        BEGIN
+           ADDRESS_LINE6 = WK_ADDRESS_LINE7;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 6 set to addr 7');
+        END
+        IF (WK_PD_LAST_LINE = 6) THEN
+        BEGIN
+           ADDRESS_LINE7 = WK_ADDRESS_LINE7;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 7 set to addr 7');
+        END
+        IF (WK_PD_LAST_LINE = 7) THEN
+        BEGIN
+           ADDRESS_LINE8 = WK_ADDRESS_LINE7;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'line 8 set to addr 7');
+        END
+        WK_PD_LAST_LINE = WK_PD_LAST_LINE + 1;
+     WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, :WK_PD_LAST_LINE);
+     END
+
+    WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'end of of ADDRESS Filter');
+    SUSPEND;
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

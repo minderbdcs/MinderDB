@@ -1,0 +1,1 @@
+alter table control add use_invoice value_tf;

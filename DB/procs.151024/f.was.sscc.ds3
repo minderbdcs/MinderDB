@@ -1,0 +1,36 @@
+/* now have to do the same to the to address first name */
+/* reduce the font size for the to addr first name
+   then move down so that the bottom is at the same place */
+/***************************************************************/
+/* now the first name */
+/* ===================================== */
+/* 2830 ^FT488,152 */
+/* update sys_label set sl_line = '^FT488,152' where record_id=2830; */
+/* shift to the left by 1 byte = 488 - 34 = 454 */
+update sys_label set sl_line = '^FT454,152' where record_id=2830; */
+
+/* update sys_label set sl_line = '^A0N,34,37^FD%STORE_NAME_LEN20%^FS' where record_id=2831; */
+/* enforce the store name len20 to be the full store name for dick smiths edi no */
+/*
+ 767 %STORE_NAME_LEN20%        substr(%PICK_ADDRESS_ST.PIA_FIRST_NAME%,1,20) 
+*/
+update sys_label_var set slv_expression = 
+"assignIf(%PICK_ITEM.PS_CUSTOMER_EDI_NO%=='9315999902008T',%PICK_ADDRESS_ST.PIA_FIRST_NAME%,substr(%PICK_ADDRESS_ST.PIA_FIRST_NAME%,1,20)"
+where record_id = 767;
+/* calc the length of the store name len 20 = max (20 , len(store name 20))
+insert into sys_label_var (slv_name,slv_expression,slv_sequence,sl_name,last_update_date,last_update_by) values('%STORE_NAME_LEN20_LEN%',"max(20,len(%STORE_NAME_LEN20%))",'3','SSCC_100X150_ZPL','NOW','frankl');
+/* vary the width depending on the length of the store_name_len20
+   but enforce the max width as 37
+   488 + 20 * 37 = max space
+   454 + len of field * x = 488 + 20 * 37
+   so x = ((488 - 454) + (20 * 37)) / len of field
+   so x = (34 + 740) / len of field
+   so x =  774 / len of field
+   the max no of chars is 41
+   which gives a minimum of 18 dots
+*/
+insert into sys_label_var (slv_name,slv_expression,slv_sequence,sl_name,last_update_date,last_update_by) values('%STORE_NAME_FONT_WIDTH%',"774 / %STORE_NAME_LEN20_LEN%",'4','SSCC_100X150_ZPL','NOW','frankl');
+/*   then make the height = width /1.09 */
+insert into sys_label_var (slv_name,slv_expression,slv_sequence,sl_name,last_update_date,last_update_by) values('%STORE_NAME_FONT_HEIGHT%',"%STORE_NAME_FONT_WIDTH% / 1.09",'5','SSCC_100X150_ZPL','NOW','frankl');
+/* update sys_label set sl_line = '^A0N,34,37^FD%STORE_NAME_LEN20%^FS' where record_id=2831; */
+ update sys_label set sl_line = '^A0N,%STORE_NAME_FONT_HEIGHT%,%STORE_NAME_FONT_WIDTH%^FD%STORE_NAME_LEN20%^FS' where record_id=2831; 

@@ -1,0 +1,15 @@
+/* pkua should look at controls restrict by zone flag
+        if T then restrict the products by zone as well as wh_id and company_id
+*/
+/*
+for ebf
+
+the client code is going in H_OTHER1
+
+need to lookup the client code
+in a table
+have the allowed to use kit parts for the client in the file
+also the pick order sub type to use
+
+the partial pick allowed flag will be false
+*/

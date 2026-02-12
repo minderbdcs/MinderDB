@@ -1,0 +1,25 @@
+add control.prod_profile_std_cost_update domain value tf;
+
+if 'T' 
+	purchase_order unit_cost <> prod_profile.std_cost
+	then must recalc cost
+		calc wh_units =  # units in warehouse 
+		calc wh_value = wh_units  * prod_profile.std_cost
+		/* add the received qty * new price in purchase order */
+		calc wh_adj_units = qty to create in grnv
+		calc wh_adj_value = wh_adj_units * purchase_order_line.unit_cost
+		calc wh_new_value = wh_value + wh_adj_value
+		this gives the site value
+		/* then the new prod.std_cost = site value / (warehouse units + received units) */
+		calc wh_new_units = wh_units + wh_adj_units
+		calc wh_new_price  = wh_new_value / wh_new_units
+		update  prod_profile 
+			set last_last_std_price = last_std_price, 
+			    last_std_price=std_price, 
+			    std_cost = wh_new_price,
+			    last_last_price_updated_by = last_price_updated_by, 
+			    last_price_updated_by=price_updated_by, 
+			    price_updated_by  = user of grnv 
+		where prod_id = xxxx
+
+

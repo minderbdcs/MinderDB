@@ -1,0 +1,2 @@
+alter table sys_equip add se_brand brand;
+alter table sys_equip add se_model model;

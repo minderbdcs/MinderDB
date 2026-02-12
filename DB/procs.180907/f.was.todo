@@ -1,0 +1,12 @@
+pkol handle alternate_companys 'ALL'
+send_pickable_stock has multiple lines in singleton select
+
+product transfer when company is ALL or system is set to that any company in tranfer means 'ALL'
+stpa P if have options record for TRANFER ONE-COMPANY T
+then ignore company
+====================================================================
+for bhp have to do plpr for prod labels
+then pc_label_location for location labels
+plad transaction for addr labels
+plao transaction for addr labels
+

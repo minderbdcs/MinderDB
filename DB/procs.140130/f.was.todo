@@ -1,0 +1,8 @@
+create transaction DSUC
+to update a pick_despatches service record and and service type
+
+Only allow despatches not on a manifest and DC status.
+
+recalc the sent from fields
+recalc the depot record id's.
+

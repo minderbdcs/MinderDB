@@ -1,0 +1,23 @@
+alter domain percent type smallint;
+
+
+alter table pick_item drop pi_loan_rate ;
+
+alter table loan_rate drop       LR_DAY ;
+alter table loan_rate drop       LR_WEEK ;
+alter table loan_rate drop       LR_MONTH ;
+alter table loan_rate drop       LR_QUARTER ;
+alter table loan_rate drop       LR_ANNUAL ;
+alter table loan_rate drop       LR_REPLACEMENT ;
+
+DROP   DOMAIN PERCENT_F ;
+CREATE DOMAIN PERCENT_F AS NUMERIC(6,3);
+
+alter table pick_item add pi_loan_rate percent_f;
+alter table loan_rate add        LR_DAY PERCENT_f;
+alter table loan_rate ADD        LR_WEEK PERCENT_f;
+alter table loan_rate add        LR_MONTH PERCENT_f;
+alter table loan_rate add        LR_QUARTER PERCENT_f;
+alter table loan_rate add        LR_ANNUAL PERCENT_f;
+alter table loan_rate add        LR_REPLACEMENT PERCENT_f;
+

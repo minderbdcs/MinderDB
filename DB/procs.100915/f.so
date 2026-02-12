@@ -1,0 +1,1 @@
+alter table pick_order add sub_total_tax numeric(13,2);

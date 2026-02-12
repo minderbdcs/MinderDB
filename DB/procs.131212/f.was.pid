@@ -1,0 +1,7 @@
+set echo;
+set plan;
+set stats;
+ update pick_item_detail pid set pid.company_id        = (select  po.company_id from pick_order po where pid.pick_order =po.pick_order) where pid.company_id  is null;
+ update pick_item_detail pid set pid.zone_c            = (select  po.zone_c     from pick_order po where pid.pick_order =po.pick_order) where pid.zone_c      is null;
+ update pick_item_detail pid set pid.pick_order_sub_type  = (select  po.pick_order_sub_type from pick_order po where pid.pick_order =po.pick_order) where pid.pick_order_sub_type  is null;
+ update pick_item_detail pid set pid.prod_id              = (select  i1.prod_id             from issn i1 where pid.ssn_id     =i1.ssn_id    ) where pid.prod_id   is null;

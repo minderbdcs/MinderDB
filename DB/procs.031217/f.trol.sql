@@ -1,0 +1,51 @@
+
+ALTER PROCEDURE UPDATE_SSN_TROL_A (OBJECT VARCHAR(30) ,
+WH_ID CHAR(2) ,
+LOCN_ID VARCHAR(10) ,
+TRN_DATE TIMESTAMP,
+DEVICE_ID CHAR(2) )
+AS 
+                                                      
+  DECLARE VARIABLE strORIGINAL_SSN VARCHAR(20);
+  DECLARE VARIABLE last_date TIMESTAMP;
+     
+BEGIN
+   /* Update SSN table */   
+/*
+   UPDATE SSN
+   SET PREV_LOCN_ID = :LOCN_ID, LOCN_ID = :DEVICE_ID, WH_ID = :WH_ID,
+       DT_PREV_INTO = :TRN_DATE
+   WHERE SSN_ID = :OBJECT;
+*/
+   
+   SELECT ORIGINAL_SSN, INTO_DATE FROM ISSN 
+      WHERE SSN_ID = :OBJECT
+      INTO :strORIGINAL_SSN, :last_date;
+   IF (last_date IS NULL) THEN
+   BEGIN
+      last_date = CAST('JAN-01-2000' AS DATE);
+   END
+   IF (last_date < TRN_DATE) THEN
+   BEGIN
+      UPDATE ISSN
+      SET PREV_PREV_LOCN_ID = PREV_LOCN_ID, PREV_PREV_WH_ID = PREV_WH_ID, 
+          PREV_LOCN_ID = :LOCN_ID, PREV_WH_ID = WH_ID, 
+          LOCN_ID = :DEVICE_ID, WH_ID = :WH_ID,
+          PREV_DATE = :TRN_DATE
+      WHERE SSN_ID = :OBJECT;
+      IF (strORIGINAL_SSN = OBJECT) THEN
+      BEGIN
+         UPDATE SSN
+         SET PREV_LOCN_ID = :LOCN_ID, LOCN_ID = :DEVICE_ID, WH_ID = :WH_ID,
+             DT_PREV_INTO = :TRN_DATE
+         WHERE SSN_ID = :OBJECT;
+         
+      END
+   END
+   ELSE
+   BEGIN
+      EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :strORIGINAL_SSN, '', '', :TRN_DATE,
+      'No Update Prior to INTO Date', '', 0,  '', :DEVICE_ID);
+   END
+END ^
+

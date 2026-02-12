@@ -1,0 +1,2 @@
+alter table pick_despatch add ALTERNATE_AWB_CONSIGNMENT_NO AWB_CONSIGNMENT_NO;
+alter table pick_despatch_dx add ALTERNATE_AWB_CONSIGNMENT_NO AWB_CONSIGNMENT_NO;

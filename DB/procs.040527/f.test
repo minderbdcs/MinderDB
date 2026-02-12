@@ -1,0 +1,3 @@
+select awb_consignment_no,despatch_status from pick_despatch;
+select pick_despatch.awb_consignment_no,pick_item_detail.ssn_id
+from pick_despatch join pick_item_detail on pick_item_detail.despatch_id=pick_despatch.despatch_id ;

@@ -1,0 +1,3 @@
+alter table pick_order add exported_despatch_date timestamp;
+alter table pick_order add exported_despatch_file descr;
+

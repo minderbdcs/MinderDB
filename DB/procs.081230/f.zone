@@ -1,0 +1,2 @@
+alter table zone add zone_seq locn_seq;
+

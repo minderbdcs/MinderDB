@@ -1,0 +1,315 @@
+DROP   PROCEDURE PC_DSDX_LOCATION ^
+
+CREATE PROCEDURE PC_DSDX_LOCATION ( WK_LOCN VARCHAR(10) )
+AS
+DECLARE VARIABLE WK_SSN VARCHAR(30);
+DECLARE VARIABLE WK_SSN_SSN VARCHAR(30);
+DECLARE VARIABLE WK_QTY_TOGET INTEGER;
+DECLARE VARIABLE WK_REASON VARCHAR(70);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_LABEL VARCHAR(7);
+DECLARE VARIABLE WK_PICKED_QTY INTEGER;
+DECLARE VARIABLE WK_ORDER_QTY INTEGER;
+DECLARE VARIABLE WK_DETAIL_ID INTEGER;
+DECLARE VARIABLE WK_PROCESS_TYPE VARCHAR(10);
+DECLARE VARIABLE WK_ISSN_PICK_LABEL VARCHAR(15);
+DECLARE VARIABLE WK_BUFFER VARCHAR(150);
+
+/* 
+    get issn in location
+    must despatch exit these
+    if we have a pick_item_detail for these
+        use this to drive the exit
+    otherwise
+        if have a 'D######' pick_order in the issn
+            we know that issn was confirmed but not transferred
+            so have the order , label, order_qty
+                but the picked_qty will be null
+    otherwise
+        if pick_order is an order
+            must choose the line to use
+    otherwise
+        pick_order is null 
+        must choose the 1st pick_item for this ssn
+*/
+BEGIN
+	FOR SELECT ORIGINAL_SSN, CURRENT_QTY, SSN_ID, PICK_ORDER 
+            FROM ISSN
+            WHERE LOCN_ID = :WK_LOCN
+            INTO :WK_SSN_SSN, :WK_QTY_TOGET, :WK_SSN, :WK_ISSN_PICK_LABEL
+            DO
+            BEGIN
+                IF (WK_QTY_TOGET <> 0) THEN
+                BEGIN
+                   UPDATE ISSN SET ISSN_STATUS = 'DX',
+                       PREV_PREV_WH_ID = PREV_WH_ID,
+                       PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                       PREV_WH_ID = WH_ID,
+                       PREV_LOCN_ID = LOCN_ID,
+                       WH_ID = 'XD',
+                       PREV_QTY = CURRENT_QTY,
+                       CURRENT_QTY = 0
+                   WHERE SSN_ID = :WK_SSN;
+                END
+                ELSE
+                BEGIN
+                   /* zero qty item */
+                   UPDATE ISSN SET ISSN_STATUS = 'DX',
+                       PREV_PREV_WH_ID = PREV_WH_ID,
+                       PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                       PREV_WH_ID = WH_ID,
+                       PREV_LOCN_ID = LOCN_ID,
+                       WH_ID = 'XD'
+                   WHERE SSN_ID = :WK_SSN;
+                END
+                UPDATE SSN SET CURRENT_QTY = CURRENT_QTY - :WK_QTY_TOGET
+                   WHERE SSN_ID = :WK_SSN_SSN;
+                WK_REASON = 'Despatched ' || :WK_QTY_TOGET || ' ISSN ' || :WK_SSN ;
+                EXECUTE PROCEDURE ADD_SSN_HIST('XD', :WK_LOCN, :WK_SSN_SSN, 
+                          'DSDX', 'A', 'NOW',
+                          :WK_REASON, 'ON TO TRUCK' , :WK_QTY_TOGET, 'SYSTEM', 'SS'); 
+                WK_PROCESS_TYPE = '';
+                FOR SELECT PICK_LABEL_NO , PICK_DETAIL_ID
+                    FROM PICK_ITEM_DETAIL
+                WHERE SSN_ID = :WK_SSN
+                INTO :WK_LABEL,:WK_DETAIL_ID
+                DO
+                BEGIN
+                    WK_PROCESS_TYPE = 'DETAIL';
+                    /* update detail status to stop rerun */
+                    UPDATE PICK_ITEM_DETAIL SET PICK_DETAIL_STATUS = 'DX'
+                    WHERE PICK_DETAIL_ID = :WK_DETAIL_ID;
+                    SELECT PICK_ORDER, PICKED_QTY, PICK_ORDER_QTY
+                    FROM PICK_ITEM WHERE PICK_LABEL_NO = :WK_LABEL
+                    INTO :WK_ORDER, :WK_PICKED_QTY, :WK_ORDER_QTY;
+
+                    /* check despatched all of line */
+                    WK_FOUND = 0;
+                    SELECT FIRST 1 1 FROM PICK_ITEM_DETAIL
+                    WHERE PICK_LABEL_NO = :WK_LABEL
+                      AND PICK_DETAIL_STATUS <> 'DX'
+                    INTO :WK_FOUND;
+                    IF (WK_FOUND IS NULL) THEN
+                       WK_FOUND = 0;
+                    IF (WK_FOUND = 0) THEN
+                    BEGIN
+                       /* no undespatched ssns on item */
+                       UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'DX'
+                       WHERE PICK_LABEL_NO = :WK_LABEL;
+                       IF (WK_PICKED_QTY < WK_ORDER_QTY) THEN
+                       BEGIN
+                          /* must change line to allow picking of the remaining qty */
+                          UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'OP',
+                                 DEVICE_ID = NULL
+                          WHERE PICK_LABEL_NO = :WK_LABEL;
+                       END
+                       ELSE
+                       BEGIN
+                          /* must change line to allow picking of the remaining qty */
+                          UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'DX',
+                                 DEVICE_ID = NULL
+                          WHERE PICK_LABEL_NO = :WK_LABEL;
+                       END
+                    END
+                    /* check despatched all of order */
+                    WK_FOUND = 0;
+                    SELECT FIRST 1 1 FROM PICK_ITEM
+                    WHERE PICK_ORDER = :WK_ORDER
+                      AND PICK_LINE_STATUS <> 'DX'
+                      AND PICK_LINE_STATUS <> 'CN'
+                      AND PICK_LINE_STATUS <> 'HD'
+                    INTO :WK_FOUND;
+                    IF (WK_FOUND IS NULL) THEN
+                       WK_FOUND = 0;
+                    IF (WK_FOUND = 0) THEN
+                    BEGIN
+                       UPDATE PICK_ORDER SET PICK_STATUS = 'DX'
+                       WHERE PICK_ORDER = :WK_ORDER;
+                    END
+                END /* for pick item detail */
+                IF (WK_PROCESS_TYPE = '') THEN
+                BEGIN
+                    /* try the issn pick_order is a label no */
+                    WK_FOUND = 0; 
+                    SELECT 1, PICK_ORDER, PICK_ORDER_QTY, PICK_LABEL_NO
+                    FROM PICK_ITEM WHERE PICK_LABEL_NO = :WK_ISSN_PICK_LABEL
+                    INTO :WK_FOUND, :WK_ORDER, :WK_ORDER_QTY, :WK_LABEL;
+                    IF (WK_FOUND = 1) THEN
+                    BEGIN
+                        WK_PROCESS_TYPE = 'LABEL';
+                        /* have confirmed line but not picked right */
+                        WK_PICKED_QTY = WK_ORDER_QTY; /* since pick_qty is null */
+                        /* check despatched all of line */
+                        WK_FOUND = 0;
+                        SELECT FIRST 1 1 FROM PICK_ITEM_DETAIL
+                        WHERE PICK_LABEL_NO = :WK_LABEL
+                          AND PICK_DETAIL_STATUS <> 'DX'
+                        INTO :WK_FOUND;
+                        IF (WK_FOUND IS NULL) THEN
+                           WK_FOUND = 0;
+                        IF (WK_FOUND = 0) THEN
+                        BEGIN
+                           /* no undespatched ssns on item */
+                           UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'DX'
+                           WHERE PICK_LABEL_NO = :WK_LABEL;
+                           IF (WK_PICKED_QTY < WK_ORDER_QTY) THEN
+                           BEGIN
+                              /* must change line to allow picking of the remaining qty */
+                              UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'OP',
+                                     DEVICE_ID = NULL
+                              WHERE PICK_LABEL_NO = :WK_LABEL;
+                           END
+                           ELSE
+                           BEGIN
+                              /* must change line to allow picking of the remaining qty */
+                              UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'DX',
+                                     DEVICE_ID = NULL
+                              WHERE PICK_LABEL_NO = :WK_LABEL;
+                           END
+                        END
+                        /* check despatched all of order */
+                        WK_FOUND = 0;
+                        SELECT FIRST 1 1 FROM PICK_ITEM
+                        WHERE PICK_ORDER = :WK_ORDER
+                          AND PICK_LINE_STATUS <> 'DX'
+                          AND PICK_LINE_STATUS <> 'CN'
+                          AND PICK_LINE_STATUS <> 'HD'
+                        INTO :WK_FOUND;
+                        IF (WK_FOUND IS NULL) THEN
+                           WK_FOUND = 0;
+                        IF (WK_FOUND = 0) THEN
+                        BEGIN
+                           UPDATE PICK_ORDER SET PICK_STATUS = 'DX'
+                           WHERE PICK_ORDER = :WK_ORDER;
+                        END
+                    END /* end LABEL process type */
+                END
+                IF (WK_PROCESS_TYPE = '') THEN
+                BEGIN
+                    /* try the issn pick_order is an order no */
+                    WK_FOUND = 0; 
+                    SELECT FIRST 1 1, PICK_ORDER, PICK_ORDER_QTY, PICK_LABEL_NO
+                    FROM PICK_ITEM 
+                    WHERE PICK_ORDER = :WK_ISSN_PICK_LABEL
+                    AND SSN_ID = :WK_SSN_SSN
+                    INTO :WK_FOUND, :WK_ORDER, :WK_ORDER_QTY, :WK_LABEL;
+                    IF (WK_FOUND = 1) THEN
+                    BEGIN
+                        WK_PROCESS_TYPE = 'ORDER';
+                        /* have maybe confirmed or unconfirmed line and not picked right */
+                        WK_PICKED_QTY = WK_ORDER_QTY; /* since pick_qty is null */
+                        /* check despatched all of line */
+                        WK_FOUND = 0;
+                        SELECT FIRST 1 1 FROM PICK_ITEM_DETAIL
+                        WHERE PICK_LABEL_NO = :WK_LABEL
+                          AND PICK_DETAIL_STATUS <> 'DX'
+                        INTO :WK_FOUND;
+                        IF (WK_FOUND IS NULL) THEN
+                           WK_FOUND = 0;
+                        IF (WK_FOUND = 0) THEN
+                        BEGIN
+                           /* no undespatched ssns on item */
+                           UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'DX'
+                           WHERE PICK_LABEL_NO = :WK_LABEL;
+                           IF (WK_PICKED_QTY < WK_ORDER_QTY) THEN
+                           BEGIN
+                              /* must change line to allow picking of the remaining qty */
+                              UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'OP',
+                                     DEVICE_ID = NULL
+                              WHERE PICK_LABEL_NO = :WK_LABEL;
+                           END
+                           ELSE
+                           BEGIN
+                              /* must change line to allow picking of the remaining qty */
+                              UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'DX',
+                                     DEVICE_ID = NULL
+                              WHERE PICK_LABEL_NO = :WK_LABEL;
+                           END
+                        END
+                        /* check despatched all of order */
+                        WK_FOUND = 0;
+                        SELECT FIRST 1 1 FROM PICK_ITEM
+                        WHERE PICK_ORDER = :WK_ORDER
+                          AND PICK_LINE_STATUS <> 'DX'
+                          AND PICK_LINE_STATUS <> 'CN'
+                          AND PICK_LINE_STATUS <> 'HD'
+                        INTO :WK_FOUND;
+                        IF (WK_FOUND IS NULL) THEN
+                           WK_FOUND = 0;
+                        IF (WK_FOUND = 0) THEN
+                        BEGIN
+                           UPDATE PICK_ORDER SET PICK_STATUS = 'DX'
+                           WHERE PICK_ORDER = :WK_ORDER;
+                        END
+                    END /* end ORDER process type */
+                END
+                IF (WK_PROCESS_TYPE = '') THEN
+                BEGIN
+                    /* the issn pick_order is null so use the 1st line for this ssn */
+                    WK_FOUND = 0;
+                    SELECT FIRST 1 1, PICK_ORDER, PICK_ORDER_QTY, PICK_LABEL_NO
+                    FROM PICK_ITEM 
+                    WHERE SSN_ID = :WK_SSN_SSN
+                    INTO :WK_FOUND, :WK_ORDER, :WK_ORDER_QTY, :WK_LABEL;
+                    IF (WK_FOUND = 1) THEN
+                    BEGIN
+                        WK_PROCESS_TYPE = 'NULL';
+                        WK_BUFFER = 'issn in Despatch issn_pick_location order not found ' || :WK_SSN || ' SSN ' || :WK_SSN_SSN || ' used order ' || :WK_ORDER ;
+                        INSERT INTO LOG(DESCRIPTION) VALUES (:WK_BUFFER);
+                        /* have unconfirmed line */
+                        WK_PICKED_QTY = WK_ORDER_QTY; /* since pick_qty is null */
+                        /* check despatched all of line */
+                        WK_FOUND = 0;
+                        SELECT FIRST 1 1 FROM PICK_ITEM_DETAIL
+                        WHERE PICK_LABEL_NO = :WK_LABEL
+                          AND PICK_DETAIL_STATUS <> 'DX'
+                        INTO :WK_FOUND;
+                        IF (WK_FOUND IS NULL) THEN
+                           WK_FOUND = 0;
+                        IF (WK_FOUND = 0) THEN
+                        BEGIN
+                           /* no undespatched ssns on item */
+                           UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'DX'
+                           WHERE PICK_LABEL_NO = :WK_LABEL;
+                           IF (WK_PICKED_QTY < WK_ORDER_QTY) THEN
+                           BEGIN
+                              /* must change line to allow picking of the remaining qty */
+                              UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'OP',
+                                     DEVICE_ID = NULL
+                              WHERE PICK_LABEL_NO = :WK_LABEL;
+                           END
+                           ELSE
+                           BEGIN
+                              /* must change line to allow picking of the remaining qty */
+                              UPDATE PICK_ITEM SET PICK_LINE_STATUS = 'DX',
+                                     DEVICE_ID = NULL
+                              WHERE PICK_LABEL_NO = :WK_LABEL;
+                           END
+                        END
+                        /* check despatched all of order */
+                        WK_FOUND = 0;
+                        SELECT FIRST 1 1 FROM PICK_ITEM
+                        WHERE PICK_ORDER = :WK_ORDER
+                          AND PICK_LINE_STATUS <> 'DX'
+                          AND PICK_LINE_STATUS <> 'CN'
+                          AND PICK_LINE_STATUS <> 'HD'
+                        INTO :WK_FOUND;
+                        IF (WK_FOUND IS NULL) THEN
+                           WK_FOUND = 0;
+                        IF (WK_FOUND = 0) THEN
+                        BEGIN
+                           UPDATE PICK_ORDER SET PICK_STATUS = 'DX'
+                           WHERE PICK_ORDER = :WK_ORDER;
+                        END
+                    END /* end NULL process type */
+                END
+                IF (WK_PROCESS_TYPE = '') THEN
+                BEGIN
+                    /* not any of the above */
+                    WK_BUFFER = 'issn in Despatch but cannot exit' || :WK_SSN || ' SSN ' || :WK_SSN_SSN ;
+                    INSERT INTO LOG(DESCRIPTION) VALUES (:WK_BUFFER);
+                END
+
+            END /* for issn */
+END^

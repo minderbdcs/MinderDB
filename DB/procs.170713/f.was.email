@@ -1,0 +1,15 @@
+/*
+table sys_email
+E_MAIL_RELAY_HOST              (HOST_NAME) VARCHAR(50) Not Null 
+SE_MAIL_FROM_DOMAIN             (DOMAIN_NAME) VARCHAR(63) Not Null 
+                                CHECK  (VALUE SIMILAR TO '^[A-Za-z0-9][A-Za-z0-9\-\.]*[A-Za-z0-9]$')
+SE_EMAIL_FROM_NAME              (EMAIL_NAME) VARCHAR(50) Not Null 
+SE_CREATED_DATE                 (CREATE_DATE) TIMESTAMP Nullable 
+SE_CREATED_BY                   (USER_ID) VARCHAR(10) Nullable 
+SE_LAST_UPDATED                 (CREATE_DATE) TIMESTAMP Nullable 
+SE_LAST_UPDATED_BY              (USER_ID) VARCHAR(10) Nullable 
+CONSTRAINT INTEG_637:
+  Primary key (SE_MAIL_RELAY_HOST)
+*/
+alter table sys_email drop constraint integ_637;
+alter table sys_email add se_

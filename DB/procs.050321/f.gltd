@@ -1,0 +1,445 @@
+DROP TRIGGER RUN_TRANSACTION_GLTD ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GLTD FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 6 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_BUSINESS_ID VARCHAR(10);
+DECLARE VARIABLE WK_BUSINESS_NAME VARCHAR(50);
+DECLARE VARIABLE WK_CURRENT_COMPANY VARCHAR(50);
+DECLARE VARIABLE WK_SHORT_DESC VARCHAR(50);
+DECLARE VARIABLE WK_OWNERS_NAME_ID VARCHAR(10);
+DECLARE VARIABLE WK_OWNERS_NAME VARCHAR(255);
+DECLARE VARIABLE WK_CURRENT_OWNER VARCHAR(255);
+DECLARE VARIABLE WK_TITLE VARCHAR(255);
+DECLARE VARIABLE WK_PROD_TYPE VARCHAR(50);
+DECLARE VARIABLE WK_PROD_TYPE_ID CHAR(2);
+DECLARE VARIABLE WK_PROD_STATUS VARCHAR(2);
+DECLARE VARIABLE WK_QTY_X VARCHAR(10);
+DECLARE VARIABLE WK_PACK_QTY INTEGER;
+DECLARE VARIABLE WK_INNER_PACK_QTY INTEGER;
+DECLARE VARIABLE WK_WEIGHT INTEGER;
+DECLARE VARIABLE WK_WEIGHT_UOM VARCHAR(2);
+DECLARE VARIABLE WK_INNER_PACK_UOM VARCHAR(2);
+DECLARE VARIABLE WK_PACK_UOM VARCHAR(2);
+DECLARE VARIABLE WK_ISSUE_UOM VARCHAR(2);
+DECLARE VARIABLE WK_ISSUE INTEGER;
+DECLARE VARIABLE WK_PACK_WEIGHT INTEGER;
+DECLARE VARIABLE WK_PACK_WEIGHT_UOM VARCHAR(2);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+/* new prod type generation */
+DECLARE VARIABLE WK_CHARS VARCHAR(40);
+DECLARE VARIABLE WK_START INTEGER;
+DECLARE VARIABLE WK_END INTEGER;
+DECLARE VARIABLE WK_TRY_CNT INTEGER;
+DECLARE VARIABLE WK_LABEL_CURRENT INTEGER;
+DECLARE VARIABLE WK_LABEL_NO INTEGER;
+DECLARE VARIABLE WK_LABEL VARCHAR(10);
+DECLARE VARIABLE WK_LABEL_LEN INTEGER;
+DECLARE VARIABLE WK_TOT INTEGER;
+DECLARE VARIABLE WK_QUOT INTEGER;
+DECLARE VARIABLE WK_REM INTEGER;
+DECLARE VARIABLE WK_CHAR VARCHAR(5);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GLTD') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the product code (EAN)
+            field 2 is the Extension (EAN Extension)
+            field 3 is the Business Unit ID
+            field 4 is the Business Unit Name
+            field 5 is the Literature External Title
+            field 6 is the Literature Owners Name ID
+            field 7 is the Literature Owners Name
+            field 8 is the Literature Short Description
+            field 9 is the Literature Type
+            field 10 is the Literature Status
+            field 11 is the Literature Pack Quantity
+            field 12 is the Literature Inner Pack Quantity
+            field 13 is the Literature Unit Weight
+            field 14 is the Literature Unit Weight UOM
+            field 15 is the Literature Inner Pack UOM
+            field 16 is the Literature Pack UOM
+            field 17 is the Literature Pack Weight
+            field 18 is the Literature Pack Weight UOM
+            field 19 is the retrieve status 
+         */
+         WK_STATUS = '';
+         WK_PROD = 'NOPROD';
+         WK_EXTENSION = '';
+         WK_BUSINESS_ID = '';
+         WK_BUSINESS_NAME = '';
+         WK_SHORT_DESC = '';
+         WK_OWNERS_NAME_ID = '';
+         WK_OWNERS_NAME = '';
+         WK_TITLE = '';
+         WK_PROD_TYPE = '';
+         WK_PROD_STATUS = '';
+         WK_PACK_QTY = 1;
+         WK_INNER_PACK_QTY = 1;
+         WK_WEIGHT = 0;
+         WK_WEIGHT_UOM = '';
+         WK_INNER_PACK_UOM = '';
+         WK_PACK_UOM = '';
+         WK_PACK_WEIGHT = 0;
+         WK_PACK_WEIGHT_UOM = '';
+
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) -2;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'EANNumber') THEN
+            BEGIN
+               WK_PROD = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'EANextension') THEN
+            BEGIN
+               WK_EXTENSION = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'BusinessUnitID') THEN
+            BEGIN
+               WK_BUSINESS_ID = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'BusinessUnitName') THEN
+            BEGIN
+               WK_BUSINESS_NAME = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureExternalTitle') THEN
+            BEGIN
+               WK_TITLE = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureOwnersNameID') THEN
+            BEGIN
+               WK_OWNERS_NAME_ID = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureOwnersName') THEN
+            BEGIN
+               WK_OWNERS_NAME = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureShortDescription') THEN
+            BEGIN
+               WK_SHORT_DESC = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureType') THEN
+            BEGIN
+               WK_PROD_TYPE = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureStatus') THEN
+            BEGIN
+               WK_PROD_STATUS = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteraturePackQuantity') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               WK_PACK_QTY = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'LiteratureInnerPackQuantity') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               WK_INNER_PACK_QTY = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'LiteratureUnitWeight') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               WK_WEIGHT = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'LiteratureUnitWeightUOM') THEN
+            BEGIN
+               WK_WEIGHT_UOM = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteratureInnerPackUOM') THEN
+            BEGIN
+               WK_INNER_PACK_UOM = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteraturePackUOM') THEN
+            BEGIN
+               WK_PACK_UOM = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'LiteraturePackWeight') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               WK_PACK_WEIGHT = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'LiteraturePackWeightUOM') THEN
+            BEGIN
+               WK_PACK_WEIGHT_UOM = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'GetLiteratureDetailStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         WK_PROD_ID = WK_PROD || WK_EXTENSION;
+         /* does company exist */
+         WK_FOUND = 0;
+         SELECT 1, NAME FROM COMPANY
+         WHERE COMPANY_ID = :WK_BUSINESS_ID 
+         INTO :WK_FOUND, :WK_CURRENT_COMPANY;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO COMPANY(COMPANY_ID, NAME)
+            VALUES (:WK_BUSINESS_ID, :WK_BUSINESS_NAME);
+         END
+         ELSE
+         BEGIN
+            IF (WK_CURRENT_COMPANY IS NULL) THEN
+               WK_CURRENT_COMPANY = '';
+            IF ( NOT(WK_CURRENT_COMPANY = WK_BUSINESS_NAME)) THEN
+            BEGIN
+               UPDATE COMPANY SET NAME = :WK_BUSINESS_NAME
+               WHERE COMPANY_ID = :WK_BUSINESS_ID;
+            END
+         END
+         /* does owner person type exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM PERSON_TYPE
+         WHERE CODE = 'CV'
+         INTO :WK_FOUND ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO PERSON_TYPE(CODE, DESCRIPTION)
+            VALUES ('CV', 'Company - Vendor');
+         END
+         /* does prod type exist */
+         WK_FOUND = 0;
+         SELECT 1, CODE FROM PROD_TYPE
+         WHERE DESCRIPTION = :WK_PROD_TYPE
+         INTO :WK_FOUND, :WK_PROD_TYPE_ID ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* need 2 bytes = 36*36 = 1200 so use a single generator */
+            WK_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ@';
+            WK_START = 0;
+            WK_END = 1295;
+            WK_TRY_CNT = 0;
+            WK_FOUND = 1;
+            /* try up to 4 next labels */
+            WHILE (WK_FOUND > 0 AND WK_TRY_CNT < 4)
+            DO
+            BEGIN
+               WK_LABEL_CURRENT = GEN_ID(PROD_TYPE_GEN, 1);
+               WK_LABEL_NO = mod(WK_LABEL_CURRENT, :WK_END - :WK_START) + :WK_START;
+               WK_LABEL = '';
+               WK_LABEL_LEN = 0;
+               WK_TOT = WK_LABEL_NO;
+               WHILE (WK_LABEL_LEN < 2) DO
+               BEGIN
+                  /* do for length remaining */
+                  WK_QUOT = modquot(WK_TOT, 36);
+                  WK_REM = mod(WK_TOT ,36);
+                  WK_CHAR = substr(WK_CHARS,WK_REM +1,WK_REM +1);
+                  WK_LABEL = WK_LABEL || WK_CHAR;
+                  WK_TOT = WK_QUOT;
+                  WK_LABEL_LEN = WK_LABEL_LEN + 1;
+               END
+               /* now swap order */
+               WK_LABEL = reverse(WK_LABEL);
+               /* now try this */
+               WK_TRY_CNT = WK_TRY_CNT + 1;
+               WK_FOUND = 0;
+               SELECT 1  FROM PROD_TYPE
+               WHERE CODE = :WK_LABEL
+               INTO :WK_FOUND ;
+               WK_PROD_TYPE_ID = WK_LABEL;
+               IF (WK_FOUND = 0) THEN
+               BEGIN
+                  INSERT INTO PROD_TYPE(CODE, DESCRIPTION)
+                  VALUES (:WK_PROD_TYPE_ID, :WK_PROD_TYPE );
+               END
+               ELSE
+               BEGIN
+                  IF (WK_TRY_CNT = 4) THEN
+                  BEGIN
+                     UPDATE PROD_TYPE SET DESCRIPTION = :WK_PROD_TYPE
+                     WHERE CODE = :WK_PROD_TYPE_ID;
+                  END
+               END
+            END
+         END
+         /* does owner exist */
+         WK_FOUND = 0;
+         SELECT 1, FIRST_NAME FROM PERSON
+         WHERE PERSON_ID = :WK_OWNERS_NAME_ID
+         INTO :WK_FOUND, :WK_CURRENT_OWNER;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO PERSON(PERSON_ID, FIRST_NAME, PERSON_TYPE)
+            VALUES (:WK_OWNERS_NAME_ID, :WK_OWNERS_NAME, 'CV');
+         END
+         ELSE
+         BEGIN
+            IF (WK_CURRENT_OWNER IS NULL) THEN
+               WK_CURRENT_OWNER = '';
+            IF ( NOT(WK_CURRENT_OWNER = WK_OWNERS_NAME)) THEN
+            BEGIN
+               UPDATE PERSON SET FIRST_NAME = :WK_OWNERS_NAME
+               WHERE PERSON_ID = :WK_OWNERS_NAME_ID;
+            END
+         END
+
+         /* does pack uom exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM UOM
+         WHERE CODE = :WK_PACK_UOM
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO UOM(CODE, DESCRIPTION, UOM_TYPE) VALUES (:WK_PACK_UOM, :WK_PACK_UOM, 'UT');
+         END
+         /* issue uom = ea */
+         WK_ISSUE_UOM = 'EA';
+         WK_ISSUE = 1;
+         WK_FOUND = 0;
+         SELECT 1 FROM UOM
+         WHERE CODE = :WK_ISSUE_UOM
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO UOM(CODE, DESCRIPTION, UOM_TYPE) VALUES (:WK_ISSUE_UOM, :WK_ISSUE_UOM, 'UT');
+         END
+         /* does pack weight uom exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM UOM
+         WHERE CODE = :WK_PACK_WEIGHT_UOM
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO UOM(CODE, DESCRIPTION, UOM_TYPE) VALUES (:WK_PACK_WEIGHT_UOM, :WK_PACK_WEIGHT_UOM, 'WT');
+         END
+         /* does inner pack uom exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM UOM
+         WHERE CODE = :WK_INNER_PACK_UOM
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO UOM(CODE, DESCRIPTION, UOM_TYPE) VALUES (:WK_INNER_PACK_UOM, :WK_INNER_PACK_UOM, 'UT');
+         END
+         /* does unit weight uom exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM UOM
+         WHERE CODE = :WK_WEIGHT_UOM
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO UOM(CODE, DESCRIPTION, UOM_TYPE) VALUES (:WK_WEIGHT_UOM, :WK_WEIGHT_UOM, 'WT');
+         END
+
+         /* does product exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM PROD_PROFILE
+         WHERE PROD_ID = :WK_PROD_ID
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no prod profile - so create a dummy */
+            INSERT INTO PROD_PROFILE(PROD_ID, 
+               SHORT_DESC, 
+               COMPANY_ID, 
+               SUPPLIER_NO1, 
+               LONG_DESC, 
+               PROD_TYPE, 
+               STOCK, 
+               ISSUE_PER_ORDER_UNIT, 
+               ISSUE_PER_INNER_UNIT, 
+               ORDER_UOM, 
+               ISSUE_UOM, 
+               ISSUE, 
+               NET_WEIGHT, 
+               ORDER_WEIGHT, 
+               NET_WEIGHT_UOM, 
+               ORDER_WEIGHT_UOM, 
+               INNER_UOM, 
+               PROD_RETRIEVE_STATUS )
+            VALUES (:WK_PROD_ID, 
+               :WK_SHORT_DESC, 
+               :WK_BUSINESS_ID, 
+               :WK_OWNERS_NAME_ID,
+               :WK_TITLE, 
+               :WK_PROD_TYPE_ID, 
+               :WK_PROD_STATUS, 
+               :WK_PACK_QTY, 
+               :WK_INNER_PACK_QTY, 
+               :WK_PACK_UOM, 
+               :WK_ISSUE_UOM, 
+               :WK_ISSUE, 
+               :WK_WEIGHT, 
+               :WK_PACK_WEIGHT, 
+               :WK_WEIGHT_UOM, 
+               :WK_PACK_WEIGHT_UOM, 
+               :WK_INNER_PACK_UOM, 
+               :WK_STATUS);
+         END
+         ELSE
+         BEGIN
+            UPDATE PROD_PROFILE 
+            SET SHORT_DESC = :WK_SHORT_DESC, 
+            COMPANY_ID = :WK_BUSINESS_ID, 
+            SUPPLIER_NO1 = :WK_OWNERS_NAME_ID, 
+            LONG_DESC = :WK_TITLE, 
+            PROD_RETRIEVE_STATUS = :WK_STATUS,
+            PROD_TYPE = :WK_PROD_TYPE_ID,
+            STOCK = :WK_PROD_STATUS,
+            ISSUE_PER_ORDER_UNIT = :WK_PACK_QTY,
+            ISSUE_PER_INNER_UNIT = :WK_INNER_PACK_QTY,
+            ORDER_UOM = :WK_PACK_UOM,
+            ISSUE = :WK_ISSUE,
+            ISSUE_UOM = :WK_ISSUE_UOM,
+            NET_WEIGHT = :WK_WEIGHT,
+            ORDER_WEIGHT = :WK_PACK_WEIGHT,
+            NET_WEIGHT_UOM = :WK_WEIGHT_UOM,
+            ORDER_WEIGHT_UOM = :WK_PACK_WEIGHT_UOM,
+            INNER_UOM = :WK_INNER_PACK_UOM
+            WHERE PROD_ID = :WK_PROD_ID;
+         END
+         WK_FOUND = 0;
+         SELECT 1 FROM PROD_EAN
+         WHERE PROD_EAN = :WK_PROD AND 
+               PROD_EAN_EXTENSION = :WK_EXTENSION
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no prod ean - so create one */
+            INSERT INTO PROD_EAN(PROD_ID, PROD_EAN, PROD_EAN_EXTENSION)
+            VALUES (:WK_PROD_ID, :WK_PROD, :WK_EXTENSION);
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 

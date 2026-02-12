@@ -1,0 +1,21 @@
+add fields for austpost api's
+connote no x50 from x20 : will effect
+used in hh
+    dsol  Done
+    dsuc  Done
+    dsuq  Done
+used in crontab
+    dsas field size for connote is x20 Done
+used in minder screens
+    dsol  Done
+    dsuc field size for connote is x30 Done
+    dsud field size for connote is x20 Done
+    dsus field size for connote is x20 Done
+
+note change in reference for dsol in hh and minder screens
+     connote now in reference part 1 was in object
+     part 2 is the label
+
+carrier service code x50 from 4 = will break dsot and dsst trn_data layout.
+So could use the description instead
+or seperate the fields by |

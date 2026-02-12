@@ -1,0 +1,2 @@
+alter table control add limit_company_id value_tf;
+alter table control add limit_wh_id value_tf;

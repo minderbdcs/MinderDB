@@ -1,0 +1,2 @@
+alter table import_map drop constraint integ_326;
+alter table import_map drop record_id;

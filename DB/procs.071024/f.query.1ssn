@@ -1,0 +1,4 @@
+select * from query_layout where code='1ssn';
+insert into query_layout(code,description,label,sequence) values('1ssn','issn.pick_order','Pick',6);
+update query_layout set description='issn.other1',label='Pallet No' where sequence=4 and code='1ssn';
+update query_layout set description='issn.other2',label='Split' where sequence=5 and code='1ssn';

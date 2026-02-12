@@ -1,0 +1,4 @@
+alter table ssn_hist drop constraint integ_96;
+create index ssn_hist_record_idx on ssn_hist(record_id);
+
+

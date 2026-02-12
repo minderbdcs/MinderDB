@@ -1,0 +1,3 @@
+update control set send_so_cancel='T',export_so_held_printer='PI',export_so_cancel_printer='PJ';
+insert into sys_equip(device_id, device_type,working_directory,equipment_description_code) values('PI','PR','d:\asset.rf\PI\','SO Reversals');
+insert into sys_equip(device_id, device_type,working_directory,equipment_description_code) values('PJ','PR','d:\asset.rf\PJ\','SO Cancels');

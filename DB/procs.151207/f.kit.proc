@@ -1,0 +1,165 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+/*
+the join to prod profile may duplicate the records if the prod_profile has a record in the passed company and in company all
+
+the kit_line_id is not unique if the parent is called more than once in a kit in the list of products
+eg
+kit a
+have part kit b and kit c
+kit b has  prod x 
+kit c has  kit b
+then kit b in level 1 and level 2
+so prod x in level 2 and 3
+
+have to either add a unique id for each record or include the level no somewhere
+*/
+
+CREATE OR ALTER PROCEDURE GET_CHILD_4_KIT (
+WK_CHILD_KIT PRODUCT,
+WK_CHILD_COMPANY_ID COMPANY,
+WK_PERSON PERSON,
+WK_DATE TIMESTAMP)
+RETURNS (
+WK_CHILD_PROD_ID PRODUCT,
+WK_CHILD_KIT_LINE_ID KIT_LINE_ID ,
+WK_CHILD_KIT_LEVEL_ID KIT_LINE_ID ,
+WK_CHILD_QTY QTY,
+WK_CHILD_STATUS STATUS )
+AS 
+ 
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_RES INTEGER;
+DECLARE VARIABLE WK_RECORD_ID INTEGER;
+DECLARE VARIABLE WK_TW_LINE_ID QTY;
+DECLARE VARIABLE WK_TW_PROD_ID PRODUCT;
+DECLARE VARIABLE WK_TW_QTY QTY;
+DECLARE VARIABLE WK_TW_DO_UPDATE VARCHAR(1);
+DECLARE VARIABLE WK_PK_KIT_LINE_ID QTY;
+DECLARE VARIABLE WK_PK_PROD_ID PRODUCT;
+DECLARE VARIABLE WK_PK_PROD_QTY QTY;
+DECLARE VARIABLE WK_PP_PROD_ID PRODUCT;
+DECLARE VARIABLE WK_NEW_QTY QTY;
+DECLARE VARIABLE WK_LEVEL QTY;
+BEGIN
+/*
+   get the next tran id
+*/
+   WK_RECORD_ID = GEN_ID(TRANSACTION_ID, 1);    
+/*
+   update any old transaction_work records for that number  to have status XX
+*/
+   UPDATE TRANSACTIONS_WORK SET WH_ID = 'XX' WHERE RECORD_ID = :WK_RECORD_ID;
+
+/*
+   level 1 query using in kit
+   select p1.prod_id,p1.prod_qty,p1.kit_line_id, p2.company_id from product_kit p1 
+   join prod_profile p2 on p1.prod_id=p2.prod_id 
+   and p2.company_id in ('PINPOINT','ALL') 
+   where p1.kit_id = 'EBFB4629' and p1.status='OP' ;
+*/
+/*
+   so use transactions_work to do the task
+*/
+/*
+   do level 1
+*/
+/*
+   INSERT INTO TRANSACTIONS_WORK (RECORD_ID, QTY2, OBJECT, QTY, WH_ID, PERSON_ID, TRN_DATE)
+   SELECT :WK_RECORD_ID, P1.KIT_LINE_ID, P1.PROD_ID, P1.PROD_QTY , 'NP', :WK_PERSON, :WK_DATE
+   FROM PRODUCT_KIT P1 
+   JOIN PROD_PROFILE P2 ON P1.PROD_ID = P2.PROD_ID 
+   AND P2.COMPANY_ID IN (:WK_CHILD_COMPANY_ID ,'ALL') 
+   WHERE P1.KIT_ID = :WK_CHILD_KIT AND P1.STATUS = 'OP' ;
+*/
+   FOR SELECT P1.KIT_LINE_ID, P1.PROD_ID, P1.PROD_QTY  
+   FROM PRODUCT_KIT P1 
+   WHERE P1.KIT_ID = :WK_CHILD_KIT AND P1.STATUS = 'OP' 
+   INTO :WK_PK_KIT_LINE_ID, :WK_PK_PROD_ID, :WK_PK_PROD_QTY
+   DO
+   BEGIN
+      /* look in prod profile */
+      WK_PP_PROD_ID = NULL;
+      SELECT FIRST 1 P2.PROD_ID FROM PROD_PROFILE P2 WHERE P2.PROD_ID = :WK_PK_PROD_ID 
+      AND P2.COMPANY_ID IN (:WK_CHILD_COMPANY_ID ,'ALL') 
+      INTO :WK_PP_PROD_ID;
+      IF (WK_PP_PROD_ID IS NOT NULL) THEN
+      BEGIN
+         WK_NEW_QTY = WK_PK_PROD_QTY ;
+         INSERT INTO TRANSACTIONS_WORK (RECORD_ID, QTY2, OBJECT, QTY, WH_ID, PERSON_ID, TRN_DATE)
+         VALUES (:WK_RECORD_ID, :WK_PK_KIT_LINE_ID, :WK_PK_PROD_ID, :WK_NEW_QTY, 'NP', :WK_PERSON, :WK_DATE);
+      END
+   END
+
+/*
+   ok have records in trans work
+   now loop thru using the qty2 as the unique key in the group and status = 'NP' (WH_ID)
+   adding for the next level with the qty multiplied and the original status goes to DX
+*/
+/*
+   doing until level 5  
+*/
+   WK_LEVEL = 1;
+   WHILE (WK_LEVEL < 6)
+   DO
+   BEGIN
+      FOR SELECT QTY2, OBJECT, QTY FROM TRANSACTIONS_WORK WHERE RECORD_ID = :WK_RECORD_ID AND WH_ID = 'NP'
+      INTO :WK_TW_LINE_ID, :WK_TW_PROD_ID, :WK_TW_QTY
+      DO
+      BEGIN
+         WK_TW_DO_UPDATE = 'F'; 
+         FOR SELECT P1.KIT_LINE_ID, P1.PROD_ID, P1.PROD_QTY  
+         FROM PRODUCT_KIT P1 
+         WHERE P1.KIT_ID = :WK_TW_PROD_ID AND P1.STATUS = 'OP' 
+         INTO :WK_PK_KIT_LINE_ID, :WK_PK_PROD_ID, :WK_PK_PROD_QTY
+         DO
+         BEGIN
+            /* look in prod profile */
+            WK_PP_PROD_ID = NULL;
+            SELECT FIRST 1 P2.PROD_ID FROM PROD_PROFILE P2 WHERE P2.PROD_ID = :WK_PK_PROD_ID 
+            AND P2.COMPANY_ID IN (:WK_CHILD_COMPANY_ID ,'ALL') 
+            INTO :WK_PP_PROD_ID;
+            IF (WK_PP_PROD_ID IS NOT NULL) THEN
+            BEGIN
+               WK_TW_DO_UPDATE = 'T';
+               WK_NEW_QTY = WK_PK_PROD_QTY * WK_TW_QTY;
+               INSERT INTO TRANSACTIONS_WORK (RECORD_ID, QTY2, OBJECT, QTY, WH_ID, PERSON_ID, TRN_DATE)
+               VALUES (:WK_RECORD_ID, :WK_PK_KIT_LINE_ID, :WK_PK_PROD_ID, :WK_NEW_QTY, 'NP', :WK_PERSON, :WK_DATE);
+            END
+         END
+         IF (WK_TW_DO_UPDATE = 'T') THEN
+         BEGIN
+            UPDATE TRANSACTIONS_WORK SET WH_ID = 'DX' WHERE RECORD_ID = :WK_RECORD_ID AND QTY2 = :WK_TW_LINE_ID;
+         END
+         ELSE
+         BEGIN
+            UPDATE TRANSACTIONS_WORK SET WH_ID = 'OP' WHERE RECORD_ID = :WK_RECORD_ID AND QTY2 = :WK_TW_LINE_ID;
+         END
+      END
+      WK_LEVEL = WK_LEVEL + 1;
+   END
+
+/*
+   update any records still 'NP' to 'OP'
+*/
+   UPDATE TRANSACTIONS_WORK SET WH_ID = 'OP' WHERE RECORD_ID = :WK_RECORD_ID AND WH_ID = 'NP';
+
+/*
+   then return the list of lines with statuses 'OP' or 'DX'
+*/
+
+   FOR SELECT QTY2, OBJECT, QTY, WH_ID FROM TRANSACTIONS_WORK WHERE RECORD_ID = :WK_RECORD_ID AND WH_ID IN ('DX','OP')
+   INTO :WK_CHILD_KIT_LINE_ID, :WK_CHILD_PROD_ID, :WK_CHILD_QTY, :WK_CHILD_STATUS
+   DO
+   BEGIN
+      SUSPEND;
+   END
+
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

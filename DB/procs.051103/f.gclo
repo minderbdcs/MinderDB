@@ -1,0 +1,308 @@
+DROP TRIGGER RUN_TRANSACTION_GCLO ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GCLO FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 2 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_END CHAR(1);
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_QTY_X VARCHAR(10);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_ORDER_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_PICK_LABEL VARCHAR(7);
+DECLARE VARIABLE WK_LABEL_LENGTH INTEGER;
+DECLARE VARIABLE WK_LAST_LINE INTEGER;
+DECLARE VARIABLE WK_LEN_LINE_NO INTEGER;
+DECLARE VARIABLE WK_PICK_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_L_PICK_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_ORDER_TYPE CHAR(2);
+DECLARE VARIABLE WK_TERM VARCHAR(20);
+DECLARE VARIABLE WK_PAYMENT VARCHAR(20);
+DECLARE VARIABLE WK_CARRIER VARCHAR(10);
+DECLARE VARIABLE WK_DO_UASL CHAR(1);
+DECLARE VARIABLE WK_DONTDO_LINE INTEGER;
+DECLARE VARIABLE WK_PICK_STATUS CHAR(2);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GCLO') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the order 
+            field 2 is the product code (EAN)
+            field 3 is the quantity 
+            field 4 is the Extension (EAN Extension)
+            field 5 is the retrieve status 
+         */
+/*         INSERT INTO LOG(DESCRIPTION) VALUES('GOT GCLO'); */
+         WK_ORDER = '';
+         WK_STATUS = '';
+         WK_PROD = '';
+         WK_QTY_X = '';
+         WK_QTY = 0;
+         WK_EXTENSION = '';
+         WK_LINE_NO = '';
+         WK_ORDER_TYPE = 'SO';
+         /* WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ; */
+         WK_FIELD_NO = 1;
+         WK_WORK_END = 'F';
+         /* WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO */
+         WHILE (WK_WORK_END = 'F') DO
+         BEGIN
+            SELECT WK_FIELD_TEXT , WK_AT_END
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD, :WK_WORK_END;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'ContactInstanceID') THEN
+            BEGIN
+               WK_ORDER = WK_WORK_DATA;
+/*         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_ORDER); */
+            END
+            IF (WK_WORK_LABEL = 'EANNumber') THEN
+            BEGIN
+               WK_PROD = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'Quantity') THEN
+            BEGIN
+               WK_QTY_X = WK_WORK_DATA;
+               WK_QTY = CAST(WK_QTY_X AS INTEGER);
+            END
+            IF (WK_WORK_LABEL = 'EANExtension') THEN
+            BEGIN
+               WK_EXTENSION = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'ContactInstanceRetrieveStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+/*         INSERT INTO LOG(DESCRIPTION) VALUES('have status '); */
+/*         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_STATUS); */
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+/*         INSERT INTO LOG(DESCRIPTION) VALUES('now status '); */
+/*         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_STATUS); */
+         IF (WK_EXTENSION = '0') THEN
+         BEGIN
+            WK_EXTENSION = '';
+         END
+         /* get default values from control */
+         SELECT DEFAULT_TERM, DEFAULT_PAYMENT_METHOD, DEFAULT_CARRIER_ID
+         FROM CONTROL
+         INTO :WK_TERM, :WK_PAYMENT, :WK_CARRIER;
+         /* does order exist */
+         WK_FOUND = 0;
+         SELECT 1, PICK_RETRIEVE_STATUS, PICK_STATUS  FROM PICK_ORDER
+         WHERE PICK_ORDER = :WK_ORDER
+         INTO :WK_FOUND, :WK_ORDER_STATUS, :WK_PICK_STATUS;
+         IF (WK_ORDER_STATUS IS NULL) THEN
+         BEGIN
+            WK_ORDER_STATUS = 'F';
+         END
+/*         INSERT INTO LOG(DESCRIPTION) VALUES('found '); */
+/*         INSERT INTO LOG(DESCRIPTION) VALUES(:WK_FOUND); */
+
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            IF (WK_STATUS = 'T') THEN
+            BEGIN
+               /* no order - so probably an urgent */
+               WK_ORDER_STATUS = WK_STATUS;
+               INSERT INTO PICK_ORDER(PICK_ORDER, 
+                  PICK_STATUS, 
+                  PICK_RETRIEVE_STATUS,
+                  CREATE_DATE,
+                  CREATED_BY,
+                  PICK_ORDER_TYPE,
+                  UPDATE_ID,
+                  TERMS,
+                  PAYMENT_METHOD,
+                  SHIP_VIA)
+               VALUES (:WK_ORDER, 
+                  'DA', 
+                  :WK_STATUS,
+                  NEW.TRN_DATE,
+                  NEW.PERSON_ID,
+                  :WK_ORDER_TYPE,
+                  NEW.MESSAGE_ID,
+                  :WK_TERM,
+                  :WK_PAYMENT,
+                  :WK_CARRIER);
+            END
+            ELSE
+            BEGIN
+               /*
+               INSERT INTO PICK_ORDER(PICK_ORDER, 
+                  PICK_STATUS, 
+                  PICK_RETRIEVE_STATUS, 
+                  CREATE_DATE, 
+                  CREATED_BY, 
+                  PICK_ORDER_TYPE, 
+                  UPDATE_ID,
+                  TERMS,
+                  PAYMENT_METHOD,
+                  SHIP_VIA)
+               VALUES (:WK_ORDER, 
+                  'HD', 
+                  :WK_STATUS , 
+                  NEW.TRN_DATE, 
+                  NEW.PERSON_ID, 
+                  :WK_ORDER_TYPE , 
+                  NEW.MESSAGE_ID ,
+                  :WK_TERM,
+                  :WK_PAYMENT,
+                  :WK_CARRIER);
+               */
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+         END
+         ELSE
+         BEGIN
+            IF (WK_STATUS = 'F') THEN
+            BEGIN
+               UPDATE PICK_ORDER
+               SET PICK_RETRIEVE_STATUS = :WK_STATUS,
+                   UPDATE_ID = NEW.MESSAGE_ID
+               WHERE PICK_ORDER = :WK_ORDER;
+               WK_ORDER_STATUS = WK_STATUS;
+            END
+            ELSE
+            BEGIN
+               IF (WK_PICK_STATUS = 'HD') THEN
+               BEGIN
+                  UPDATE PICK_ORDER
+                  SET PICK_RETRIEVE_STATUS = :WK_STATUS,
+                      PICK_STATUS='DA',
+                      UPDATE_ID = NEW.MESSAGE_ID
+                  WHERE PICK_ORDER = :WK_ORDER;
+               END
+               ELSE
+               BEGIN
+                  UPDATE PICK_ORDER
+                  SET PICK_RETRIEVE_STATUS = :WK_STATUS,
+                      UPDATE_ID = NEW.MESSAGE_ID
+                  WHERE PICK_ORDER = :WK_ORDER;
+               END
+            END
+         END
+         /* do line stuff */
+         IF (WK_PROD = '') THEN
+         BEGIN
+            WK_PROD = 'NOPROD';
+            IF (WK_QTY = 0) THEN
+            BEGIN
+               WK_QTY = 1;
+            END
+/*
+            IF (WK_STATUS = 'F') THEN
+            BEGIN
+               WK_STATUS = 'T';
+            END
+*/
+         END
+         WK_DONTDO_LINE = 0;
+         SELECT FIRST 1 1
+         FROM PICK_ITEM
+         WHERE PICK_LINE_STATUS NOT IN ('OP','UP')
+           AND PICK_ORDER = :WK_ORDER
+         INTO :WK_DONTDO_LINE;
+         IF (WK_PICK_STATUS = 'CN') THEN
+         BEGIN
+            WK_DONTDO_LINE = 0;
+         END
+         IF (WK_DONTDO_LINE = 0) THEN
+         BEGIN
+            IF (WK_PROD > '') THEN
+            BEGIN
+               EXECUTE PROCEDURE ADD_PICK_ITEMS (
+                  WK_ORDER ,
+                  WK_ORDER_STATUS ,
+                  WK_STATUS ,
+                  WK_PROD ,
+                  WK_EXTENSION ,
+                  WK_LINE_NO ,
+                  WK_QTY ,
+                  NEW.TRN_DATE ,
+                  NEW.PERSON_ID );
+               /* send uasl for product */
+               SELECT SEND_UASL_V4 FROM CONTROL INTO :WK_DO_UASL;
+               IF (WK_DO_UASL = 'T') THEN
+               BEGIN
+                  IF (WK_STATUS = 'T') THEN
+                  BEGIN
+                     EXECUTE PROCEDURE SEND_PICKABLE_STOCK (:WK_PROD,
+                        NEW.PERSON_ID,
+                        NEW.DEVICE_ID,
+                        NEW.TRN_DATE);
+                  END
+               END
+            END
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+      ELSE
+      IF ((NEW.TRN_TYPE = 'GCLO') AND (NEW.TRN_CLASS = 'S')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the order 
+         */
+         WK_ORDER = '';
+         WK_ORDER_TYPE = 'SO';
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'ContactInstanceID') THEN
+            BEGIN
+               WK_ORDER = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         UPDATE PICK_ITEM
+            SET PICK_ORDER_QTY = 0
+         WHERE PICK_ORDER = :WK_ORDER
+            AND (PICK_LINE_STATUS IN ('UC','CF','OP','UP')
+              OR PICK_LINE_STATUS IS NULL);
+      END
+   END
+END ^
+ 

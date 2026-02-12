@@ -1,0 +1,104 @@
+DROP TRIGGER RUN_TRANSACTION_UASL ^
+COMMIT^
+
+CREATE TRIGGER RUN_TRANSACTION_UASL FOR TRANSACTIONS4
+ACTIVE AFTER INSERT POSITION 4 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_EXTENSION VARCHAR(6);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'UASL') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the product code (EAN)
+            field 2 is the Extension (EAN Extension)
+            field 3 is the retrieve status 
+         */
+         WK_STATUS = '';
+         WK_PROD = 'NOPROD';
+         WK_EXTENSION = '';
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) -2;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = 'EANNumber') THEN
+            BEGIN
+               WK_PROD = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'EANextension') THEN
+            BEGIN
+               WK_EXTENSION = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = 'UpdateAvailableStock') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         WK_PROD_ID = WK_PROD || WK_EXTENSION;
+         /* does product exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM PROD_PROFILE
+         WHERE PROD_ID = :WK_PROD_ID
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no prod profile - so create a dummy */
+            INSERT INTO PROD_PROFILE(PROD_ID, SHORT_DESC, PROD_RETRIEVE_STATUS )
+            VALUES (:WK_PROD_ID, :WK_PROD_ID, :WK_STATUS);
+         END
+         ELSE
+         BEGIN
+            UPDATE PROD_PROFILE 
+            SET PROD_RETRIEVE_STATUS = :WK_STATUS
+            WHERE PROD_ID = :WK_PROD_ID;
+         END
+         WK_FOUND = 0;
+         SELECT 1 FROM PROD_EAN
+         WHERE PROD_EAN = :WK_PROD AND 
+               PROD_EAN_EXTENSION = :WK_EXTENSION
+         INTO :WK_FOUND;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no prod ean - so create one */
+            INSERT INTO PROD_EAN(PROD_ID, PROD_EAN, PROD_EAN_EXTENSION)
+            VALUES (:WK_PROD_ID, :WK_PROD, :WK_EXTENSION);
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 

@@ -1,0 +1,3 @@
+alter table control add allow_delete_in_pick_cancel value_tf;
+update control set allow_delete_in_pick_cancel = 'T';
+

@@ -1,0 +1,6 @@
+add company into sub_locn_id
+ if empty
+    then try company of prod
+    if empty use the company from the control table
+
+

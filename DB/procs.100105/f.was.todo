@@ -1,0 +1,45 @@
+/*
+=============================================================
+want a table for tabs in sys_screen
+	with title
+	sequence
+	status
+	active colour
+	inactive colour
+=============================================================
+then put a link to that table in sys_screen_var
+
+also adjust sys_screen_var input method to be varchar 255
+*/
+
+/*
+==============================================================
+adjust table prod_type so that the code_two field becomes varchar 10
+=============================================================
+adjust prod_profile so that the prod_type is varchar(10)
+
+then adjust product detail import for bhp. That generates the next prod_type when none is supplied.
+=============================================================
+table control pallet_base_prod_type
+table prod_profile prod_type
+                   alt_prod_type
+table prod_type code 
+index prod_profile_prod_type_idx
+proc  add_pick_items
+      add_ssn_issn_grci
+      add_ssn_issn_grnv
+      add_ssn_issn_grnv_weight
+      pc_stis
+
+trigger run_transaction_pppd
+        run_transaction_stka
+        run_transaction_ppa2
+        run_transaction_stis
+        run_transaction_grnv
+        run_transaction_grci
+
+        run_transaction_gclo
+        run_transaction_gpld
+        run_transaction_gltd
+
+*/

@@ -1,0 +1,146 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+CREATE PROCEDURE GET_ISSN_REPLENISH  
+AS
+BEGIN
+EXIT;
+END^
+ 
+ALTER PROCEDURE GET_ISSN_REPLENISH
+AS
+/* populate the replenish from the prod profile */
+/*
+this procedure updates the transfer_requests product based
+*/
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_PROD_ID2 VARCHAR(30);
+DECLARE VARIABLE WK_MIN_QTY INTEGER;
+DECLARE VARIABLE WK_MAX_QTY INTEGER;
+DECLARE VARIABLE WK_REORDER_QTY INTEGER;
+DECLARE VARIABLE WK_WH_QTY INTEGER;
+DECLARE VARIABLE WK_CURRENT_QTY INTEGER;
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_TRANSFER_LINE INTEGER;
+DECLARE VARIABLE WK_TRANSFER_STATUS CHAR(2);
+DECLARE VARIABLE WK_TRANSFER_PRIORITY SMALLINT;
+DECLARE VARIABLE IMPORTSTATUS VARCHAR(40);
+DECLARE VARIABLE WK_DUMMY INTEGER;
+BEGIN
+   WK_DATE = 'NOW';
+   SELECT CONTROL.PICK_IMPORT_SSN_STATUS
+   FROM CONTROL
+   INTO :IMPORTSTATUS; 
+   
+   FOR  SELECT PROD_ID, WH_ID, LOCN_ID,  MIN_QTY, MAX_QTY, REORDER_QTY
+      FROM LOCATION
+      WHERE REPLENISH = 'T'
+      AND (PROD_ID IS NOT NULL)
+      AND (REORDER_QTY IS NOT NULL)
+      AND (MAX_QTY IS NOT NULL)
+      INTO :WK_PROD, 
+           :WK_WH_ID, 
+           :WK_LOCN, 
+           :WK_MIN_QTY,
+           :WK_MAX_QTY,
+           :WK_REORDER_QTY
+   DO
+   BEGIN
+      /* ok have a match - iand qts not null */
+      /*
+      SELECT AVAILABLE_QTY 
+      FROM PRODUCT_STOCK_STATUS(:WK_PROD) 
+      INTO :WK_WH_QTY;
+      */
+      SELECT FIRST 1 CURRENT_QTY
+      FROM ISSN
+      WHERE ISSN.PROD_ID = :WK_PROD
+      AND CURRENT_QTY > 0
+      AND (POS(:IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1)
+      INTO :WK_WH_QTY;
+      IF (WK_WH_QTY IS NULL) THEN
+      BEGIN
+         WK_WH_QTY = 0;
+      END
+      IF (WK_WH_QTY > 0) THEN
+      BEGIN
+         SELECT SUM( ISSN.CURRENT_QTY ) 
+            FROM ISSN
+            WHERE ISSN.PROD_ID = :WK_PROD
+            AND WH_ID = :WK_WH_ID
+            AND LOCN_ID = :WK_LOCN
+            /* AND (POS(:IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1) */
+            INTO :WK_CURRENT_QTY;
+         IF (WK_CURRENT_QTY IS NULL) THEN
+         BEGIN
+            WK_CURRENT_QTY = 0;
+         END
+
+         IF (WK_CURRENT_QTY < WK_REORDER_QTY) THEN
+         BEGIN
+            IF (WK_CURRENT_QTY < WK_MIN_QTY) THEN
+            BEGIN
+               WK_TRANSFER_PRIORITY = 5;
+            END
+            ELSE
+            BEGIN
+               WK_TRANSFER_PRIORITY = 10;
+            END
+            /* now get the transfer request to update */
+            WK_FOUND = 0;
+            SELECT FIRST 1 1, TRN_LINE_NO, TRN_STATUS
+            FROM TRANSFER_REQUEST
+            WHERE TO_WH_ID = :WK_WH_ID
+            AND TO_LOCN_ID = :WK_LOCN
+            AND PROD_ID = :WK_PROD
+            AND TRN_STATUS IN ( 'OP', 'CN','AL','PG','PL')
+            AND QTY IS NULL
+            INTO :WK_FOUND, :WK_TRANSFER_LINE, :WK_TRANSFER_STATUS;
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               /* insert it */
+               /* only nominate the wh,locn ,product and priority */
+               INSERT INTO TRANSFER_REQUEST (TO_WH_ID, TO_LOCN_ID, PROD_ID, TRN_PRIORITY, TRN_STATUS) VALUES (:WK_WH_ID, :WK_LOCN, :WK_PROD, :WK_TRANSFER_PRIORITY, 'OP'); 
+            END
+            ELSE
+            BEGIN
+               /* update it */
+               IF (WK_TRANSFER_STATUS = 'CN') THEN
+               BEGIN
+                  UPDATE TRANSFER_REQUEST
+                  SET TRN_STATUS = 'OP'
+                  WHERE TRN_LINE_NO = :WK_TRANSFER_LINE;
+               END
+            END
+            
+         END            
+         ELSE
+         BEGIN
+            /*
+            need to remove / change status for 
+            records with no qty that 
+            were in the transfer request
+            but now the qty is OK
+            */
+            UPDATE TRANSFER_REQUEST
+            SET TRN_STATUS = 'CN'
+            WHERE TO_WH_ID = :WK_WH_ID
+            AND TO_LOCN_ID = :WK_LOCN
+            AND PROD_ID = :WK_PROD
+            AND TRN_STATUS = 'OP'
+            AND QTY IS NULL;
+         END
+      END            
+   END
+END ^
+ 
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

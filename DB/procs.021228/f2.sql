@@ -1,0 +1,41 @@
+set term ^ ;
+
+CREATE PROCEDURE ADD_OBJECT_LABEL (
+  SSN_ID VARCHAR(20),
+  WH_ID VARCHAR(2),
+  GRN VARCHAR(15),
+  COMPANY_ID VARCHAR(20)
+)  AS     
+
+DECLARE VARIABLE REC_EXIST INTEGER;
+
+BEGIN
+    
+    REC_EXIST = 0;
+    
+    SELECT 1 
+      FROM SSN
+      WHERE SSN_ID = :SSN_ID   
+    INTO :REC_EXIST;
+      
+    IF (REC_EXIST = 0) THEN
+    BEGIN  
+      INSERT INTO SSN (SSN_ID, WH_ID, LOCN_ID, STATUS_CODE, STATUS_CODE_DATE,
+                             GRN, LABEL_DATE, COMPANY_ID)
+      VALUES (:SSN_ID, :WH_ID, '00000000', 'RECEIVED', 'NOW', :GRN, 'NOW', :COMPANY_ID);     
+    END
+             
+END ^
+
+CREATE PROCEDURE GET_OBJECT_ID  RETURNS (
+  UNIQUEID INTEGER
+) AS  
+       
+BEGIN
+  UNIQUEID = gen_id(ObjectID_Gen,1) ;
+  if (UNIQUEID = 10000000) then
+  begin
+    UNIQUEID = gen_id(ObjectID_Gen, -9999999) ;
+  end
+END ^
+

@@ -1,0 +1,2 @@
+alter table prod_profile add prev_standard_cost_updated_by user_id;
+

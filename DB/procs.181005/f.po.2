@@ -1,0 +1,3 @@
+CREATE DOMAIN STATUS_SENT_DATE AS TIMESTAMP;
+alter table pick_order add STATUS_SENT STATUS_SENT_DATE;
+alter table pick_order_dx add STATUS_SENT STATUS_SENT_DATE;

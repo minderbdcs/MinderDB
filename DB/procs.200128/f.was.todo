@@ -1,0 +1,14 @@
+
+change post code to be x20
+
+have costraints on post_code
+primary key on 
+CREATE TABLE STARTRACK_DEPOT (POST_CODE POST_CODE NOT NULL,
+PRIMARY KEY (POST_CODE, LOCATION));
+have to change constraint
+constraint INTEG_234 for apcd and INTEG_235 for the others
+to use
+CONSTRAINT STARTRACK_DEPOT_PRIMARY PRIMARY KEY (POST_CODE, LOCATION)
+=================================================================
+
+change phone_no from x30 to x40

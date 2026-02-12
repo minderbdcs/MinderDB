@@ -1,0 +1,40 @@
+Done
+
+3 	when importing pick_items for kits
+	want at least 5 layers of kits
+	so in so.temp3 1st  or parent layer
+	only allow parent_label_no is null 
+	when searching for an instance of the product and line no to update
+
+=======================================================
+
+2	For importing of orders from ftp folders
+	Glen wants a status in the company to overwrite the order status
+	if DA leave DA as DA = allow normal processing
+	if OP make the DA OP = can only pick = credit check
+	if HD make the DA HD ! = cannot pick or despatch = bad credit
+	if IO make the DA CN ! = import only
+
+4 	when importing pick_items for kits
+	want at least 5 layers of kits
+	so in so.temp5 
+	add to product_kit a record_id unique key
+	add to pick_item kit_line_no integer
+
+	when searching for an instance of the product and line no to update
+	use the record_id in the product kit = the pick_item.kit_line_no
+
+5	when importing pick items for kits
+	we currently allow 1 level of kit items
+	and need to allow upto 5
+	can do this 2 ways
+	1	write to transactions_work for each level
+		so add the kit prod_id,kit record_id, qty, status = NP
+		for 1st time add directly from product kit joined to prod_profile all prods for the kit
+		for the 2nd  add from transactions-work (status NP) link the prod to product_kit and prod_profile 
+			- updating the original transaction_work record status = DX if record found
+				otherwise to OP
+		so add the kit prod_id,kit record_id, qty, status = NP
+		do the 2nd again for 3rd to 5th.
+		any records still NP update to OP.
+	2	Write a procedure passed the kit it

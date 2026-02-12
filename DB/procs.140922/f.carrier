@@ -1,0 +1,9 @@
+create domain DIMENSION_FACTOR INTEGER;
+create domain CUBIC_WEIGHT NUMERIC(11, 3);
+create domain CHARGE_WEIGHT NUMERIC(9, 3);
+
+alter table carrier add DIMENSIONAL_FACTOR DIMENSION_FACTOR;
+
+alter table pack_id add CUBIC_WEIGHT CUBIC_WEIGHT;
+alter table pack_id add CHARGE_WEIGHT CHARGE_WEIGHT;
+

@@ -1,0 +1,2 @@
+alter table zone add default_device_id device_id;
+

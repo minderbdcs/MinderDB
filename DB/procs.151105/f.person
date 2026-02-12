@@ -1,0 +1,4 @@
+alter domain current_person type varchar(20);
+commit;
+alter domain person type varchar(20);
+commit;

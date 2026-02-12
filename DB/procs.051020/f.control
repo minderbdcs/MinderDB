@@ -1,0 +1,2 @@
+alter table control add archive_wh_id wh_id;
+

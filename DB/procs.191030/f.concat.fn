@@ -1,0 +1,10 @@
+/*
+213:DECLARE EXTERNAL FUNCTION FILE_CONCAT
+216:ENTRY_POINT 'File_concat' MODULE_NAME 'udf_file';
+218:DECLARE EXTERNAL FUNCTION FILE_COPY
+221:ENTRY_POINT 'File_copy' MODULE_NAME 'udf_file';
+223:DECLARE EXTERNAL FUNCTION FILE_CREATE
+*/
+drop external function file_concat;
+drop external function file_copy;
+drop external function file_create;

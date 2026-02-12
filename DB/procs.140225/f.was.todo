@@ -1,0 +1,19 @@
+alter prod_profile net_weight and inner_weight to be weight_decimal3 ie 9999v999
+
+tables
+prod_profile
+prod_profile_temp
+
+procedures
+export_prod_profile
+import_prod_profile
+manifest_delivery
+locn_statistics
+
+triggers
+add_prod_profile_temp
+run_transaction_ppsp
+run_transaction_pppk
+run_transaction_ppa2
+run_transaction_gltd
+

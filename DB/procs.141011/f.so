@@ -1,0 +1,5 @@
+/*
+S_SUBURB                        (CITY) VARCHAR(25)
+*/
+alter table pick_order_dx add P_SUBURB CITY;
+alter table pick_order_dx add D_SUBURB CITY;

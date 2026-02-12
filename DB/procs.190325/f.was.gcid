@@ -1,0 +1,505 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_GCID FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 9 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_CAMPAIGN VARCHAR(10);
+DECLARE VARIABLE WK_LAST_ORDER INTEGER;
+DECLARE VARIABLE WK_ORDER1 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER2 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER3 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER4 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER5 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER6 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER7 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER8 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER9 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER10 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER11 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER12 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER13 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER14 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER15 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER16 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER17 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER18 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER19 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER20 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER21 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER22 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER23 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER24 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER25 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER26 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER27 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER28 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER29 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER30 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER31 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER32 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER33 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER34 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER35 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER36 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER37 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER38 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER39 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER40 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER41 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER42 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER43 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER44 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER45 PICK_ORDER;
+DECLARE VARIABLE WK_ORDER46 PICK_ORDER;
+DECLARE VARIABLE WK_FOUND INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GCID') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the Campaign ID
+            field 2 is the retrieve status
+            up to 34 Contact Instance IDs (if they are length 8)
+            or to 33 Contact Instance IDs (if they are length 9)
+            or to 46 Contact Instance IDs (if they are length 1)
+            field 3-35 is the ContactInstanceID
+
+         */
+         WK_STATUS = '';
+         WK_CAMPAIGN = '';
+         WK_LAST_ORDER = 0;
+         WK_ORDER1 = '';
+         WK_ORDER2 = '';
+         WK_ORDER3 = '';
+         WK_ORDER4 = '';
+         WK_ORDER5 = '';
+         WK_ORDER6 = '';
+         WK_ORDER7 = '';
+         WK_ORDER8 = '';
+         WK_ORDER9 = '';
+         WK_ORDER10 = '';
+         WK_ORDER11 = '';
+         WK_ORDER12 = '';
+         WK_ORDER13 = '';
+         WK_ORDER14 = '';
+         WK_ORDER15 = '';
+         WK_ORDER16 = '';
+         WK_ORDER17 = '';
+         WK_ORDER18 = '';
+         WK_ORDER19 = '';
+         WK_ORDER20 = '';
+         WK_ORDER21 = '';
+         WK_ORDER22 = '';
+         WK_ORDER23 = '';
+         WK_ORDER24 = '';
+         WK_ORDER25 = '';
+         WK_ORDER26 = '';
+         WK_ORDER27 = '';
+         WK_ORDER28 = '';
+         WK_ORDER29 = '';
+         WK_ORDER30 = '';
+         WK_ORDER31 = '';
+         WK_ORDER32 = '';
+         WK_ORDER33 = '';
+         WK_ORDER34 = '';
+         WK_ORDER35 = '';
+         WK_ORDER36 = '';
+         WK_ORDER37 = '';
+         WK_ORDER38 = '';
+         WK_ORDER39 = '';
+         WK_ORDER40 = '';
+         WK_ORDER41 = '';
+         WK_ORDER42 = '';
+         WK_ORDER43 = '';
+         WK_ORDER44 = '';
+         WK_ORDER45 = '';
+         WK_ORDER46 = '';
+
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = '<CampaignID') THEN
+            BEGIN
+               WK_CAMPAIGN = WK_WORK_DATA;
+               WK_LAST_ORDER = 0;
+            END
+            IF (WK_WORK_LABEL = '<CampaignContactInstanceRetrieveStatus') THEN
+            BEGIN
+               WK_STATUS = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<ContactInstanceID') THEN
+            BEGIN
+               WK_LAST_ORDER = WK_LAST_ORDER + 1;
+               IF (WK_LAST_ORDER = 1) THEN
+                  WK_ORDER1 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 2) THEN
+                  WK_ORDER2 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 3) THEN
+                  WK_ORDER3 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 4) THEN
+                  WK_ORDER4 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 5) THEN
+                  WK_ORDER5 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 6) THEN
+                  WK_ORDER6 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 7) THEN
+                  WK_ORDER7 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 8) THEN
+                  WK_ORDER8 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 9) THEN
+                  WK_ORDER9 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 10) THEN
+                  WK_ORDER10 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 11) THEN
+                  WK_ORDER11 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 12) THEN
+                  WK_ORDER12 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 13) THEN
+                  WK_ORDER13 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 14) THEN
+                  WK_ORDER14 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 15) THEN
+                  WK_ORDER15 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 16) THEN
+                  WK_ORDER16 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 17) THEN
+                  WK_ORDER17 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 18) THEN
+                  WK_ORDER18 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 19) THEN
+                  WK_ORDER19 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 20) THEN
+                  WK_ORDER20 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 21) THEN
+                  WK_ORDER21 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 22) THEN
+                  WK_ORDER22 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 23) THEN
+                  WK_ORDER23 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 24) THEN
+                  WK_ORDER24 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 25) THEN
+                  WK_ORDER25 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 26) THEN
+                  WK_ORDER26 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 27) THEN
+                  WK_ORDER27 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 28) THEN
+                  WK_ORDER28 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 29) THEN
+                  WK_ORDER29 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 30) THEN
+                  WK_ORDER30 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 31) THEN
+                  WK_ORDER31 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 32) THEN
+                  WK_ORDER32 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 33) THEN
+                  WK_ORDER33 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 34) THEN
+                  WK_ORDER34 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 35) THEN
+                  WK_ORDER35 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 36) THEN
+                  WK_ORDER36 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 37) THEN
+                  WK_ORDER37 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 38) THEN
+                  WK_ORDER38 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 39) THEN
+                  WK_ORDER39 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 40) THEN
+                  WK_ORDER40 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 41) THEN
+                  WK_ORDER41 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 42) THEN
+                  WK_ORDER42 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 43) THEN
+                  WK_ORDER43 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 44) THEN
+                  WK_ORDER44 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 45) THEN
+                  WK_ORDER45 = WK_WORK_DATA;
+               ELSE
+               IF (WK_LAST_ORDER = 46) THEN
+                  WK_ORDER46 = WK_WORK_DATA;
+
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         IF (WK_STATUS = 'true') THEN
+         BEGIN
+            WK_STATUS = 'T';
+         END
+         ELSE
+         BEGIN
+            WK_STATUS = 'F';
+         END
+         /* do pick campaigns for this campaign */
+         IF (WK_ORDER1 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER1, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER2 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER2, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER3 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER3, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER4 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER4, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER5 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER5, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER6 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER6, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER7 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER7, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER8 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER8, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER9 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER9, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER10 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER10, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER11 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER11, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER12 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER12, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER13 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER13, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER14 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER14, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER15 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER15, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER16 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER16, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER17 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER17, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER18 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER18, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER19 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER19, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER20 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER20, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER21 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER21, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER22 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER22, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER23 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER23, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER24 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER24, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER25 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER25, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER26 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER26, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER27 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER27, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER28 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER28, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER29 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER29, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER30 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER30, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER31 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER31, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER32 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER32, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER33 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER33, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER34 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER34, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER35 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER35, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER36 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER36, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER37 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER37, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER38 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER38, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER39 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER39, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER40 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER40, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER41 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER41, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER42 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER42, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER43 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER43, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER44 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER44, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER45 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER45, NEW.PERSON_ID);
+         END
+         IF (WK_ORDER46 > '') THEN
+         BEGIN
+            EXECUTE PROCEDURE ADD_ORDER_GROUP_PICK(:WK_CAMPAIGN, :WK_ORDER46, NEW.PERSON_ID);
+         END
+         /* update the status */
+         UPDATE ORDER_GROUP
+         SET PICK_RETRIEVE_STATUS = :WK_STATUS
+         WHERE ORDER_GROUP_ID = :WK_CAMPAIGN;
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

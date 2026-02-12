@@ -1,0 +1,7 @@
+alter table prod_profile add min_stock_days qty;
+alter table prod_profile add max_stock_days qty;
+alter table prod_profile add reorder_stock_days qty;
+alter table prod_profile add leadtime_no1 qty;
+alter table prod_profile add leadtime_no2 qty;
+alter table prod_profile add leadtime_no3 qty;
+

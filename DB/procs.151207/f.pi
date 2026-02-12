@@ -1,0 +1,6 @@
+create domain  kit_line_id integer;
+alter table pick_item add kit_line_id kit_line_id;
+alter table pick_item_dx add kit_line_id kit_line_id ;
+alter table pick_order_item_temp add l_kit_line_id kit_line_id;
+
+alter table product_kit add  kit_line_id kit_line_id;

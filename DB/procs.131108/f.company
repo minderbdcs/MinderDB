@@ -1,0 +1,1 @@
+alter table company add import_pick_held_status status;

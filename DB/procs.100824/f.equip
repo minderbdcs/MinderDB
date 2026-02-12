@@ -1,0 +1,3 @@
+alter table sys_equip add computer_queue description;
+alter table sys_equip add computer_queue_server description;
+

@@ -1,0 +1,108 @@
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+ALTER  PROCEDURE REPLENISH_LOCN 
+RETURNS (
+PROD_ID VARCHAR(30) ,
+TO_WH_ID CHAR(2) ,
+TO_LOCN_ID VARCHAR(10) ,
+TRN_PRIORITY SMALLINT,
+REQUIRED_QTY INTEGER
+)
+AS 
+ 
+
+DECLARE VARIABLE WK_MIN_QTY INTEGER;
+DECLARE VARIABLE WK_MAX_QTY INTEGER;
+DECLARE VARIABLE WK_REORDER_QTY INTEGER;
+DECLARE VARIABLE WK_CURRENT_QTY INTEGER;
+DECLARE VARIABLE IMPORTSTATUS VARCHAR(40);
+BEGIN
+/*
+have a procedure to report the current transfer request 
+for locations with
+	replenish flag 'T'
+	and prod_id populated
+
+	get current stock of that product in the location
+	if current stock < reorder_level
+	begin
+		if current stock <= min level
+		begin
+			priority is High
+		end
+		else
+		begin
+			priority is default
+		end
+		qty to get is the max_level - current level
+	end
+change on 210706
+only include prods where have some stock in the warehouse
+*/
+   FOR SELECT PROD_ID, WH_ID, LOCN_ID, MIN_QTY, MAX_QTY, REORDER_QTY
+   FROM LOCATION
+   WHERE REPLENISH = 'T'
+   AND (PROD_ID IS NOT NULL)
+   AND (REORDER_QTY IS NOT NULL)
+   AND (MAX_QTY IS NOT NULL)
+   INTO :PROD_ID, 
+        :TO_WH_ID,
+        :TO_LOCN_ID,
+        :WK_MIN_QTY,
+        :WK_MAX_QTY,
+        :WK_REORDER_QTY
+   DO
+   BEGIN
+      IF (WK_MIN_QTY IS NULL) THEN
+      BEGIN
+         WK_MIN_QTY = 0;
+      END
+      SELECT AVAILABLE_QTY 
+      FROM PRODUCT_STOCK_STATUS(:PROD_ID) 
+      INTO :WK_CURRENT_QTY;
+      IF (WK_CURRENT_QTY IS NULL) THEN
+      BEGIN
+         WK_CURRENT_QTY = 0;
+      END
+      IF (WK_CURRENT_QTY > 0) THEN
+      BEGIN
+         SELECT CONTROL.PICK_IMPORT_SSN_STATUS
+         FROM CONTROL
+         INTO :IMPORTSTATUS; 
+   
+         SELECT SUM( ISSN.CURRENT_QTY ) 
+            FROM ISSN
+            WHERE ISSN.PROD_ID = :PROD_ID
+            AND WH_ID = :TO_WH_ID
+            AND LOCN_ID = :TO_LOCN_ID
+            AND (POS(:IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1)
+            INTO :WK_CURRENT_QTY;
+         IF (WK_CURRENT_QTY IS NULL) THEN
+         BEGIN
+            WK_CURRENT_QTY = 0;
+         END
+         IF (WK_CURRENT_QTY < WK_REORDER_QTY) THEN
+         BEGIN
+            IF (WK_CURRENT_QTY < WK_MIN_QTY) THEN
+            BEGIN
+               TRN_PRIORITY = 5;
+            END
+            ELSE
+            BEGIN
+               TRN_PRIORITY = 10;
+            END
+            REQUIRED_QTY = WK_MAX_QTY - WK_CURRENT_QTY;
+            SUSPEND;
+         END
+      END
+   END
+   
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

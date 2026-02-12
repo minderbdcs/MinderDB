@@ -1,0 +1,7 @@
+insert into person_type(code, description) values('CA','Carrier');    
+insert into person_type(code, description) values('IN','Individual');
+insert into person_type(code, description) values('CO','Company');  
+insert into person_type(code, description) values('CS','Company - Supplier');    
+insert into person_type(code, description) values('LE','Leasee');    
+insert into person_type(code, description) values('RP','Repository Contact');    
+insert into person_type(code, description) values('CR','Company Respository Contact');    

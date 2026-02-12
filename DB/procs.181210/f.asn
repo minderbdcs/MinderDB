@@ -1,0 +1,16 @@
+/*
+DATA_ID                MAX_LENGTH DATA_TYPE FIXED_LENGTH SYMBOLOGY_PREFIX     DATA_EXPRESSION                          MENU_NAME                                TABLE_NAME                               FIELD_NAME                               MENU_URL                                                                                                                                                                                                                                                        GLOBAL_SEARCH DATA_PREFIX     DATA_SUFFIX     DATA_START_NO  DATA_END_NO DATA_GENERATOR                  DATA_TYPE_ID         DATA_SEQUENCE 
+==================== ============ ========= ============ ==================== ======================================== ======================================== ======================================== ======================================== =============================================================================== ============= =============== =============== ============= ============ =============================== ==================== ============= 
+LEGACY                         15 3         <null>       <null>               <null>                                   <null>                                   <null>                                   <null>                                   <null>                                                                                                                                                                                                                                                          F             MD              <null>                      0         9999 SSN_LEGACY_ID_GEN               <null>                      <null> 
+
+*/
+update or insert into param(data_id,max_length,data_type,global_search,data_prefix,data_start_no,data_end_no, data_generator, data_brand, data_model) values('ASN6','10','3','F','ASN','1','999999','ASN_ID_GEN6','DEFAULT','DEFAULT');
+update or insert into param(data_id,max_length,data_type,global_search,data_prefix,data_start_no,data_end_no, data_generator,data_brand,data_model) values('ASN7','10','3','F','ASN','1','999999','ASN_ID_GEN7','DEFAULT','DEFAULT');
+update or insert into param(data_id,max_length,data_type,global_search,data_prefix,data_start_no,data_end_no, data_generator,data_brand,data_model) values('ASN8','10','3','F','ASN','1','999999','ASN_ID_GEN8','DEFAULT','DEFAULT');
+update or insert into param(data_id,max_length,data_type,global_search,data_prefix,data_start_no,data_end_no, data_generator,data_brand,data_model) values('ASN9','10','3','F','ASN','1','999999','ASN_ID_GEN9','DEFAULT','DEFAULT');
+update or insert into param(data_id,max_length,data_type,global_search,data_prefix,data_start_no,data_end_no, data_generator,data_brand,data_model) values('ASN10','10','3','F','ASN','1','999999','ASN_ID_GEN10','DEFAULT','DEFAULT');
+create generator ASN_ID_GEN6;
+create generator ASN_ID_GEN7;
+create generator ASN_ID_GEN8;
+create generator ASN_ID_GEN9;
+create generator ASN_ID_GEN10;

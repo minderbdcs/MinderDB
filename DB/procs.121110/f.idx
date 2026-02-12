@@ -1,0 +1,2 @@
+create index print_requests_status_idx on print_requests(request_status);
+create index print_requests_date_idx on print_requests(prn_date);

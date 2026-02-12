@@ -1,0 +1,3 @@
+alter table person  add person_discount_percent  percent_f default 0;
+alter table person add person_discount_code  code_two ;
+

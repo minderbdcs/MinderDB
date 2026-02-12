@@ -1,0 +1,3 @@
+alter table pick_order_item_temp add h_zone_c code_two;
+alter table pick_order_item_temp add h_source_file descr;
+

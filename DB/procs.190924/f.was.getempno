@@ -1,0 +1,26 @@
+CREATE PROCEDURE GET_EMP_NO  RETURNS (
+  EMPLOYEE_ID VARCHAR(10)
+) AS  
+DECLARE VARIABLE iEmpNo INTEGER;
+DECLARE VARIABLE iLengthEmpNo INTEGER;
+DECLARE VARIABLE sEmpNo VARCHAR(10);
+BEGIN
+  iEmpNo = GEN_ID(EMP_NO_GEN, 1) ;
+  iLengthEmpNo = STRLEN(iEmpNo);
+  
+  /* default prefix */
+  sEmpNo = 'M7-';
+  
+  /* Padding leading with 0 */
+  WHILE (iLengthEmpNo < 7) DO
+  BEGIN
+        sEmpNo = sEmpNo || '0';      
+        iLengthEmpNo = iLengthEmpNo + 1;
+  END
+  sEmpNo = sEmpNo || iEmpNo;
+  
+  /* Return LoadNo to the caller */
+  EMPLOYEE_ID = sEmpNo;
+  
+END^
+

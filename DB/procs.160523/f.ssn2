@@ -1,0 +1,161 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER INSERT_SSN_PO_PRICE FOR SSN 
+ACTIVE BEFORE INSERT POSITION 5 
+AS
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_QTYF FLOAT;
+/* DECLARE VARIABLE WK_REASON VARCHAR(40); */
+DECLARE VARIABLE WK_REASON VARCHAR(1024);
+DECLARE VARIABLE WK_DO_NIPP VARCHAR(1);
+BEGIN
+   WK_DO_NIPP = 'F';
+   SELECT SSN_PO_PRICE_NIPP  
+   FROM CONTROL
+   INTO :WK_DO_NIPP;
+   IF (WK_DO_NIPP IS NULL) THEN
+   BEGIN
+      WK_DO_NIPP = 'F';
+   END
+   IF (WK_DO_NIPP = 'F') THEN
+   BEGIN
+      IF (NOT NEW.PURCHASE_PRICE IS NULL) THEN
+      BEGIN
+         IF (NEW.LOAN_COST_BASE IS NULL) THEN
+         BEGIN
+            NEW.LOAN_COST_BASE = NEW.PURCHASE_PRICE;
+         END
+         IF (NEW.LOAN_COST_BASE = 0 ) THEN
+         BEGIN
+            NEW.LOAN_COST_BASE = NEW.PURCHASE_PRICE;
+         END
+      END
+   END
+   ELSE
+   BEGIN
+      IF (NOT NEW.PURCHASE_PRICE IS NULL) THEN
+      BEGIN
+         WK_QTY = NEW.PURCHASE_PRICE * 100;
+         WK_REASON =  'No Price Yet';
+/*
+         EXECUTE PROCEDURE ADD_TRAN(
+           NEW.WH_ID,
+           NEW.LOCN_ID,
+           NEW.SSN_ID,
+           'NIPP',
+           'A',
+           'NOW',
+           'No Price Yet',
+           :WK_QTY,
+           'F',
+           '',
+           'MASTER',
+           0,
+           '',
+           'SSSSSSSSS',
+           'DB',
+           'DB');
+*/
+      END
+      ELSE
+      BEGIN
+         /* no price so retrive from control */
+         SELECT DEFAULT_PRICE FROM CONTROL INTO :WK_QTYF;
+         NEW.PURCHASE_PRICE  = WK_QTYF;
+         WK_QTY = WK_QTYF * 100;
+         WK_REASON =  'Defaulted Price - No Price Yet';
+/*
+         EXECUTE PROCEDURE ADD_TRAN(
+           NEW.WH_ID,
+           NEW.LOCN_ID,
+           NEW.SSN_ID,
+           'NIPP',
+           'A',
+           'NOW',
+           'Defaulted Price - No Price Yet',
+           :WK_QTY,
+           'F',
+           '',
+           'MASTER',
+           0,
+           '',
+           'SSSSSSSSS',
+           'DB',
+           'DB');
+*/
+      END
+      EXECUTE PROCEDURE ADD_SSN_HIST(NEW.WH_ID, NEW.LOCN_ID, NEW.SSN_ID, 
+         'nipp', 'A', 'NOW',
+         'insert ssn with a price' , :WK_REASON, :WK_QTY, 'DB', 'DB'); 
+   END
+END ^
+
+CREATE OR ALTER TRIGGER INSERT_SSN_STATUS FOR SSN 
+ACTIVE BEFORE INSERT POSITION 2 
+AS
+DECLARE VARIABLE WK_STATUS CHAR(2);
+DECLARE VARIABLE WK_COMPANY VARCHAR(20);
+DECLARE VARIABLE WK_CREATE_SSN VARCHAR(1);
+DECLARE VARIABLE WK_NEW_SSN_ID SSN_ID;
+BEGIN
+   WK_CREATE_SSN = 'F';
+   IF (NEW.SSN_ID IS NULL) THEN
+   BEGIN
+      WK_CREATE_SSN = 'T';
+   END
+   IF (NEW.SSN_ID = '') THEN
+   BEGIN
+      WK_CREATE_SSN = 'T';
+   END
+   IF (NEW.SSN_ID = '0') THEN
+   BEGIN
+      WK_CREATE_SSN = 'T';
+   END
+   IF (:WK_CREATE_SSN = 'T') THEN
+   BEGIN
+      SELECT SSN_ID FROM GET_NEXT_SSN INTO :WK_NEW_SSN_ID;
+      NEW.SSN_ID = :WK_NEW_SSN_ID;
+   END
+   IF (NEW.STATUS_SSN IS NULL) THEN
+   BEGIN
+      /* Get the STatus to use for the inserts */
+      SELECT NEW_SSN_STATUS FROM CONTROL
+      INTO :WK_STATUS;
+      NEW.STATUS_SSN = WK_STATUS;
+   END
+   IF (NEW.COMPANY_ID IS NULL) THEN
+   BEGIN
+      /* Get the STatus to use for the inserts */
+      SELECT COMPANY_ID FROM CONTROL
+      INTO :WK_COMPANY;
+      NEW.COMPANY_ID = WK_COMPANY;
+   END
+   IF (NEW.CURRENT_QTY IS NULL) THEN
+   BEGIN
+      /* Get the STatus to use for the inserts */
+      IF (NEW.ORIGINAL_QTY IS NULL) THEN
+      BEGIN
+         NEW.CURRENT_QTY = 1;
+      END
+      ELSE
+      BEGIN
+         NEW.CURRENT_QTY = NEW.ORIGINAL_QTY;
+      END
+   END
+   IF (:WK_CREATE_SSN = 'T') THEN
+   BEGIN
+      INSERT INTO ISSN   
+        (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, PREV_LOCN_ID, CURRENT_QTY, PREV_QTY,
+         PREV_DATE, ISSN_STATUS, STATUS_CODE, CREATE_DATE, USER_ID, PROD_ID, ORIGINAL_QTY, COMPANY_ID)
+   VALUES (NEW.SSN_ID, NEW.SSN_ID, NEW.WH_ID, NEW.LOCN_ID,NULL, NEW.CURRENT_QTY, NULL,
+           NULL, NEW.STATUS_SSN, NEW.STATUS_CODE, 'NOW', NEW.CREATED_BY, NEW.PROD_ID , NEW.CURRENT_QTY , NEW.COMPANY_ID);
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,5 @@
+/*
+H_S_SUBURB                      (CITY) VARCHAR(25)
+*/
+alter table pick_order_item_temp add H_D_SUBURB CITY;
+alter table pick_order_item_temp add H_P_SUBURB CITY;

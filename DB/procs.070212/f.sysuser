@@ -1,0 +1,2 @@
+alter table sys_user add pick_sequence char(2);
+alter table sys_user add pick_direction char(1);

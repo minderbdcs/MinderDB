@@ -1,0 +1,3 @@
+update control set default_connote_pack_qty = 1, default_connote_pack = 'S';
+
+

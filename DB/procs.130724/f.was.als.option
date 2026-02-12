@@ -1,0 +1,6 @@
+/*
+insert into options(group_code,code,description) values('IMPREMOTE','CMD','d:\asset.rf\database\script\expRemote.bat');
+insert into options(group_code,code,description) values('EXPREMOTE','CMD','d:\asset.rf\database\script\exp2Remote.bat');
+*/
+insert into options(group_code,code,description) values('IMPREMOTE','SH','/data/asset.rf/script/expRemote.sh');
+insert into options(group_code,code,description) values('EXPREMOTE','SH','/data/asset.rf/script/exp2Remote.sh');

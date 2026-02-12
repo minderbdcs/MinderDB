@@ -1,0 +1,2 @@
+insert into options(group_code,code,description) values('RECEIVE','DEADLOCK','7');
+

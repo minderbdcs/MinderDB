@@ -1,0 +1,2 @@
+alter table control add pallet_base_prod_type code_two;
+

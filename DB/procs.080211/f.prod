@@ -1,0 +1,2 @@
+alter table prod_profile add pp_package_type code_two;
+

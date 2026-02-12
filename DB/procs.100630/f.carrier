@@ -1,0 +1,3 @@
+alter table carrier add uom_dt code_two;
+alter table carrier add uom_wt code_two;
+

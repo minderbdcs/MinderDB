@@ -1,0 +1,31 @@
+done
+alter table pick_invoice add invoice_1st_despatch_id despatch_id;
+alter table pick_invoice add invoice_1st_AWB_CONSIGNMENT_NO AWB_CONSIGNMENT_NO;
+
+alter table pick_order add last_invoice_date timestamp;
+alter table pick_order add last_invoice_no invoice_no ;
+alter table pick_order add freight_every_invoice values_tf;
+alter table pick_invoice_line add INVLINE_ORDERED_QTY  QTY;
+alter table pick_invoice_line add INVLINE_LINE_TOTAL_TAX       DOUBLE PRECISION  ;
+alter table pick_invoice_line add INVLINE_WARRANTY_CODE       WARRANTY_TERM     ;
+alter table pick_invoice_line add INVLINE_BACK_ORDER_QTY  QTY;
+==================================================================================
+populate new fields
+
+alter table pick_order add freight_last_update_date timestamp;
+alter table pick_order add freight_last_updated_by person;
+==================================================================================
+populate fields
+in PINL 
+alter table pick_invoice_line add INVLINE_ORDERED_QTY  QTY;
+	use the pick items pick order qty
+alter table pick_invoice_line add INVLINE_LINE_TOTAL_TAX       DOUBLE PRECISION  ;
+	use the passed qty in the transaction * pick items tax amount /pick items pick ordered qtyY
+alter table pick_invoice_line add INVLINE_WARRANTY_CODE       WARRANTY_TERM     ;
+	use the pick items warranty term
+rather than relying on the reference field parameters
+
+alter table pick_invoice_line add INVLINE_BACK_ORDER_QTY  QTY;
+	?
+insert into options(group_code,code,description) values('REF_CODE','PILN_BOQTY', 'PICK_INVOICE_LINE.INVLINE_BACK_ORDER_QTY');
+

@@ -1,0 +1,4 @@
+alter table ssn add ssn_tax_applicable value_tf;
+alter table ssn add ssn_sale_price unit_price;
+alter table ssn add ssn_sale_uom code_two;
+

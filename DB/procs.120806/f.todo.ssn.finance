@@ -1,0 +1,31 @@
+/*
+TABLE = SSN_FINANCE 
+Holds mainly Financial related details and which has the following fields (again can we prefix all field names with SSN_?):
+
+*SSN_ID
+SSN_SALE_PRICE
+COMPANY_ID 				-> SSN_COMPANY_ID
+PURCHASE_PRICE			-> SSN_PURCHASE_PRICE
+PURCHASE_QTY				-> SSN_PURCHASE_QTY
+PURCHASE_DATE				-> SSN_PURCHASE_DATE
+ACQUISITION_COST 			-> SSN_ACQUISITION_COST.  This is used by Depreciation and Museums screens. Includes Freight and other commissioning costs.
+SSN_RECEIPT_NO INVOICE_NUMBER - VARCHAR ( 15) - new field for Museums when items are purchased without Purchase Orders.
+SSN_VALUATION_METHOD  CODE - New Field required for MUSEUMs and Depreciation
+INSURED_VALUE				-> SSN_INSURED_VALUE
+SSN_VALUED_BY  PERSON - New Field required for Musuems
+DIVISION_ID 				-> SSN_DIVISION_ID
+COST_CENTER 				-> SSN_COST_CENTER
+DEPARTMENT_ID 			-> SSN_DEPARTMENT_ID
+SSN_TAX_APPLICABLE
+GOV_TAX 					-> SSN_GOV_TAX  - not sure what used for??
+LEASED					-> SSN_LEASED
+LEASE_EXPIRY_DATE			-> SSN_LEASE_EXPIRY_DATE
+LEASOR					-> SSN_LEASOR
+LEGACY_LEDGER_SALE_CODE 		-> SSN_LEGACY_SALE_PROD_ID_CODE
+LEGACY_LEDGER_DEPOSIT_CODE 		-> SSN_LEGACY_DEPOSIT_CODE
+LEGACY_LEDGER_PURCHASE_CODE	-> SSN_LEGACY_PURCHASE_CODE
+LEGACY_LEDGER_SALE_SSN_ID_CODE	-> SSN_LEGACY_SALE_SSN_ID_CODE
+SSN_FINANCE_LAST_UPDTD_BY
+SSN_FINANCE_LAST_UPDTD_DATE
+SSN_FINANCE_LAST_UPDTD_DEVICE     /* length = 29 characters */
+*/

@@ -1,0 +1,7 @@
+update or insert into warehouse(wh_id, description) values('NF','Not Found');
+update issn set wh_id ='NF' where not exists(select warehouse.wh_id from warehouse where warehouse.wh_id = issn.wh_id);
+commit;
+
+alter table ISSN add  CONSTRAINT ISSN_FK_WH_ID foreign key (WH_ID) references WAREHOUSE(WH_ID);
+
+/* alter table ISSN add  foreign key ISSN_FK_LOCATION (WH_ID, LOCN_ID) references LOCATION(WH_ID, LOCN_ID); */

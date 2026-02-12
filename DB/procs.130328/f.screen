@@ -1,0 +1,1 @@
+alter table sys_screen_var alter ssv_expression type varchar(300);

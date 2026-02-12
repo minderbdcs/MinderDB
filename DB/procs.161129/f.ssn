@@ -1,0 +1,43 @@
+/*
+update or insert into warehouse(wh_id, description) values('NF','Not Found');
+update ssn set wh_id ='NF' where not exists(select warehouse.wh_id from warehouse where warehouse.wh_id = ssn.wh_id);
+commit;
+
+alter table SSN add  CONSTRAINT SSN_FK_WH_ID foreign key (WH_ID) references WAREHOUSE(WH_ID);
+*/
+
+update or insert  into  ssn_type(code, description) values('UNKNOWN','Unknown');
+update ssn set ssn_type = upper(ssn_type) where upper(ssn_type) <> ssn_type;
+update ssn set ssn_type = 'UNKNOWN'  where coalesce(ssn_type,'') = '';
+insert into ssn_type (code,description)
+select s1.ssn_type, s1.ssn_type as s1_desc from ssn s1 left outer join ssn_type s2 on s1.ssn_type = s2.code
+where s2.code is null
+group by s1.ssn_type
+;
+
+update or insert  into  generic(code, description, ssn_type) values('UNKNOWN','Unknown', 'UNKNOWN');
+update ssn set generic = upper(generic) where upper(generic) <> generic;
+update ssn set ssn_type = 'UNKNOWN'  where coalesce(ssn_type,'') = '';
+update ssn set generic = null where coalesce(generic,'') = '';
+insert into generic (code,description, ssn_type)
+select s1.generic, s1.generic as s1_desc, s1.ssn_type from ssn s1 left outer join generic s2 on s1.generic = s2.code and  s1.ssn_type = s2.ssn_type
+where s2.code is null and (s1.generic is not null)
+group by s1.ssn_type, s1.generic
+;
+/*
+update ssn set prev_wh_id=wh_id,prev_locn_id=locn_id, wh_id ='NF',locn_id='00000000',ssn_type='UNKNOWN' where ssn_type is null;
+commit;
+update ssn set prev_wh_id=wh_id,prev_locn_id=locn_id, wh_id ='NF',locn_id='00000000',file_number = ssn_type,ssn_type='UNKNOWN' where not exists(select ssn_type.code from ssn_type  where ssn_type.code  = ssn.ssn_type);
+commit;
+alter table SSN add  CONSTRAINT SSN_FK_SSN_TYPE foreign key (SSN_TYPE) references SSN_TYPE(CODE);
+*/
+/* want to upshift 
+ssn_type, generic
+model
+brand
+other1 - 20
+wh_id
+locn_id
+legacy_id
+*/
+/* alter table SSN add  foreign key SSN_FK_LOCATION (WH_ID, LOCN_ID) references LOCATION(WH_ID, LOCN_ID); */

@@ -1,0 +1,6 @@
+/*
+add to pick_order_sub_type whether to include in replenish
+add company_id to transfer_requests
+*/
+alter table pick_order_sub_type add replenish value_tf;
+alter table transfer_request add company_id company;

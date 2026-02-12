@@ -1,0 +1,6 @@
+/*
+818:DECLARE EXTERNAL FUNCTION VSUBSTRING
+ENTRY_POINT 'fudlib_substr' MODULE_NAME 'fudlib';
+*/
+
+drop external function vsubstring;

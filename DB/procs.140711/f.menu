@@ -1,0 +1,6 @@
+/*
+2. We need in the SYS_MENU a new field = SM_REFRESH INTEGER
+*/
+create domain seconds integer default 0;
+alter table sys_menu add sm_refresh seconds  ;
+

@@ -1,0 +1,2 @@
+alter table global_conditions add legacy_code legacy_code;
+

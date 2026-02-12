@@ -1,0 +1,2 @@
+alter table pick_order add d_wh_id wh_id;
+

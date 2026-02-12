@@ -1,0 +1,63 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+ALTER PROCEDURE DUMP_ASHTML (AFILENAME VARCHAR(255) CHARACTER SET NONE)
+RETURNS (RES INTEGER)
+AS 
+
+declare variable pinputs integer;
+declare variable poutputs integer;
+declare variable pname varchar(32);
+begin
+  res=file_create(afilename);
+  if (res<>0) then
+   begin
+     suspend;
+     exit;
+   end
+  res=file_writeln(afilename,'<h1>Tables and Views</h1><br><TABLE border=1><TR><th>Table Name</th></TR>');
+  if (res<>0) then
+   begin
+     suspend;
+     exit;
+   end
+ for
+  select  Rdb$RElation_name from rdb$relations where rdb$system_flag=0 order by Rdb$RElation_name into :pname do
+      begin
+       res=file_writeln(afilename,'<TR><td>'||nonull(pname)||'</td><td>');
+       if (res<>0) then
+        begin
+          suspend;
+          exit;
+        end
+       end
+  res=file_writeln(afilename,'</TABLE>');
+/* Procedures */
+  res=file_writeln(afilename,'<h1>Stored Procedures</h1><br><TABLE border=1> <TR><th>Procedure Name</th><th>Inputs</th><th>Outputs</th></TR>');
+  if (res<>0) then
+   begin
+     suspend;
+     exit;
+   end
+for
+ select rdb$Procedure_name ,rdb$procedure_inputs,rdb$procedure_outputs from rdb$Procedures
+   order by   rdb$Procedure_name into pname,pinputs,poutputs
+   do
+   begin
+    res=file_writeln(afilename,strformat('<TR><td>% </td><td align="right">% </td><td align="right">% </td></TR>',nonull(pname)||','||nonull(pinputs)||','||nonull(poutputs)||' ',','));
+    if (res<>0) then
+    begin
+     suspend;
+     exit;
+    end
+  end
+  res=file_writeln(afilename,'</TABLE>');
+  suspend;
+end ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

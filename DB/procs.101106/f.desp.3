@@ -1,0 +1,61 @@
+
+
+CREATE TABLE POSTCODE_DEPOT (
+POST_CODE POST_CODE NOT NULL,
+locality suburb,
+state state,
+comments description ,
+delivery_office description ,
+pre_sort_indicator code_6 ,
+parcel_zone code_6 ,
+bsp_number  code_6 ,
+bsp_name    description ,
+category    description ,
+        COUNTRY COUNTRY default 'AU',
+        DESCRIPTION DESCRIPTION ,
+        DEPOT_01 DEPOT_ID,
+        DEPOT_02 DEPOT_ID,
+        DEPOT_03 DEPOT_ID,
+        DEPOT_04 DEPOT_ID,
+        DEPOT_05 DEPOT_ID,
+        DEPOT_06 DEPOT_ID,
+        DEPOT_07 DEPOT_ID,
+        DEPOT_08 DEPOT_ID,
+        DEPOT_09 DEPOT_ID,
+        DEPOT_10 DEPOT_ID,
+record_id record_id,
+PRIMARY KEY (record_id));
+
+create index postcode_depot_post_code_id on postcode_depot(country, post_code);
+
+create generator postcode_depot_id_gen;
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER ADD_POSTCODE_DEPOT FOR POSTCODE_DEPOT
+ACTIVE BEFORE INSERT POSITION 10 
+AS
+BEGIN
+   IF ((NEW.RECORD_ID IS NULL) OR (NEW.RECORD_ID = 0)) THEN
+   BEGIN
+      NEW.RECORD_ID  = GEN_ID(POSTCODE_DEPOT_ID_GEN,1);
+   END
+END ^
+
+CREATE OR ALTER TRIGGER MOD_POSTCODE_DEPOT FOR POSTCODE_DEPOT 
+ACTIVE BEFORE UPDATE POSITION 10 
+AS
+BEGIN
+   IF ((NEW.RECORD_ID IS NULL) OR (NEW.RECORD_ID = 0)) THEN
+   BEGIN
+      NEW.RECORD_ID  = GEN_ID(POSTCODE_DEPOT_ID_GEN,1);
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

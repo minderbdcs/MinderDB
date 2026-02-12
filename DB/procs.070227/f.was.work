@@ -1,0 +1,8 @@
+for MGM pick product by locn seq
+
+in the 2 procedures for the pick_item
+	pkbs (from the calcSeq)
+	pkua (after each screen) 
+	save the pick_sequence + and pick_sequence -
+	or/and the locn_seq
+

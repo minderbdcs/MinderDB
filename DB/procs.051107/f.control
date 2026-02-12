@@ -1,0 +1,6 @@
+
+alter table control add allow_unpick_in_pick_cancel value_tf;
+update control set allow_unpick_in_pick_cancel = 'F';
+
+alter table control add warn_pick_priority integer;
+update control set warn_pick_priority = 10;

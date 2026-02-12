@@ -1,0 +1,2 @@
+alter domain order_no type varchar(20);
+

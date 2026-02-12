@@ -1,0 +1,9 @@
+vlpad is an intermediate
+was done on 190828
+
+change lpad to vlpad
+remove lpad function
+========================
+
+change vlpad to use fdb lpad
+then can remove vlpad

@@ -1,0 +1,8 @@
+
+alter table param add DATA_PREFIX VARCHAR(15);
+alter table param add DATA_SUFFIX VARCHAR(15);
+alter table param add DATA_START_NO START_NO;
+alter table param add DATA_END_NO END_NO;
+
+create generator ssn_legacy_id_gen;
+

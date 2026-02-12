@@ -1,0 +1,2 @@
+alter table prod_profile add PALLET_UOM CODE_TWO;
+

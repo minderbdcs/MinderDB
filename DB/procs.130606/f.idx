@@ -1,0 +1,9 @@
+/*
+select wh_id,locn_id2,count(*) as cnt from location where locn_id2 is not null group by wh_id,locn_id2 having count(*)>1;
+select locn_id2,count(*) as cnt from location where locn_id2 is not null group by locn_id2 having count(*)>1;
+select locn_id2,count(*) as cnt,len(locn_id2) as ll from location where locn_id2 is not null group by locn_id2 having count(*)>1;
+select locn_id2,count(*) as cnt from location where locn_id2 is not null group by locn_id2 having count(*)>1;
+*/
+create index locn_id2_idx ON LOCATION(LOCN_ID2, WH_ID );
+set statistics index locn_id2_idx;
+

@@ -1,0 +1,3 @@
+alter table prod_type add NON_PRODUCT VALUE_FT;
+
+

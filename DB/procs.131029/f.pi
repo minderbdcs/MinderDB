@@ -1,0 +1,4 @@
+
+alter table pick_item  add pi_legacy_internal_id	varchar(20);
+alter table pick_item_dx  add pi_legacy_internal_id	varchar(20);
+alter table pick_order_item_temp  add L_pi_legacy_internal_id	varchar(20);

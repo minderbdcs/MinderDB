@@ -1,0 +1,1 @@
+insert into location (wh_id,locn_id,locn_name,move_stat,locn_stat) values('XX','00000000','Delete Store','AR','OK');

@@ -1,0 +1,6 @@
+alter table grn add vessel_name descr;
+alter table grn add voyage_no descr;
+alter table grn add other1 other_char;
+alter table grn add other2 other_char;
+alter table grn add other3 other_char;
+

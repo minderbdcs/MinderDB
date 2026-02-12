@@ -1,0 +1,1 @@
+execute procedure add_tran_response('FX','RC000002','87510101','UISS','A','NOW','test me',0,'F','','MASTER    ',0,'','SSSSSSSSS','me','me');

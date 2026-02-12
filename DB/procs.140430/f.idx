@@ -1,0 +1,3 @@
+create index pack_sscc_out_despatch_id on pack_sscc(PS_OUT_DESPATCH_ID);
+create index pack_sscc_despatch_id on pack_sscc(PS_DESPATCH_ID);
+

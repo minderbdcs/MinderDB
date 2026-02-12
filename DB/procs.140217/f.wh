@@ -1,0 +1,6 @@
+alter table warehouse add wh_suburb city;
+alter table warehouse add wh_city city;
+alter table warehouse add wh_state state;
+alter table warehouse add wh_country country;
+alter table warehouse add wh_post_code post_code;
+

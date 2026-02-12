@@ -1,0 +1,9 @@
+CREATE DOMAIN QUERY_COPY_FIELD AS VARCHAR(40);
+
+COMMENT ON DOMAIN QUERY_COPY_FIELD IS  '
+The name of a Query field to use for the value when running the report
+';
+
+
+alter table reports_detail add query_copy_field  query_copy_field;
+

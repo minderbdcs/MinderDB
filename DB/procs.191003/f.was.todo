@@ -1,0 +1,10 @@
+for pkal we currently update pick_started in pkal and printed_date in prcl
+
+for manual order prints
+ the prcl transaction updates the printed_date
+     the send start time I will put in pick_order.label_printed_date
+     both fields need to be nulled if not already null
+
+for prcl in case we send and dont get a response
+we currently have the soap resend in a crontask
+when its trn_class becomes E or R

@@ -1,0 +1,3 @@
+alter table pack_id add prod_id product;
+alter table pack_id add qty qty;
+

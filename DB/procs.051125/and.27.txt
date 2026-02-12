@@ -1,0 +1,40 @@
+/*
+OnScreen Transfers for Handhelds. If I understand the problem correctly, there are specific orders that are not being shown for that handheld. Because it may be filtered by a particular status "AL" and "PG". This was originally said to me. Anyway. I've created a new storedprocedure called GET_HANDHELD_TRANSFERS. Which allows modifying the storedprocedure to display any status or any order based on the deviceID.
+*/
+
+CREATE PROCEDURE GET_HANDHELD_TRANSFERS ( DEVICE_ID VARCHAR (2)) RETURNS ( PICK_ORDER VARCHAR (30), PROD_ID VARCHAR (30), SHORT_DESC VARCHAR (50))
+AS 
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_SSN VARCHAR(20);
+DECLARE VARIABLE WK_PROD_DESC VARCHAR(50);
+DECLARE VARIABLE WK_TYPE_DESC VARCHAR(50);
+BEGIN
+   /* Procedure body */ 
+   FOR SELECT P1.PICK_ORDER, P1.PROD_ID, P1.SSN_ID, P2.SHORT_DESC, S3.DESCRIPTION
+       FROM PICK_ITEM P1 
+       LEFT OUTER JOIN PROD_PROFILE P2 ON P1.PROD_ID = P2.PROD_ID 
+       LEFT OUTER JOIN ISSN S1 ON P1.SSN_ID = S1.SSN_ID 
+       LEFT OUTER JOIN SSN S2 ON S1.ORIGINAL_SSN = S2.SSN_ID 
+       LEFT OUTER JOIN SSN_TYPE S3 ON S2.SSN_TYPE = S3.CODE 
+       WHERE P1.PICK_LINE_STATUS IN ('AL','PG','PL','DS') 
+       AND P1.DEVICE_ID = :DEVICE_ID 
+       INTO :PICK_ORDER, :WK_PROD, :WK_SSN, :WK_PROD_DESC, :WK_TYPE_DESC 
+   DO
+   BEGIN 
+      IF ((WK_SSN IS NULL) OR (WK_SSN = '')) THEN
+      BEGIN
+         /* a prod */
+         PROD_ID = WK_PROD;
+         SHORT_DESC = WK_PROD_DESC;
+      END
+      ELSE
+      BEGIN
+         /* a ssn */
+         PROD_ID = WK_SSN;
+         SHORT_DESC = WK_TYPE_DESC;
+      END 
+      SUSPEND; 
+   END 
+   EXIT; 
+END^
+

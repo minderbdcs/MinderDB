@@ -1,0 +1,423 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP TRIGGER RUN_TRANSACTION_PLAO ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_PLAO FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 87 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_CLASS CHAR(1);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_REF VARCHAR(40);
+DECLARE VARIABLE WK_PRINTER VARCHAR(40);
+DECLARE VARIABLE WK_OBJECT VARCHAR(30);
+DECLARE VARIABLE WK_CONSIGNMENT VARCHAR(40);
+DECLARE VARIABLE WK_DIRECTORY VARCHAR(80);
+DECLARE VARIABLE WK_FILENAME VARCHAR(80);
+DECLARE VARIABLE WK_FILENAME_OUT VARCHAR(80);
+DECLARE VARIABLE WK_LABEL_LINE VARCHAR(875);
+DECLARE VARIABLE WK_RESULT INTEGER;
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_SUB_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_PERSON VARCHAR(15);
+DECLARE VARIABLE WK_LINE1 VARCHAR(40);
+DECLARE VARIABLE WK_LINE2 VARCHAR(40);
+DECLARE VARIABLE WK_FILE_TYPE_U INTEGER;
+DECLARE VARIABLE WK_FILE_TYPE_V INTEGER;
+DECLARE VARIABLE WK_CONTACT_FIRST_NAME VARCHAR(50);
+DECLARE VARIABLE WK_CONTACT_LAST_NAME VARCHAR(50);
+DECLARE VARIABLE WK_ADDRESS_LINE1 VARCHAR(100);
+DECLARE VARIABLE WK_ADDRESS_LINE2 VARCHAR(50);
+DECLARE VARIABLE WK_ADDRESS_LINE3 VARCHAR(50);
+DECLARE VARIABLE WK_ADDRESS_LINE4 VARCHAR(50);
+DECLARE VARIABLE WK_ADDRESS_LINE5 VARCHAR(50);
+DECLARE VARIABLE WK_TITLE VARCHAR(10);
+DECLARE VARIABLE WK_4STATE VARCHAR(255);
+DECLARE VARIABLE WK_CITY VARCHAR(25);
+DECLARE VARIABLE WK_STATE VARCHAR(15);
+DECLARE VARIABLE WK_COUNTRY VARCHAR(25);
+DECLARE VARIABLE WK_POST_CODE VARCHAR(10);
+DECLARE VARIABLE WK_PHONE_NO VARCHAR(30);
+DECLARE VARIABLE WK_MAIL_ADDRESS_LINE1 VARCHAR(50);
+DECLARE VARIABLE WK_MAIL_ADDRESS_LINE2 VARCHAR(50);
+DECLARE VARIABLE WK_MAIL_CITY VARCHAR(25);
+DECLARE VARIABLE WK_MAIL_STATE VARCHAR(15);
+DECLARE VARIABLE WK_MAIL_COUNTRY VARCHAR(25);
+DECLARE VARIABLE WK_MAIL_POST_CODE VARCHAR(10);
+DECLARE VARIABLE WK_CONTACT_PHONE_NO VARCHAR(30);
+DECLARE VARIABLE WK_COMPANY VARCHAR(20);
+DECLARE VARIABLE WK_FILE_PREFIX VARCHAR(40);
+/*
+DECLARE VARIABLE WK_BUFFER VARCHAR(600);
+*/
+
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PLAO') THEN
+  BEGIN
+     WK_DEVICE = NEW.WH_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_OBJECT = ALLTRIM(NEW.OBJECT);
+     WK_REF = ALLTRIM(NEW.REFERENCE);
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     WK_SUB_LOCN = NEW.SUB_LOCN_ID;
+     WK_PERSON = SUBSTR(WK_OBJECT,1,10);
+     WK_LINE1 = SUBSTR(WK_OBJECT,11,30) || WK_WH_ID || WK_LOCN_ID || WK_SUB_LOCN;
+     EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REF, 1  RETURNING_VALUES :WK_LINE2 ; 
+     EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REF, 2  RETURNING_VALUES :WK_PRINTER ; 
+     WK_LINE2 = ALLTRIM(WK_LINE2);
+     IF (SUBSTR(WK_LINE2, LEN(WK_LINE2) -2, LEN(WK_LINE2) - 2) = '|') THEN
+     BEGIN
+        WK_LINE2 = SUBSTR(WK_LINE2, 1, LEN(WK_LINE2) - 3);
+     END
+     WK_QTY = NEW.QTY;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_CLASS = NEW.TRN_CODE;
+
+     WK_DIRECTORY = '';
+     WK_FILE_TYPE_U = 0;
+     WK_FILE_TYPE_V = 0;
+     WK_FILE_PREFIX = '';
+
+     IF (STRLEN(WK_PRINTER) > 2) THEN
+     BEGIN
+        WK_PRINTER = UPPER(SUBSTR(WK_PRINTER,2,3));
+     END
+     ELSE
+     BEGIN
+        WK_PRINTER = UPPER(WK_PRINTER);
+     END
+     IF (STRLEN(WK_PRINTER) < 2) THEN
+     BEGIN
+        WK_PRINTER = 'P' || WK_PRINTER;
+     END
+     /* need the directory for this label set */
+     SELECT WORKING_DIRECTORY FROM SYS_EQUIP 
+         WHERE DEVICE_ID = :WK_PRINTER
+         INTO :WK_DIRECTORY;
+     /* print labels */
+     WK_CONTACT_FIRST_NAME = '';
+     WK_CONTACT_LAST_NAME = '';
+     WK_ADDRESS_LINE1 = '';
+     WK_ADDRESS_LINE2 = '';
+     WK_CITY = '';
+     WK_STATE = '';
+     WK_COUNTRY = '';
+     WK_POST_CODE = '';
+     WK_PHONE_NO = '';
+     WK_MAIL_ADDRESS_LINE1 = '';
+     WK_MAIL_ADDRESS_LINE2 = '';
+     WK_MAIL_CITY = '';
+     WK_MAIL_STATE = '';
+     WK_MAIL_COUNTRY = '';
+     WK_MAIL_POST_CODE = '';
+     WK_CONTACT_PHONE_NO = '';
+     IF ((WK_CLASS = 'S') OR (WK_CLASS = 'M')) THEN
+     BEGIN
+        SELECT CONTACT_FIRST_NAME,
+            CONTACT_LAST_NAME,
+            ADDRESS_LINE1,
+            ADDRESS_LINE2,
+            CITY,
+            STATE,
+            COUNTRY,
+            POST_CODE,
+            PHONE_NO,
+            MAIL_ADDRESS1,
+            MAIL_ADDRESS2,
+            MAIL_CITY,
+            MAIL_STATE,
+            MAIL_COUNTRY,
+            MAIL_POST_CODE,
+            CONTACT_PHONE
+            FROM PERSON 
+            WHERE PERSON_ID = :WK_PERSON
+            INTO :WK_CONTACT_FIRST_NAME,
+                 :WK_CONTACT_LAST_NAME,
+                 :WK_ADDRESS_LINE1,
+                 :WK_ADDRESS_LINE2,
+                 :WK_CITY,
+                 :WK_STATE,
+                 :WK_COUNTRY,
+                 :WK_POST_CODE,
+                 :WK_PHONE_NO,
+                 :WK_MAIL_ADDRESS_LINE1,
+                 :WK_MAIL_ADDRESS_LINE2,
+                 :WK_MAIL_CITY,
+                 :WK_MAIL_STATE,
+                 :WK_MAIL_COUNTRY,
+                 :WK_MAIL_POST_CODE,
+                 :WK_CONTACT_PHONE_NO;
+        BEGIN
+           IF (WK_CONTACT_FIRST_NAME IS NULL) THEN
+           BEGIN
+              WK_CONTACT_FIRST_NAME = '';
+           END
+           IF (WK_CONTACT_LAST_NAME IS NULL) THEN
+           BEGIN
+              WK_CONTACT_LAST_NAME = '';
+           END
+           IF (WK_ADDRESS_LINE1 IS NULL) THEN
+           BEGIN
+              WK_ADDRESS_LINE1 = '';
+           END
+           IF (WK_ADDRESS_LINE2 IS NULL) THEN
+           BEGIN
+              WK_ADDRESS_LINE2 = '';
+           END
+           IF (WK_CITY IS NULL) THEN
+           BEGIN
+              WK_CITY = '';
+           END
+           IF (WK_STATE IS NULL) THEN
+           BEGIN
+              WK_STATE = '';
+           END
+           IF (WK_COUNTRY IS NULL) THEN
+           BEGIN
+              WK_COUNTRY = '';
+           END
+           IF (WK_POST_CODE IS NULL) THEN
+           BEGIN
+              WK_POST_CODE = '';
+           END
+           IF (WK_PHONE_NO IS NULL) THEN
+           BEGIN
+              WK_PHONE_NO = '';
+           END
+           IF (WK_MAIL_ADDRESS_LINE1 IS NULL) THEN
+           BEGIN
+              WK_MAIL_ADDRESS_LINE1 = '';
+           END
+           IF (WK_MAIL_ADDRESS_LINE2 IS NULL) THEN
+           BEGIN
+              WK_MAIL_ADDRESS_LINE2 = '';
+           END
+           IF (WK_MAIL_CITY IS NULL) THEN
+           BEGIN
+              WK_MAIL_CITY = '';
+           END
+           IF (WK_MAIL_STATE IS NULL) THEN
+           BEGIN
+              WK_MAIL_STATE = '';
+           END
+           IF (WK_MAIL_COUNTRY IS NULL) THEN
+           BEGIN
+              WK_MAIL_COUNTRY = '';
+           END
+           IF (WK_MAIL_POST_CODE IS NULL) THEN
+           BEGIN
+              WK_MAIL_POST_CODE = '';
+           END
+           IF (WK_CONTACT_PHONE_NO IS NULL) THEN
+           BEGIN
+              WK_CONTACT_PHONE_NO = '';
+           END
+        END
+     END
+     IF (WK_CLASS = 'O') THEN
+     BEGIN
+        SELECT P_TITLE,
+            P_FIRST_NAME,
+            P_LAST_NAME,
+            P_ADDRESS_LINE1,
+            P_ADDRESS_LINE2,
+            P_ADDRESS_LINE3,
+            P_ADDRESS_LINE4,
+            P_ADDRESS_LINE5,
+            P_AUST_POST_4STATE_ID,
+            P_CITY,
+            P_STATE,
+            P_COUNTRY,
+            P_POST_CODE,
+            P_PHONE,
+            COMPANY_ID
+        FROM PICK_ORDER
+        WHERE PICK_ORDER = :WK_PERSON
+        INTO :WK_TITLE,
+             :WK_CONTACT_FIRST_NAME,
+             :WK_CONTACT_LAST_NAME,
+             :WK_ADDRESS_LINE1,
+             :WK_ADDRESS_LINE2,
+             :WK_ADDRESS_LINE3,
+             :WK_ADDRESS_LINE4,
+             :WK_ADDRESS_LINE5,
+             :WK_4STATE,
+             :WK_CITY,
+             :WK_STATE,
+             :WK_COUNTRY,
+             :WK_POST_CODE,
+             :WK_PHONE_NO,
+             :WK_COMPANY;
+           IF (WK_TITLE IS NULL) THEN
+           BEGIN
+              WK_TITLE = '';
+           END
+           IF (WK_CONTACT_FIRST_NAME IS NULL) THEN
+           BEGIN
+              WK_CONTACT_FIRST_NAME = '';
+           END
+           IF (WK_CONTACT_LAST_NAME IS NULL) THEN
+           BEGIN
+              WK_CONTACT_LAST_NAME = '';
+           END
+           IF (WK_ADDRESS_LINE1 IS NULL) THEN
+           BEGIN
+              WK_ADDRESS_LINE1 = '';
+           END
+           IF (WK_ADDRESS_LINE2 IS NULL) THEN
+           BEGIN
+              WK_ADDRESS_LINE2 = '';
+           END
+           IF (WK_ADDRESS_LINE3 IS NULL) THEN
+           BEGIN
+              WK_ADDRESS_LINE3 = '';
+           END
+           IF (WK_ADDRESS_LINE4 IS NULL) THEN
+           BEGIN
+              WK_ADDRESS_LINE4 = '';
+           END
+           IF (WK_ADDRESS_LINE5 IS NULL) THEN
+           BEGIN
+              WK_ADDRESS_LINE5 = '';
+           END
+           IF (WK_4STATE IS NULL) THEN
+           BEGIN
+              WK_4STATE = '';
+           END
+           IF (WK_CITY IS NULL) THEN
+           BEGIN
+              WK_CITY = '';
+           END
+           IF (WK_STATE IS NULL) THEN
+           BEGIN
+              WK_STATE = '';
+           END
+           IF (WK_COUNTRY IS NULL) THEN
+           BEGIN
+              WK_COUNTRY = '';
+           END
+           IF (WK_POST_CODE IS NULL) THEN
+           BEGIN
+              WK_POST_CODE = '';
+           END
+           IF (WK_PHONE_NO IS NULL) THEN
+           BEGIN
+              WK_PHONE_NO = '';
+           END
+           IF (WK_COMPANY IS NULL) THEN
+           BEGIN
+              WK_COMPANY = '';
+           END
+           SELECT DESCRIPTION
+           FROM OPTIONS
+           WHERE GROUP_CODE = 'PLAO-PFX'
+           AND CODE = (:WK_COMPANY || '|' || :WK_COUNTRY)
+           INTO :WK_FILE_PREFIX;
+           IF (WK_FILE_PREFIX IS NULL) THEN
+           BEGIN
+              WK_FILE_PREFIX = '';
+           END
+       
+     END
+     /* WK_FILENAME = WK_DIRECTORY || 'AddrOther.txt'; */
+     WK_FILENAME = WK_DIRECTORY || WK_FILE_PREFIX || 'AddrOther.txt';
+     IF (WK_CLASS = 'S') THEN
+     BEGIN
+        WK_LABEL_LINE = '"' || WK_PERSON || '","' ||
+             WK_CONTACT_FIRST_NAME || ' ' || WK_CONTACT_LAST_NAME || '","' ||
+             WK_ADDRESS_LINE1 || '","' ||
+             WK_ADDRESS_LINE2 || '","' ||
+             WK_CITY || '","' ||
+             WK_STATE || '","' ||
+             WK_COUNTRY || '","' ||
+             WK_POST_CODE || '","' ||
+             WK_CONTACT_PHONE_NO || '","' ||
+             WK_LINE1 || '","' ||
+             WK_LINE2 || '",' ||
+             WK_QTY || ',"' ||
+             SUBSTR(WK_PRINTER,2,2) || '"' ||
+             CHR(13) || CHR(10);
+     END
+     IF (WK_CLASS = 'M') THEN
+     BEGIN
+        WK_LABEL_LINE = '"' || WK_PERSON || '","' ||
+             WK_CONTACT_FIRST_NAME || ' ' || WK_CONTACT_LAST_NAME || '","' ||
+             WK_MAIL_ADDRESS_LINE1 || '","' ||
+             WK_MAIL_ADDRESS_LINE2 || '","' ||
+             WK_MAIL_CITY || '","' ||
+             WK_MAIL_STATE || '","' ||
+             WK_MAIL_COUNTRY || '","' ||
+             WK_MAIL_POST_CODE || '","' ||
+             WK_CONTACT_PHONE_NO || '","' ||
+             WK_LINE1 || '","' ||
+             WK_LINE2 || '",' ||
+             WK_QTY || ',"' ||
+             SUBSTR(WK_PRINTER,2,2) || '"' ||
+             CHR(13) || CHR(10);
+     END
+     IF (WK_CLASS = 'O') THEN
+     BEGIN
+        WK_LABEL_LINE = '"' || WK_PERSON || '","' ||
+             WK_CONTACT_FIRST_NAME || ' ' || WK_CONTACT_LAST_NAME || '","' ||
+             WK_ADDRESS_LINE1 || '","' ||
+             WK_ADDRESS_LINE2 || '","' ||
+             WK_CITY || '","' ||
+             WK_STATE || '","' ||
+             WK_COUNTRY || '","' ||
+             WK_POST_CODE || '","' ||
+             WK_CONTACT_PHONE_NO || '","' ||
+             WK_LINE1 || '","' ||
+             WK_LINE2 || '",' ||
+             WK_QTY || ',"' ||
+             SUBSTR(WK_PRINTER,2,2) || '","' ||
+             WK_TITLE || '","' ||
+             WK_ADDRESS_LINE3 || '","' ||
+             WK_ADDRESS_LINE4 || '","' ||
+             WK_4STATE || '","' ||
+             WK_ADDRESS_LINE5 || '"' ||
+             CHR(13) || CHR(10);
+     END
+
+     WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+     IF (WK_RESULT = 0) THEN
+     BEGIN
+        WK_FILE_TYPE_U = 1;
+     END
+     IF (WK_RESULT <> 0) THEN
+     BEGIN
+        /* WK_FILENAME = WK_DIRECTORY || 'AddrOther.vxt'; */
+        WK_FILENAME = WK_DIRECTORY || WK_FILE_PREFIX || 'AddrOther.vxt';
+        WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+        WK_FILE_TYPE_V = 1;
+     END
+     IF (WK_FILE_TYPE_V = 1) THEN
+     BEGIN
+        /* WK_FILENAME = WK_DIRECTORY || 'AddrOther.vxt'; */
+        WK_FILENAME = WK_DIRECTORY || WK_FILE_PREFIX || 'AddrOther.vxt';
+        /* WK_FILENAME_OUT = WK_DIRECTORY || 'AddrOther.txt'; */
+        WK_FILENAME_OUT = WK_DIRECTORY || WK_FILE_PREFIX || 'AddrOther.txt';
+        WK_RESULT = FILE_RENAME(WK_FILENAME, WK_FILENAME_OUT);
+     END
+   EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+   /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+  END
+ END
+END ^
+ 
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

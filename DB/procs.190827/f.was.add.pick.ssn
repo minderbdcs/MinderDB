@@ -1,0 +1,597 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/*
+CREATE OR ALTER PROCEDURE ADD_PICK_SSN_ITEMS (WK_ORDER VARCHAR(15) ,
+WK_ORDER_STATUS CHAR(1) ,
+WK_PERSON_ID VARCHAR(10) ,
+*/
+
+CREATE OR ALTER PROCEDURE ADD_PICK_SSN_ITEMS (WK_ORDER PICK_ORDER ,
+WK_ORDER_STATUS CHAR(1) ,
+WK_STATUS VARCHAR(6) ,
+WK_SSN VARCHAR(200) ,
+WK_LINE_NO1 VARCHAR(4) ,
+WK_QTY1 INTEGER,
+WK_TRN_DATE TIMESTAMP,
+WK_PERSON_ID PERSON ,
+WK_SALE_PRICE NUMERIC(9,4))
+AS 
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_PICK_LABEL VARCHAR(8);
+DECLARE VARIABLE WK_L_PICK_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_SSN_SALE_PRICE DECIMAL(9,4);
+DECLARE VARIABLE WK_SSN_COST_BASE  DECIMAL(9,4);
+DECLARE VARIABLE WK_SSN_TYPE VARCHAR(40);
+DECLARE VARIABLE WK_SSN_COMPANY VARCHAR(20);
+DECLARE VARIABLE WK_ISSN_COMPANY VARCHAR(20);
+DECLARE VARIABLE WK_PICK_RETURN_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PICK_DUE_DATE TIMESTAMP;
+DECLARE VARIABLE WK_ORDER_TYPE CHAR(2);
+DECLARE VARIABLE WK_PI_SALE_PRICE DECIMAL(9,4);
+DECLARE VARIABLE WK_PI_RETURN_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PI_DUE_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PI_LINE_TOTAL DECIMAL(9,4);
+DECLARE VARIABLE WK_PI_LOAN_RATE  DECIMAL(9,4);
+DECLARE VARIABLE WK_PERIOD_DAY INTEGER;
+DECLARE VARIABLE WK_PERIOD_WEEK INTEGER;
+DECLARE VARIABLE WK_PERIOD_MONTH INTEGER;
+DECLARE VARIABLE WK_PERIOD_QUARTER INTEGER;
+DECLARE VARIABLE WK_PERIOD_YEAR INTEGER;
+DECLARE VARIABLE WK_PERIOD_LENGTH VARCHAR(20);
+DECLARE VARIABLE WK_PERIOD_NAME VARCHAR(50);
+DECLARE VARIABLE WK_TOTAL_DAYS INTEGER;
+DECLARE VARIABLE WK_LR_DAY NUMERIC(6,4);
+DECLARE VARIABLE WK_LR_WEEK NUMERIC(6,4);
+DECLARE VARIABLE WK_LR_MONTH NUMERIC(6,4);
+DECLARE VARIABLE WK_LR_QUARTER NUMERIC(6,4);
+DECLARE VARIABLE WK_LR_YEAR NUMERIC(6,4);
+DECLARE VARIABLE WK_LR_RATE NUMERIC(6,4);
+DECLARE VARIABLE WK_ISSN_PROD VARCHAR(30);
+DECLARE VARIABLE WK_SSN_PROD VARCHAR(30);
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_PROD_SALE_PRICE NUMERIC(9,4);
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_FIELD_ENDED CHAR(1);
+DECLARE VARIABLE WK_FIELD_ENDED2 CHAR(1);
+DECLARE VARIABLE WK_PART_SSN VARCHAR(40);
+DECLARE VARIABLE WK_WORK_SSN VARCHAR(30);
+DECLARE VARIABLE WK_WORK_QTY VARCHAR(30);
+DECLARE VARIABLE WK_WORK_QTY2 VARCHAR(30);
+DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(80) ;
+DECLARE VARIABLE WK_LOG_RESULT   INTEGER;
+BEGIN
+   /* do line stuff */
+   /* split up wk_ssn seperated by ' '
+               with trailing (qty)
+   WK_SSN = '111111(23) 22(2) 333(4) 4(3)';
+   */
+   WK_LOG_FILENAME = '/tmp/addpickssn.log';
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'start add pick ssn items');
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'ssn: ' || :WK_SSN);
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'qty: ' || :WK_QTY1);
+   WK_FIELD_NO = 0;
+   WK_FIELD_ENDED = 'F';
+   WHILE (WK_FIELD_ENDED = 'F') DO
+   BEGIN
+      WK_FIELD_NO = WK_FIELD_NO + 1;
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'field no: ' || :WK_FIELD_NO);
+      EXECUTE PROCEDURE GET_REFERENCE_FIELD4 (:WK_SSN, :WK_FIELD_NO, ' ') RETURNING_VALUES :WK_PART_SSN, :WK_FIELD_ENDED;
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'part: ' || :WK_PART_SSN || ' end:' || WK_FIELD_ENDED);
+      IF (WK_FIELD_ENDED = 'F') THEN
+      BEGIN
+         WK_WORK_SSN = '';
+         WK_WORK_QTY = '';
+         SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+         FROM GET_DATA_REFERENCE_FIELD4 (:WK_PART_SSN, '(')
+         INTO :WK_WORK_SSN, :WK_WORK_QTY;
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'work_ssn: ' || :WK_WORK_SSN || ' work_qty:' || WK_WORK_QTY);
+         EXECUTE PROCEDURE GET_REFERENCE_FIELD4 (:WK_WORK_QTY, 1, ')') RETURNING_VALUES :WK_WORK_QTY2, :WK_FIELD_ENDED2;
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'work_qty2: ' || :WK_WORK_QTY2 || ' ended:' || WK_FIELD_ENDED2);
+         IF (WK_FIELD_ENDED2 = 'F') THEN
+         BEGIN
+            WK_WORK_QTY = WK_WORK_QTY2;
+         END
+         IF (WK_WORK_QTY = '') THEN
+         BEGIN
+            WK_WORK_QTY = WK_QTY1;
+         END
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'work_qty to use: ' || :WK_WORK_QTY );
+         /* ok now use the wk_work_ssn and wk_work_qty */
+
+         WK_FOUND = 0;
+         /* does line for product exist in order */
+         /* WK_STATUS = 'T'; */
+         IF (WK_STATUS = 'T') THEN
+         BEGIN
+            WK_FOUND = 0;
+            SELECT 1, RETURN_DATE, PICK_DUE_DATE, PICK_ORDER_TYPE 
+            FROM PICK_ORDER
+            WHERE PICK_ORDER = :WK_ORDER
+            INTO :WK_FOUND, :WK_PICK_RETURN_DATE, :WK_PICK_DUE_DATE, :WK_ORDER_TYPE;
+            WK_FOUND = 0;
+            /*  AND SSN_ID = :WK_SSN */
+            IF (WK_LINE_NO1 IS NULL OR WK_LINE_NO1 = '' OR WK_LINE_NO1 = '0') THEN
+            BEGIN
+               /*  AND (PICK_LINE_STATUS IN ('UC','CF','OP','UP') */
+               SELECT 1, PICK_LABEL_NO FROM PICK_ITEM
+               WHERE PICK_ORDER = :WK_ORDER
+                    AND SSN_ID = :WK_WORK_SSN
+                 AND (PICK_LINE_STATUS IN ('UC','CF','OP','UP','WP')
+                 OR PICK_LINE_STATUS IS NULL)
+               INTO :WK_FOUND, :WK_PICK_LABEL;
+            END
+            ELSE
+            BEGIN
+               /*  AND (PICK_LINE_STATUS IN ('UC','CF','OP','UP') */
+               SELECT 1, PICK_LABEL_NO FROM PICK_ITEM
+               WHERE PICK_ORDER = :WK_ORDER
+                    AND SSN_ID = :WK_WORK_SSN
+                 AND (PICK_LINE_STATUS IN ('UC','CF','OP','UP','WP')
+                 OR PICK_LINE_STATUS IS NULL)
+                 AND PICK_ORDER_LINE_NO = :WK_LINE_NO1
+               INTO :WK_FOUND, :WK_PICK_LABEL;
+            END
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               WK_SSN_SALE_PRICE = 0;
+               WK_SSN_COST_BASE = 0;
+               WK_SSN_TYPE = '';
+               WK_SSN_COMPANY = '';
+               WK_ISSN_COMPANY = '';
+               WK_SSN_PROD = '';
+               WK_ISSN_PROD = '';
+               WK_PROD_SALE_PRICE = 0;
+               WK_PROD_ID = '';
+               /* WHERE SSN_ID = :WK_SSN */
+               SELECT SSN_SALE_PRICE , PROD_ID 
+               FROM SSN 
+               WHERE SSN_ID = :WK_WORK_SSN
+               INTO :WK_SSN_SALE_PRICE, :WK_SSN_PROD ;
+               IF (WK_SSN_SALE_PRICE IS NULL) THEN
+               BEGIN
+                  /* WHERE ISSN.SSN_ID = :WK_SSN */
+                  SELECT SSN.SSN_SALE_PRICE  
+                  FROM ISSN 
+                  JOIN  SSN ON SSN.SSN_ID = ISSN.ORIGINAL_SSN
+                  WHERE ISSN.SSN_ID = :WK_WORK_SSN
+                  INTO :WK_SSN_SALE_PRICE ;
+               END
+               /* what about products */
+               /* WHERE SSN_ID = :WK_SSN */
+               SELECT PROD_ID
+               FROM ISSN
+               WHERE SSN_ID = :WK_WORK_SSN
+               INTO :WK_ISSN_PROD;
+               WK_PROD_ID = WK_ISSN_PROD;
+               IF (WK_SSN_PROD IS NOT NULL) THEN
+               BEGIN
+                  WK_PROD_ID = WK_SSN_PROD;
+               END
+               IF (WK_PROD_ID IS NOT NULL) THEN
+               BEGIN
+                  SELECT  SALE_PRICE 
+                  FROM PROD_PROFILE
+                  WHERE PROD_ID = :WK_PROD_ID
+                  INTO  :WK_PROD_SALE_PRICE;
+                  IF (WK_PROD_SALE_PRICE IS NOT NULL) THEN
+                  BEGIN
+                     WK_SSN_SALE_PRICE = WK_PROD_SALE_PRICE;
+                  END
+               END
+               IF (WK_SALE_PRICE IS NOT NULL) THEN
+               BEGIN
+                  IF (WK_SALE_PRICE > 0) THEN
+                  BEGIN
+                     WK_PROD_SALE_PRICE = WK_SALE_PRICE;
+                     WK_SSN_SALE_PRICE = WK_PROD_SALE_PRICE;
+                  END
+              END
+      
+               /* no line - so create one */
+               /* calc the next label and line no */
+               WK_PICK_LABEL = '';
+               SELECT LABEL_NO FROM NEXT_PICK_LABEL
+               INTO :WK_PICK_LABEL;
+               IF ((WK_LINE_NO1 > '') AND (WK_LINE_NO1 <> '0')) THEN
+               BEGIN
+                  WK_L_PICK_LINE_NO = WK_LINE_NO1;
+               END
+               ELSE
+               BEGIN
+                  SELECT PICK_ORDER_LINE_NO 
+                  FROM GET_SALE_LINES_NO(:WK_ORDER) 
+                  INTO :WK_L_PICK_LINE_NO;
+               END
+                
+               IF (WK_ORDER_TYPE = 'TO' OR WK_ORDER_TYPE = 'LO') THEN
+               BEGIN
+                  /* WHERE SSN_ID = :WK_SSN */
+                  SELECT LOAN_COST_BASE, SSN_TYPE, COMPANY_ID
+                  FROM SSN 
+                  WHERE SSN_ID = :WK_WORK_SSN
+                  INTO :WK_SSN_COST_BASE, :WK_SSN_TYPE, :WK_SSN_COMPANY;
+                  /* WHERE SSN_ID = :WK_SSN */
+                  SELECT COMPANY_ID
+                  FROM ISSN 
+                  WHERE SSN_ID = :WK_WORK_SSN
+                  INTO :WK_ISSN_COMPANY;
+                  /* need loan rate for company and ssn type */
+                  /* if none then use ssn_type default */
+                  WK_FOUND = 0;
+                  SELECT 1, LR_DAY, LR_WEEK, LR_MONTH, LR_QUARTER, LR_ANNUAL
+                  FROM LOAN_RATE 
+                  WHERE LR_COMPANY_ID = :WK_ISSN_COMPANY
+                    AND LR_SSN_TYPE = :WK_SSN_TYPE
+                  INTO :WK_FOUND, :WK_LR_DAY, :WK_LR_WEEK, :WK_LR_MONTH, :WK_LR_QUARTER, :WK_LR_YEAR;
+                  IF (WK_FOUND = 0) THEN
+                  BEGIN
+                     SELECT 1, LR_DAY, LR_WEEK, LR_MONTH, LR_QUARTER, LR_ANNUAL
+                     FROM LOAN_RATE 
+                     WHERE LR_COMPANY_ID = :WK_ISSN_COMPANY
+                       AND LR_SSN_TYPE = 'DEFAULT'
+                     INTO :WK_FOUND, :WK_LR_DAY, :WK_LR_WEEK, :WK_LR_MONTH, :WK_LR_QUARTER, :WK_LR_YEAR;
+                  END
+                  IF (WK_FOUND = 0) THEN
+                  BEGIN
+                     WK_LR_DAY = 1;
+                     WK_LR_WEEK = 1;
+                     WK_LR_MONTH = 1;
+                     WK_LR_QUARTER = 1;
+                     WK_LR_YEAR = 1;
+                  END
+                  /* need to get the period lengths */
+                  WK_PERIOD_DAY = 1;
+                  WK_PERIOD_WEEK = 7;
+                  WK_PERIOD_MONTH = 30;
+                  WK_PERIOD_QUARTER = 90;
+                  WK_PERIOD_YEAR = 365;
+                  FOR SELECT CODE, DESCRIPTION
+                      FROM OPTIONS
+                      WHERE GROUP_CODE='LOAN_DAYS'
+                      INTO :WK_PERIOD_LENGTH, WK_PERIOD_NAME
+                  DO
+                  BEGIN
+                     IF (WK_PERIOD_NAME = 'Days') THEN
+                     BEGIN
+                        WK_PERIOD_DAY = WK_PERIOD_LENGTH;
+                     END
+                     IF (WK_PERIOD_NAME = 'Weeks') THEN
+                     BEGIN
+                        WK_PERIOD_WEEK = WK_PERIOD_LENGTH;
+                     END
+                     IF (WK_PERIOD_NAME = 'Months') THEN
+                     BEGIN
+                        WK_PERIOD_MONTH = WK_PERIOD_LENGTH;
+                     END
+                     IF (WK_PERIOD_NAME = 'Quarters') THEN
+                     BEGIN
+                        WK_PERIOD_QUARTER = WK_PERIOD_LENGTH;
+                     END
+                     IF (WK_PERIOD_NAME = 'Years') THEN
+                     BEGIN
+                        WK_PERIOD_YEAR = WK_PERIOD_LENGTH;
+                     END
+                  END
+                  /* need wk_days as diff between wk_return_date
+                     and trn_date */
+                  IF (WK_PICK_DUE_DATE IS NULL) THEN
+                  BEGIN
+                     WK_PICK_DUE_DATE = CAST('NOW' AS TIMESTAMP);
+                  END
+                  IF (WK_PICK_RETURN_DATE IS NULL) THEN
+                  BEGIN
+                     WK_PICK_RETURN_DATE = CAST('NOW' AS TIMESTAMP);
+                  END
+                  WK_TOTAL_DAYS = DIFFDATE(WK_PICK_DUE_DATE, WK_PICK_RETURN_DATE, 4);
+                  IF (WK_TOTAL_DAYS = 0) THEN
+                  BEGIN
+                     WK_TOTAL_DAYS = 1;
+                  END
+                  /* must use the max time period rate for period */
+                  IF (WK_TOTAL_DAYS >= WK_PERIOD_YEAR) THEN
+                  BEGIN
+                     WK_LR_RATE = WK_LR_YEAR;
+                  END
+                  ELSE
+                  BEGIN
+                     IF (WK_TOTAL_DAYS >= WK_PERIOD_QUARTER) THEN
+                     BEGIN
+                        WK_LR_RATE = WK_LR_QUARTER;
+                     END
+                     ELSE
+                     BEGIN
+                        IF (WK_TOTAL_DAYS >= WK_PERIOD_MONTH) THEN
+                        BEGIN
+                           WK_LR_RATE = WK_LR_MONTH;
+                        END
+                        ELSE
+                        BEGIN
+                           IF (WK_TOTAL_DAYS >= WK_PERIOD_WEEK) THEN
+                           BEGIN
+                              WK_LR_RATE = WK_LR_WEEK;
+                           END
+                           ELSE
+                           BEGIN
+                              WK_LR_RATE = WK_LR_DAY;
+                           END
+                        END
+                     END
+                  END
+      
+                  /* WK_PI_LINE_TOTAL = WK_LR_RATE * WK_TOTAL_DAYS * WK_SSN_COST_BASE * WK_QTY1;  */
+                  WK_PI_LINE_TOTAL = WK_LR_RATE * WK_TOTAL_DAYS * WK_SSN_COST_BASE * WK_WORK_QTY; 
+                  WK_PI_SALE_PRICE = WK_SSN_COST_BASE ;
+                  WK_PI_LOAN_RATE = WK_LR_RATE;
+                  WK_PI_DUE_DATE = WK_PICK_DUE_DATE;
+                  WK_PI_RETURN_DATE = WK_PICK_RETURN_DATE ;
+               END
+               ELSE
+               BEGIN
+                  /* WK_PI_LINE_TOTAL = WK_SSN_SALE_PRICE * WK_QTY1; */
+                  WK_PI_LINE_TOTAL = WK_SSN_SALE_PRICE * WK_WORK_QTY; 
+                  WK_PI_SALE_PRICE = WK_SSN_SALE_PRICE ;
+                  WK_PI_DUE_DATE = NULL;
+                  WK_PI_RETURN_DATE = NULL ;
+                  WK_PI_LOAN_RATE = NULL ;
+               END
+      
+               /*   :WK_SSN, */
+               /*   :WK_QTY1, */
+               INSERT INTO PICK_ITEM(
+                  PICK_ORDER, 
+                  PICK_LABEL_NO,
+                  PICK_ORDER_LINE_NO,
+                  PICK_LINE_STATUS, 
+                  PICK_ORDER_QTY, 
+                  SSN_ID,
+                  PICK_RETRIEVE_STATUS,
+                  CREATE_DATE,
+                  USER_ID,
+                  SSN_CONFIRM,
+                  SALE_PRICE,
+                  PICK_LINE_DUE_DATE,
+                  RETURN_DATE,
+                  LINE_TOTAL,
+                  PI_LOAN_RATE)
+               VALUES (
+                  :WK_ORDER, 
+                  :WK_PICK_LABEL,
+                  :WK_L_PICK_LINE_NO,
+                  'UC',
+                  :WK_WORK_QTY,
+                  :WK_WORK_SSN,
+                  :WK_STATUS,
+                  :WK_TRN_DATE,
+                  :WK_PERSON_ID,
+                  'I',
+                  :WK_PI_SALE_PRICE,
+                  :WK_PI_DUE_DATE,
+                  :WK_PI_RETURN_DATE,
+                  :WK_PI_LINE_TOTAL,
+                  :WK_PI_LOAN_RATE );
+            END
+            ELSE
+            BEGIN
+               /* for a TO order recalc sale price and dates */
+               WK_SSN_SALE_PRICE = 0;
+               WK_SSN_COST_BASE = 0;
+               WK_SSN_TYPE = '';
+               WK_SSN_COMPANY = '';
+               WK_ISSN_COMPANY = '';
+      
+               IF (WK_ORDER_TYPE = 'TO' OR WK_ORDER_TYPE = 'LO') THEN
+               BEGIN
+                  /* WHERE SSN_ID = :WK_SSN */
+                  SELECT LOAN_COST_BASE, SSN_TYPE, COMPANY_ID
+                  FROM SSN 
+                  WHERE SSN_ID = :WK_WORK_SSN
+                  INTO :WK_SSN_COST_BASE, :WK_SSN_TYPE, :WK_SSN_COMPANY;
+                  /* WHERE SSN_ID = :WK_SSN */
+                  SELECT COMPANY_ID
+                  FROM ISSN 
+                  WHERE SSN_ID = :WK_WORK_SSN
+                  INTO :WK_ISSN_COMPANY;
+                  /* need loan rate for company and ssn type */
+                  /* if none then use ssn_type default */
+                  WK_FOUND = 0;
+                  SELECT 1, LR_DAY, LR_WEEK, LR_MONTH, LR_QUARTER, LR_ANNUAL
+                  FROM LOAN_RATE 
+                  WHERE LR_COMPANY_ID = :WK_ISSN_COMPANY
+                    AND LR_SSN_TYPE = :WK_SSN_TYPE
+                  INTO :WK_FOUND, :WK_LR_DAY, :WK_LR_WEEK, :WK_LR_MONTH, :WK_LR_QUARTER, :WK_LR_YEAR;
+                  IF (WK_FOUND = 0) THEN
+                  BEGIN
+                     SELECT 1, LR_DAY, LR_WEEK, LR_MONTH, LR_QUARTER, LR_ANNUAL
+                     FROM LOAN_RATE 
+                     WHERE LR_COMPANY_ID = :WK_ISSN_COMPANY
+                       AND LR_SSN_TYPE = 'DEFAULT'
+                     INTO :WK_FOUND, :WK_LR_DAY, :WK_LR_WEEK, :WK_LR_MONTH, :WK_LR_QUARTER, :WK_LR_YEAR;
+                  END
+                  IF (WK_FOUND = 0) THEN
+                  BEGIN
+                     WK_LR_DAY = 1;
+                     WK_LR_WEEK = 1;
+                     WK_LR_MONTH = 1;
+                     WK_LR_QUARTER = 1;
+                     WK_LR_YEAR = 1;
+                  END
+                  /* need to get the period lengths */
+                  WK_PERIOD_DAY = 1;
+                  WK_PERIOD_WEEK = 7;
+                  WK_PERIOD_MONTH = 30;
+                  WK_PERIOD_QUARTER = 90;
+                  WK_PERIOD_YEAR = 365;
+                  FOR SELECT CODE, DESCRIPTION
+                      FROM OPTIONS
+                      WHERE GROUP_CODE='LOAN_DAYS'
+                      INTO :WK_PERIOD_LENGTH, WK_PERIOD_NAME
+                  DO
+                  BEGIN
+                     IF (WK_PERIOD_NAME = 'Days') THEN
+                     BEGIN
+                        WK_PERIOD_DAY = WK_PERIOD_LENGTH;
+                     END
+                     IF (WK_PERIOD_NAME = 'Weeks') THEN
+                     BEGIN
+                        WK_PERIOD_WEEK = WK_PERIOD_LENGTH;
+                     END
+                     IF (WK_PERIOD_NAME = 'Months') THEN
+                     BEGIN
+                        WK_PERIOD_MONTH = WK_PERIOD_LENGTH;
+                     END
+                     IF (WK_PERIOD_NAME = 'Quarters') THEN
+                     BEGIN
+                        WK_PERIOD_QUARTER = WK_PERIOD_LENGTH;
+                     END
+                     IF (WK_PERIOD_NAME = 'Years') THEN
+                     BEGIN
+                        WK_PERIOD_YEAR = WK_PERIOD_LENGTH;
+                     END
+                  END
+                  /* need wk_days as diff between wk_return_date
+                     and trn_date */
+                  IF (WK_PICK_DUE_DATE IS NULL) THEN
+                  BEGIN
+                     WK_PICK_DUE_DATE = CAST('NOW' AS TIMESTAMP);
+                  END
+                  IF (WK_PICK_RETURN_DATE IS NULL) THEN
+                  BEGIN
+                     WK_PICK_RETURN_DATE = CAST('NOW' AS TIMESTAMP);
+                  END
+                  WK_TOTAL_DAYS = DIFFDATE(WK_PICK_DUE_DATE, WK_PICK_RETURN_DATE, 4);
+                  IF (WK_TOTAL_DAYS = 0) THEN
+                  BEGIN
+                     WK_TOTAL_DAYS = 1;
+                  END
+                  /* must use the max time period rate for period */
+                  IF (WK_TOTAL_DAYS >= WK_PERIOD_YEAR) THEN
+                  BEGIN
+                     WK_LR_RATE = WK_LR_YEAR;
+                  END
+                  ELSE
+                  BEGIN
+                     IF (WK_TOTAL_DAYS >= WK_PERIOD_QUARTER) THEN
+                     BEGIN
+                        WK_LR_RATE = WK_LR_QUARTER;
+                     END
+                     ELSE
+                     BEGIN
+                        IF (WK_TOTAL_DAYS >= WK_PERIOD_MONTH) THEN
+                        BEGIN
+                           WK_LR_RATE = WK_LR_MONTH;
+                        END
+                        ELSE
+                        BEGIN
+                           IF (WK_TOTAL_DAYS >= WK_PERIOD_WEEK) THEN
+                           BEGIN
+                              WK_LR_RATE = WK_LR_WEEK;
+                           END
+                           ELSE
+                           BEGIN
+                              WK_LR_RATE = WK_LR_DAY;
+                           END
+                        END
+                     END
+                  END
+      
+                  /* WK_PI_LINE_TOTAL = WK_LR_RATE * WK_TOTAL_DAYS * WK_SSN_COST_BASE * WK_QTY1;  */
+                  WK_PI_LINE_TOTAL = WK_LR_RATE * WK_TOTAL_DAYS * WK_SSN_COST_BASE * WK_WORK_QTY; 
+                  WK_PI_SALE_PRICE =  WK_SSN_COST_BASE ;
+                  WK_PI_LOAN_RATE = WK_LR_RATE;
+                  WK_PI_DUE_DATE = WK_PICK_DUE_DATE;
+                  WK_PI_RETURN_DATE = WK_PICK_RETURN_DATE ;
+                  /* SET PICK_ORDER_QTY = :WK_QTY1, */
+                  UPDATE PICK_ITEM 
+                  SET PICK_ORDER_QTY = :WK_WORK_QTY,
+                     PICK_RETRIEVE_STATUS = :WK_STATUS,
+                     CREATE_DATE = :WK_TRN_DATE,
+                     USER_ID = :WK_PERSON_ID,
+                     SALE_PRICE = :WK_PI_SALE_PRICE,
+                     PICK_LINE_DUE_DATE = :WK_PI_DUE_DATE,
+                     RETURN_DATE = :WK_PI_RETURN_DATE,
+                     LINE_TOTAL = :WK_PI_LINE_TOTAL,
+                     PI_LOAN_RATE = :WK_PI_LOAN_RATE
+                  WHERE PICK_LABEL_NO = :WK_PICK_LABEL;
+               END
+               ELSE
+               BEGIN
+                  /* SET PICK_ORDER_QTY = :WK_QTY1, */
+                  UPDATE PICK_ITEM 
+                  SET PICK_ORDER_QTY = :WK_WORK_QTY,
+                     PICK_RETRIEVE_STATUS = :WK_STATUS,
+                     CREATE_DATE = :WK_TRN_DATE,
+                     USER_ID = :WK_PERSON_ID
+                  WHERE PICK_LABEL_NO = :WK_PICK_LABEL;
+               END
+            END
+         END
+         ELSE
+         BEGIN
+            /* status is false */
+            /* IF (WK_SSN = 'NOPROD') THEN */
+            IF (WK_WORK_SSN = 'NOPROD') THEN
+            BEGIN
+               /* whole order is false*/
+               UPDATE PICK_ITEM 
+               SET PICK_RETRIEVE_STATUS = :WK_STATUS,
+                  CREATE_DATE = :WK_TRN_DATE,
+                  USER_ID = :WK_PERSON_ID
+               WHERE PICK_ORDER = :WK_ORDER;
+            END
+            ELSE
+            BEGIN
+               /* the line is false*/
+               /*  AND (PICK_LINE_STATUS IN ('UC','CF','OP','UP') */
+               WK_FOUND = 0;
+               /*  AND SSN_ID = :WK_SSN */
+               SELECT 1, PICK_LABEL_NO FROM PICK_ITEM
+               WHERE PICK_ORDER = :WK_ORDER
+                 AND SSN_ID = :WK_WORK_SSN
+                 AND (PICK_LINE_STATUS IN ('UC','CF','OP','UP','WP')
+                 OR PICK_LINE_STATUS IS NULL)
+               INTO :WK_FOUND, :WK_PICK_LABEL;
+               IF (WK_FOUND = 1) THEN
+               BEGIN
+                  UPDATE PICK_ITEM 
+                  SET PICK_RETRIEVE_STATUS = :WK_STATUS,
+                     CREATE_DATE = :WK_TRN_DATE,
+                     USER_ID = :WK_PERSON_ID
+                  WHERE PICK_LABEL_NO = :WK_PICK_LABEL;
+               END
+            END
+         END
+         /* if the status changed to true must recalc the orders retrieve status */
+         IF ((WK_STATUS = 'T') AND (WK_ORDER_STATUS = 'F')) THEN
+         BEGIN
+            /*  AND (PICK_LINE_STATUS IN ('UC','CF','OP','UP') */
+            WK_FOUND = 0;
+            SELECT FIRST 1 1
+            FROM PICK_ITEM 
+            WHERE PICK_ORDER = :WK_ORDER
+              AND (PICK_LINE_STATUS IN ('UC','CF','OP','UP','WP')
+              OR PICK_LINE_STATUS IS NULL)
+              AND (PICK_RETRIEVE_STATUS = 'F'
+              OR PICK_RETRIEVE_STATUS IS NULL)
+            INTO :WK_FOUND;
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               /* have no more failures */
+      /*
+               UPDATE PICK_ORDER
+               SET PICK_STATUS='DA',
+                   PICK_RETRIEVE_STATUS = :WK_STATUS
+               WHERE PICK_ORDER = :WK_ORDER;
+      */
+            END
+         END
+      END
+   END
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'end add pick ssn items');
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

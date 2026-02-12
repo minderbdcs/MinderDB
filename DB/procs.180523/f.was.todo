@@ -1,0 +1,4 @@
+1. DSOT enforce non punctuation chars
+
+2. enforce no delete on pick_despatch except for audit processing.
+   The despatch mirroring dosn't do deletes so this is ok. 

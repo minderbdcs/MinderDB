@@ -1,0 +1,7 @@
+netsuite have put '9999/99' in the ssn_id of an order
+
+must look for the correct ssn id
+put this '/'ed is in some field and replace the ssn id
+
+if the prod is '' make this null
+

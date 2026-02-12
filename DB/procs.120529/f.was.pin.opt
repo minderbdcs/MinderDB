@@ -1,0 +1,7 @@
+insert into options(group_code,code,description) values('RECEIVE','RECEIVE_MENU|AD',',LPO,');
+insert into options(group_code,code,description) values('RECEIVE','DEFAULT|received_qty','1');
+insert into options(group_code,code,description) values('RECEIVE','DEFAULT|carrier','BLANK');
+insert into options(group_code,code,description) values('RECEIVE','DEFAULT|vehicle','BLANK');
+insert into options(group_code,code,description) values('RECEIVE','DEFAULT|container','Y');
+insert into options(group_code,code,description) values('RECEIVE','DEFAULT|pallet_type','P');
+insert into options(group_code,code,description) values('RECEIVE','DEFAULT|pallet_qty','0');

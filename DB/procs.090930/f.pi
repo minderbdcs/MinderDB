@@ -1,0 +1,3 @@
+alter table pick_item add orig_ssn_id descr;
+alter table pick_item add orig_prod_id descr;
+

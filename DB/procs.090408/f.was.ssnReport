@@ -1,0 +1,16 @@
+select i1.ssn_id, i1.wh_id, i1.locn_id, i1.current_qty, i1.prev_qty, i1.create_date as issn_create_date, i1.company_id, i1.despatched_date , i1.issn_status, i1.other1, i1.other2, i1.other3, 
+s1.grn, s1.ssn_description,
+p1.pick_order, p1.pick_line_status, p1.picked_qty as line_pick_qty, p1.pick_order_qty,
+p111.create_date as picked_date, p111.from_wh_id, p111.from_locn_id, p111.qty_picked as detail_pick_qty,
+p11.person_id, p11.s_person_id, p11.d_person_id, p11.wh_id, p11.company_id order_company_id, p11.contact_name,
+p1v.qty as packed_qty
+from issn i1 
+left outer join ssn s1 on s1.ssn_id = i1.original_ssn 
+left outer join pick_item_detail p111 on i1.ssn_id  = p111.ssn_id 
+left outer join pick_item p1 on p111.pick_label_no = p1.pick_label_no 
+left outer join pick_order p11 on p1.pick_order  = p11.pick_order 
+left outer join pack_id p1v on p111.despatch_id = p1v.despatch_id and i1.ssn_id = p1v.ssn_id 
+where s1.grn starting '27'
+order by  s1.grn, s1.ssn_id, i1.ssn_id
+;
+

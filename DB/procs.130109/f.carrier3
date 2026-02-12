@@ -1,0 +1,6 @@
+/*
+drop trigger run_transaction_mdac;
+create domain connote_prefix varchar(75);
+alter table carrier alter prefix         type connote_prefix;
+*/
+alter table carrier add  customer_code   carrier_account_no ;

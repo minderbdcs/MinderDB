@@ -1,0 +1,14 @@
+select ssn_id,pick_detail_status from pick_item_detail;
+update issn set issn_status='ST' where ssn_id in (select ssn_id from pick_item_detail);
+delete from pick_item_detail;
+update pick_item set picked_qty=0;
+update pick_item set pick_line_status='AL' where pick_line_status='DC';
+update pick_item set pick_line_status='AL' where pick_line_status='DS';
+delete from pick_despatch;
+delete from pack_id;
+
+update issn set current_qty = 10 where current_qty<1;
+update issn set issn_status = 'ST' where issn_status in ('AL','PG','PG','DS','DC');
+update issn set pack_id = null,despatch_id=null where pack_id is not null;
+update issn set pack_id = null,despatch_id=null where despatch_id is not null;
+

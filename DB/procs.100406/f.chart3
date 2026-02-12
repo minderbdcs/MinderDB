@@ -1,0 +1,9 @@
+alter table prod_profile add legacy_ledger_deposit_code code;
+alter table ssn          add legacy_ledger_deposit_code code;
+alter table pick_item    add legacy_ledger_deposit_code code;
+alter table pick_order   add legacy_ledger_deposit_code code;
+alter table prod_profile add legacy_ledger_purchase_code code;
+alter table ssn          add legacy_ledger_purchase_code code;
+alter table pick_item    add legacy_ledger_purchase_code code;
+
+alter table chart_of_accounts add company_id company;

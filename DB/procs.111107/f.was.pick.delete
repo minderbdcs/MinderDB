@@ -1,0 +1,68 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+ALTER PROCEDURE DELETE_SALE_ORDER_LINES (PICK_ORDER VARCHAR(15) CHARACTER SET NONE)
+AS 
+DECLARE VARIABLE WK_LABEL VARCHAR(7);
+DECLARE VARIABLE WK_STATUS CHAR(2);
+DECLARE VARIABLE WK_DOIT CHAR(2);
+DECLARE VARIABLE WK_SSN VARCHAR(20);
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+
+BEGIN
+        
+    /* Update Pick Item Status */
+    FOR SELECT PICK_LABEL_NO, PICK_LINE_STATUS, SSN_ID, PROD_ID
+       FROM PICK_ITEM 
+       WHERE PICK_ORDER = :PICK_ORDER
+       INTO :WK_LABEL, :WK_STATUS, :WK_SSN, :WK_PROD
+    DO
+    BEGIN
+       WK_DOIT = 'N';
+       IF (WK_STATUS IS NULL) THEN
+       BEGIN
+          WK_DOIT = 'UC';
+       END
+       IF (WK_STATUS = 'UC') THEN
+       BEGIN
+          WK_DOIT = 'UC';
+       END
+       IF (WK_STATUS = 'CF') THEN
+       BEGIN
+          WK_DOIT = 'CF';
+       END
+       IF (WK_STATUS = 'OP') THEN
+       BEGIN
+          WK_DOIT = 'CF';
+       END
+       IF (WK_STATUS = 'UP') THEN
+       BEGIN
+          WK_DOIT = 'CF';
+       END
+       IF (WK_DOIT = 'UC') THEN
+       BEGIN
+          /* Unconfirmed line so can just cancel the line - no change to issn */
+          DELETE FROM PICK_ITEM
+          WHERE PICK_LABEL_NO = :WK_LABEL;
+       END
+       IF (WK_DOIT = 'CF') THEN
+       BEGIN
+          /* Confirmed line so cancel the line and change status of issn*/
+          IF (WK_SSN IS NOT NULL) THEN
+          BEGIN
+             UPDATE ISSN SET ISSN_STATUS = 'PA', PICK_ORDER = NULL
+             WHERE ORIGINAL_SSN = :WK_SSN
+               AND PICK_ORDER = :WK_LABEL;
+          END
+          DELETE FROM PICK_ITEM
+          WHERE PICK_LABEL_NO = :WK_LABEL;
+       END
+    END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

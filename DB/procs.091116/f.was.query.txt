@@ -1,0 +1,93 @@
+As in sys_label
+The type of query is the seperation point.
+
+the options record with a group_code of 'SCN_FORMAT' and a code of the particular query type that you are using
+this produces the sys_screen query name to use
+I have setup SCN_FORMAT	ISSN	FPGISSN
+	     SCN_FORMAT SSN	FPGSSN
+
+(this is equivalent to the sys_labels options record of PA_FORMAT to define which format to use)
+
+The sys_screen is the top level of the query (like a primary in delphi) it only has a name and notes
+
+the sys_screen_table of a ss_name provides the FROM clause of the query
+The sequence 0 is ALWAYS the FROM table.
+The subsequent tables are sequenced of the sst_sequence
+They have a SST_VIA and SST_JOIN fields which specify the type of join and what it joins to
+There is an SST_ALIAS for an alias for this table.
+
+The where clause of the query is started by 
+        //$sql .= $this->getWarehouseAndCompanyLimit();
+        $sql .= $this->getWarehouseAndCompanyLimit( 0, True, "ISSN.", "ISSN.");
+the getWarehouseAndCompanyLimit I changed the first field (the mode) was there already (the one with a 0)
+I added a boolean for whether to put in a 'WHERE' or make this an 'AND' to an existing clause
+the next two fields are the prefix to the wh_id and company_id
+then I restricted this so that only records from the current wh_id are used.
+That reduces issn count from 300k to 23k.
+
+Then comes the existing values clause for the selected fields to search for
+
+Then the Order by  - defined from the sys_screen_order table
+the sys_screen_order of a ss_name provides the Order By clause of the query
+The SSO_ORDER are sequenced of the sso_sequence
+
+to get the query use getSelectQuery
+        list($sql, $sqlOrder) =  $this->getSelectQuery( "T", "ISSN");
+the first parameter is whether to use the primary key in the query.
+All queries are expected to have a primary key.
+The values clause is applied to the primary key query. Since this is far faster than 
+applying the values to the full list of fields.
+
+        list($sqlCount, $sqlQuery) = $this->__addLimitToQuery($sql, $pageNo, $resultsPerPage, False);
+I changed the __addLimitToQuery adding a field to say whether to embed the query
+eg select * from (select y,g,h from t)
+This is Terrible code. it forces a full retrieve of all the data before applying the where or order by
+Added to which it is not possible to use that construct in firebird 1.5
+So the plan is to remove ALL Embedded queries.
+Certainly one by one they are being removed by these Query changes. However this will not change all of them.
+eg getClearIssns is not changed.
+
+
+
+Once the required primary keys are retrieved then the query for all the fields is performed usning the primary key passed.
+see searchdIssn for an example.
+        list($sql, $sqlOrder) =  $this->getSelectQuery( "F", "ISSN");
+
+
+I added a function getDBLog so that I could see actual times for execution of parts before the prowser gets the data.
+
+For the ISSN Controller I saw the getLocationListFromIssn is being performed.
+This was taking 17 seconds.
+I modified that procedure so that rather than returning 1 row per issn in a  locn_id . It returns 1 row for a locn_id with at least 1 issn in it.
+That is a great saving. Why return 300k records when 4.5K will do
+
+Next I added the function
+getSelectFeild(screentype)
+
+This returns an array of field aliases/names =>	titles
+to give the titles to the result result set.
+
+======================================================================================================================
+I have seen in the getSsns function
+an and clause if the user is an amin user.
+This can be added to the start of the order by clause.
+
+I have in the sys_screen_table
+              sys_screen_var
+              sys_screen_order
+
+the user_type
+    wh_id
+    company_id
+    device_type
+so that I can have a specific query for one of thos groupings
+the user_type is then concatination of the sys_user's value_tf fields
+eg editable, sys_admin, inventory_operator ......
+
+I had to change the IssnController so that it always used the results of the getSelectField. Not just at the initialization of the class.
+Since there may be different queries for different company's and wh_id's.
+
+In Order to change your wh_id you must use the Warehouse controller and the drop down on the lower lefthand side of
+the Minder screens. So using that dropdowm Must be able to change to another wh_id that you have access to.
+
+

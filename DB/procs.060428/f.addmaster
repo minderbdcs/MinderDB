@@ -1,0 +1,375 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+ALTER PROCEDURE ADD_MASTER_DATA (TRN_TYPE VARCHAR(4) ,
+TRN_DATE TIMESTAMP,
+FIELD_VALUE VARCHAR(75) )
+AS 
+ 
+
+DECLARE VARIABLE REC_EXIST INTEGER; 
+DECLARE VARIABLE strDESC VARCHAR(50);
+DECLARE VARIABLE WK_DODROP VARCHAR(6);
+DECLARE VARIABLE WK_CODE VARCHAR(40);
+DECLARE VARIABLE WK_CODE2 VARCHAR(40);
+DECLARE VARIABLE WK_CODE3 VARCHAR(40);
+DECLARE VARIABLE WK_CODE4 VARCHAR(40);
+DECLARE VARIABLE WK_SSN VARCHAR(40);
+
+BEGIN
+
+   REC_EXIST = 0;
+   /* strDESC = "Created during audit " || :TRN_DATE; */
+   strDESC = FIELD_VALUE;
+   /* Check if record exists */ 
+   IF (:TRN_TYPE = 'NITP') THEN
+   BEGIN   /* SSN Type Table */
+     SELECT 1 
+     FROM SSN_TYPE
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+   
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+       INSERT INTO SSN_TYPE (CODE, DESCRIPTION)
+       VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NIOB') THEN
+   BEGIN   /* Generic Table */                           
+     /* must split the field_value into an ssn and the code */
+     EXECUTE PROCEDURE GET_REFERENCE_FIELD :FIELD_VALUE, 1  RETURNING_VALUES :WK_SSN ; 
+     EXECUTE PROCEDURE GET_REFERENCE_FIELD :FIELD_VALUE, 2  RETURNING_VALUES :WK_CODE ; 
+     /* and for that ssn use its ssn_type in the generic */
+     SELECT SSN_TYPE 
+     FROM SSN 
+     WHERE SSN_ID = :WK_SSN
+     INTO :WK_CODE2;
+     IF (WK_CODE2 IS NULL) THEN
+     BEGIN
+        WK_CODE2 = '';
+     END
+     SELECT 1 
+     FROM GENERIC
+     WHERE SSN_TYPE = :WK_CODE2   
+     AND CODE = :WK_CODE   
+     INTO :REC_EXIST;
+   
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+       INSERT INTO GENERIC (CODE, DESCRIPTION, SSN_TYPE)
+       VALUES (:WK_CODE, :WK_CODE, :WK_CODE2); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NIBC') THEN
+   BEGIN   /* Brand Table */                           
+     SELECT 1 
+     FROM BRAND
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+      
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+        INSERT INTO BRAND (CODE, DESCRIPTION)
+        VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NIMO') THEN
+   BEGIN   /* Model Table */                           
+     SELECT 1 
+     FROM MODEL
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+         
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+        INSERT INTO MODEL (CODE, DESCRIPTION)
+        VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NICC') THEN
+   BEGIN   /* Cost Center Table */                           
+     SELECT 1 
+     FROM COST_CENTRE
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO COST_CENTRE (CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NILG') THEN
+   BEGIN   /* Legacy Table */                           
+     SELECT 1 
+     FROM LEGACY
+     WHERE LEGACY_ID = :FIELD_VALUE   
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO LEGACY (LEGACY_ID, LEGACY_DESCRIPTION)
+         VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIO6') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :FIELD_VALUE   
+       AND FIELD_CODE = '1'
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, '1', :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIO7') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :FIELD_VALUE   
+       AND FIELD_CODE = '2'
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, '2', :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIO8') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :FIELD_VALUE   
+       AND FIELD_CODE = '3'
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, '3', :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIO9') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :FIELD_VALUE   
+       AND FIELD_CODE = '4'
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, '4', :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIOA') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :FIELD_VALUE   
+       AND FIELD_CODE = '5'
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, '5', :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NI11') THEN
+   BEGIN   /* Other 11 - global_condition */
+     SELECT DD_OTHER11 FROM SSN_GROUP WHERE SSN_GROUP = 'DEFAULT'
+     INTO :WK_DODROP;
+     
+     IF (WK_DODROP = 'TRUE') THEN
+     BEGIN
+        REC_EXIST = 0;
+        SELECT 1 
+        FROM GLOBAL_CONDITIONS   
+        WHERE OTHER_NO = 11
+          AND DESCRIPTION = :FIELD_VALUE
+        INTO :REC_EXIST;
+            
+        IF (REC_EXIST = 0) THEN
+        BEGIN
+            INSERT INTO GLOBAL_CONDITIONS (OTHER_NO, DESCRIPTION, RESULT)
+            VALUES (11, :FIELD_VALUE, 'O' ); 
+        END
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NI12') THEN
+   BEGIN   /* Other 12 - global_condition */
+     SELECT DD_OTHER12 FROM SSN_GROUP WHERE SSN_GROUP = 'DEFAULT'
+     INTO :WK_DODROP;
+     IF (WK_DODROP = 'TRUE') THEN
+     BEGIN
+        REC_EXIST = 0;
+        SELECT 1 
+        FROM GLOBAL_CONDITIONS   
+        WHERE OTHER_NO = 12
+          AND DESCRIPTION = :FIELD_VALUE
+        INTO :REC_EXIST;
+            
+        IF (REC_EXIST = 0) THEN
+        BEGIN
+            INSERT INTO GLOBAL_CONDITIONS (OTHER_NO, DESCRIPTION, RESULT)
+            VALUES (12, :FIELD_VALUE, 'O' ); 
+        END
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NI13') THEN
+   BEGIN   /* Other 13 - global_condition */
+     SELECT DD_OTHER13 FROM SSN_GROUP WHERE SSN_GROUP = 'DEFAULT'
+     INTO :WK_DODROP;
+     IF (WK_DODROP = 'TRUE') THEN
+     BEGIN
+        REC_EXIST = 0;
+        SELECT 1 
+        FROM GLOBAL_CONDITIONS   
+        WHERE OTHER_NO = 13
+          AND DESCRIPTION = :FIELD_VALUE
+        INTO :REC_EXIST;
+            
+        IF (REC_EXIST = 0) THEN
+        BEGIN
+            INSERT INTO GLOBAL_CONDITIONS (OTHER_NO, DESCRIPTION, RESULT)
+            VALUES (13, :FIELD_VALUE, 'O' ); 
+        END
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NI14') THEN
+   BEGIN   /* Other 14 - global_condition */
+     SELECT DD_OTHER14 FROM SSN_GROUP WHERE SSN_GROUP = 'DEFAULT'
+     INTO :WK_DODROP;
+     IF (WK_DODROP = 'TRUE') THEN
+     BEGIN
+        REC_EXIST = 0;
+        SELECT 1 
+        FROM GLOBAL_CONDITIONS   
+        WHERE OTHER_NO = 14
+          AND DESCRIPTION = :FIELD_VALUE
+        INTO :REC_EXIST;
+            
+        IF (REC_EXIST = 0) THEN
+        BEGIN
+            INSERT INTO GLOBAL_CONDITIONS (OTHER_NO, DESCRIPTION, RESULT)
+            VALUES (14, :FIELD_VALUE, 'O' ); 
+        END
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NI19') THEN
+   BEGIN   /* Other 19 - global_condition */
+     SELECT DD_OTHER19 FROM SSN_GROUP WHERE SSN_GROUP = 'DEFAULT'
+     INTO :WK_DODROP;
+     IF (WK_DODROP = 'TRUE') THEN
+     BEGIN
+        REC_EXIST = 0;
+        SELECT 1 
+        FROM GLOBAL_CONDITIONS   
+        WHERE OTHER_NO = 19
+          AND DESCRIPTION = :FIELD_VALUE
+        INTO :REC_EXIST;
+            
+        IF (REC_EXIST = 0) THEN
+        BEGIN
+            INSERT INTO GLOBAL_CONDITIONS (OTHER_NO, DESCRIPTION, RESULT)
+            VALUES (19, :FIELD_VALUE, 'O' ); 
+        END
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NI20') THEN
+   BEGIN   /* Other 20 - global_condition */
+     SELECT DD_OTHER20 FROM SSN_GROUP WHERE SSN_GROUP = 'DEFAULT'
+     INTO :WK_DODROP;
+     IF (WK_DODROP = 'TRUE') THEN
+     BEGIN
+        REC_EXIST = 0;
+        SELECT 1 
+        FROM GLOBAL_CONDITIONS   
+        WHERE OTHER_NO = 20
+          AND DESCRIPTION = :FIELD_VALUE
+        INTO :REC_EXIST;
+            
+        IF (REC_EXIST = 0) THEN
+        BEGIN
+            INSERT INTO GLOBAL_CONDITIONS (OTHER_NO, DESCRIPTION, RESULT)
+            VALUES (20, :FIELD_VALUE, 'O' ); 
+        END
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NISU') THEN
+   BEGIN   /* Supplier */
+     SELECT 1 
+     FROM PERSON
+     WHERE PERSON_ID = :FIELD_VALUE   
+     INTO :REC_EXIST;
+   
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+       INSERT INTO PERSON (PERSON_ID, PERSON_TYPE, FIRST_NAME)
+       VALUES (:FIELD_VALUE, 'CS', :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIPD') THEN
+   BEGIN   /* Assets Product */
+     SELECT 1 
+     FROM SSN_PRODUCT
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+   
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+       INSERT INTO SSN_PRODUCT (CODE, DESCRIPTION)
+       VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NID3') THEN
+   BEGIN   /* Assets Sub Type */
+     /* must split the field_value into an ssn and the code */
+     EXECUTE PROCEDURE GET_REFERENCE_FIELD :FIELD_VALUE, 1  RETURNING_VALUES :WK_SSN ; 
+     EXECUTE PROCEDURE GET_REFERENCE_FIELD :FIELD_VALUE, 2  RETURNING_VALUES :WK_CODE ; 
+     /* and for that ssn use its ssn_type and generic in the sub type */
+     SELECT SSN_TYPE ,GENERIC
+     FROM SSN 
+     WHERE SSN_ID = :WK_SSN
+     INTO :WK_CODE3, :WK_CODE4;
+     IF (WK_CODE2 IS NULL) THEN
+     BEGIN
+        WK_CODE2 = '';
+     END
+     IF (WK_CODE3 IS NULL) THEN
+     BEGIN
+        WK_CODE3 = '';
+     END
+     IF (WK_CODE4 IS NULL) THEN
+     BEGIN
+        WK_CODE4 = '';
+     END
+     REC_EXIST = 0;
+     SELECT 1
+     FROM SSN_SUB_TYPE
+     WHERE SSN_TYPE = :WK_CODE3
+     AND GENERIC = :WK_CODE4
+     AND CODE = :WK_CODE2
+     INTO :REC_EXIST;
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+        INSERT INTO SSN_SUB_TYPE (SSN_TYPE, GENERIC, CODE, DESCRIPTION)
+           VALUES (:WK_CODE3, :WK_CODE4, :WK_CODE2, :WK_CODE2);
+     END
+   END   
+ 
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

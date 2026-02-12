@@ -1,0 +1,210 @@
+
+ALTER PROCEDURE PC_QANS (RECORD_ID INTEGER,
+WH_ID CHAR(2),
+LOCN_ID VARCHAR(10),
+OBJECT VARCHAR(30),
+TRN_TYPE VARCHAR(4),
+TRN_CODE CHAR(1),
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(40),
+QTY INTEGER,
+PERSON_ID VARCHAR(10),
+DEVICE_ID CHAR(2),
+SUB_LOCN VARCHAR(10))
+AS 
+  
+  DECLARE VARIABLE WK_QUESTION_ID CHAR(5);
+  DECLARE VARIABLE WK_ANSWER_ID CHAR(5);
+  DECLARE VARIABLE WK_QUESTION_NO INTEGER;
+  DECLARE VARIABLE WK_ANSWER_NO INTEGER;
+  DECLARE VARIABLE WK_QUESTION VARCHAR(70);
+  DECLARE VARIABLE WK_CATEGORY VARCHAR(1);
+  DECLARE VARIABLE WK_CATEGORY2 VARCHAR(1);
+  DECLARE VARIABLE WK_FIELD_TYPE INTEGER;
+  DECLARE VARIABLE WK_UPDATE_FIELD VARCHAR(30);
+  DECLARE VARIABLE WK_RUN_PROCEDURE VARCHAR(30);
+  DECLARE VARIABLE WK_REPAIR VARCHAR(1);
+  DECLARE VARIABLE WK_INSPECT_PASS VARCHAR(6);
+  DECLARE VARIABLE WK_TEST_EXISTS INTEGER;
+  DECLARE VARIABLE WK_TEST_ID INTEGER;
+  DECLARE VARIABLE WK_ORIGINAL VARCHAR(1);
+  DECLARE VARIABLE WK_RESPONSE VARCHAR(50);
+  DECLARE VARIABLE WK_RESPONSE_CNT INTEGER;
+  DECLARE VARIABLE WK_TEST_CNT INTEGER;
+  DECLARE VARIABLE WK_SSN_TEST_ID INTEGER;
+  DECLARE VARIABLE WK_COND_RESULT CHAR(1);
+  DECLARE VARIABLE WK_SSN VARCHAR(20);
+  DECLARE VARIABLE WK_SSN_1ST_ANSWER INTEGER;
+ DECLARE VARIABLE strDesc VARCHAR(30);
+  
+BEGIN /* Main */
+	/* ssn is in object
+           location is current location
+           sub location 1st 5 bytes is question id
+                        2nd 5 bytes is response id
+           reference is user enered response
+           qty 0 or 1 is repair_required
+        */
+   WK_QUESTION_ID = SUBSTR(SUB_LOCN, 1,5);
+   WK_ANSWER_ID = SUBSTR(SUB_LOCN, 6,10);
+   WK_QUESTION_NO = CAST(WK_QUESTION_ID AS INTEGER);
+   WK_ANSWER_NO = CAST(WK_ANSWER_ID AS INTEGER);
+
+    WK_SSN_1ST_ANSWER = 0;
+    SELECT 1 FROM SSN 
+        WHERE SSN_ID = :OBJECT
+          AND ANSWER_ID IS NULL
+          INTO WK_SSN_1ST_ANSWER;
+    IF (WK_SSN_1ST_ANSWER = 1) THEN
+    BEGIN
+        /* not answered yet - so 1st question for ssn */
+        DELETE FROM PRODUCT_COND_STATUS
+            WHERE SSN_ID = :OBJECT
+              AND ORIGINAL_TEST = 'S';
+
+    END
+
+    SELECT QUESTION, INSPECT_CATEGORY
+        FROM TEST_QUESTIONS
+        WHERE QUESTION_ID = :WK_QUESTION_NO
+        INTO :WK_QUESTION, :WK_CATEGORY;
+
+    SELECT FIELD_TYPE, 
+           UPDATE_FIELD, 
+           RUN_PROCEDURE, 
+           VALID_RESPONSE, 
+           INSPECT_PASS_CRITERIA,
+           INSPECT_CATEGORY
+        FROM VALID_RESPONSES
+        WHERE RESPONSE_ID = :WK_ANSWER_NO
+        INTO :WK_FIELD_TYPE, 
+             :WK_UPDATE_FIELD, 
+             :WK_RUN_PROCEDURE, 
+             :WK_RESPONSE, 
+             :WK_INSPECT_PASS,
+             :WK_CATEGORY2;
+    IF (WK_CATEGORY2 IS NULL) THEN
+       WK_CATEGORY2 = WK_CATEGORY;
+    ELSE
+    BEGIN
+       WK_CATEGORY = WK_CATEGORY2;
+    END
+    WK_RESPONSE_CNT = 0;
+    SELECT COUNT(*) 
+        FROM VALID_RESPONSES
+        WHERE QUESTION_ID = :WK_QUESTION_NO
+        INTO :WK_RESPONSE_CNT;
+    IF (WK_RESPONSE_CNT = 1) THEN
+    BEGIN
+        WK_RESPONSE = REFERENCE;
+    END
+    IF (QTY > 0) THEN
+    BEGIN
+        WK_REPAIR = 'Y';
+    END
+    ELSE
+    BEGIN
+        WK_REPAIR = 'N';
+    END
+    WK_TEST_EXISTS = 0;
+    SELECT 1, TEST_ID FROM SSN_TEST
+        WHERE SSN_ID = :OBJECT AND
+              STATUS_TEST = 'OP'
+        INTO :WK_TEST_EXISTS, :WK_TEST_ID;
+    IF (WK_TEST_EXISTS = 0) THEN
+    BEGIN
+        /* must get the next test id */
+        WK_TEST_ID = GEN_ID(TEST_ID, 1);
+        WK_ORIGINAL = 'O';
+        INSERT INTO SSN_TEST(TEST_ID, SSN_ID, START_DATE, STATUS_TEST)
+               VALUES (:WK_TEST_ID, :OBJECT, :TRN_DATE, 'OP');
+      
+    END 
+    ELSE
+    BEGIN
+        WK_TEST_CNT = 0;
+        SELECT COUNT(*) FROM SSN_TEST
+            WHERE SSN_ID = :OBJECT 
+            INTO :WK_TEST_CNT;
+        IF (WK_TEST_CNT = 1) THEN
+        BEGIN
+            WK_ORIGINAL = 'O';
+        END
+        ELSE
+        BEGIN
+            WK_ORIGINAL = 'S';
+        END
+    END
+    /* must get the next test id */
+    WK_SSN_TEST_ID = GEN_ID(SSN_TEST_ID_GEN, 1);
+    INSERT INTO SSN_TEST_RESULTS (SSN_TEST_ID,
+        SSN_ID, TIME_STAMP, QUESTION, RESPONSE, FIELD_TYPE,
+        UPDATE_FIELD, REPAIR_REQUIRED, RUN_PROCEDURE, 
+        INSPECT_CATEGORY, INSPECT_PASS_CRITERIA, ORIGINAL_TEST,
+        USER_ID, QUESTION_ID, RESPONSE_ID, TEST_ID, TEXT_RESPONSE)
+        VALUES ( :WK_SSN_TEST_ID,
+        :OBJECT, :TRN_DATE, :WK_QUESTION, :WK_RESPONSE, :WK_FIELD_TYPE,
+        :WK_UPDATE_FIELD, :WK_REPAIR, :WK_RUN_PROCEDURE, 
+        :WK_CATEGORY, :WK_INSPECT_PASS, :WK_ORIGINAL,
+        :PERSON_ID, :WK_QUESTION_NO, :WK_ANSWER_NO, :WK_TEST_ID, :REFERENCE);
+    UPDATE SSN SET QUESTION_ID = :WK_QUESTION_NO,
+           ANSWER_ID = :WK_ANSWER_NO
+           WHERE SSN_ID = :OBJECT;
+    /* now process this result */
+    IF (WK_CATEGORY = 'E') THEN 
+    BEGIN
+        UPDATE SSN
+        SET OTHER5 = :WK_RESPONSE
+        WHERE SSN_ID = :OBJECT;
+    END
+    ELSE
+    BEGIN
+        IF (WK_INSPECT_PASS = 'FAILED') THEN 
+        BEGIN
+                WK_SSN = OBJECT;
+                EXECUTE PROCEDURE ADD_PROD_COND_STATUS_TEST :WK_SSN, :WK_CATEGORY, :WK_RESPONSE , :WK_ORIGINAL
+                  RETURNING_VALUES :WK_COND_RESULT;
+                IF (WK_ORIGINAL = 'O') THEN
+                BEGIN
+                    EXECUTE PROCEDURE ADD_PROD_COND_STATUS_TEST :WK_SSN, :WK_CATEGORY, :WK_RESPONSE , 'S'
+                      RETURNING_VALUES :WK_COND_RESULT;
+                END
+                IF (WK_CATEGORY = 'A') THEN 
+                BEGIN
+                    EXECUTE PROCEDURE GET_GLOBAL_CONDITION 1, 'F' RETURNING_VALUES :strDesc;
+                    UPDATE SSN
+                         /*SET OTHER1 = 'NOT NEW CONDITION'*/
+                         SET OTHER1 = :strDesc
+                         WHERE SSN_ID = :OBJECT;
+                END
+                IF (WK_CATEGORY = 'B') THEN
+                BEGIN
+                    EXECUTE PROCEDURE GET_GLOBAL_CONDITION 2, 'F' RETURNING_VALUES :strDesc;
+                    UPDATE SSN
+                         /* SET OTHER2 = 'TESTED - FAULTY'*/
+                         SET OTHER2 = :strDesc
+                         WHERE SSN_ID = :OBJECT;
+                END
+                IF (WK_CATEGORY = 'C') THEN
+                BEGIN
+                    EXECUTE PROCEDURE GET_GLOBAL_CONDITION 3, 'F' RETURNING_VALUES :strDesc;
+                    UPDATE SSN
+                         /*SET OTHER3 = 'INCOMPLETE'*/
+                         SET OTHER3 = :strDesc
+                         WHERE SSN_ID = :OBJECT;
+                END
+                IF (WK_CATEGORY = 'D') THEN
+                BEGIN
+                    EXECUTE PROCEDURE GET_GLOBAL_CONDITION 4, 'F' RETURNING_VALUES :strDesc;
+                    UPDATE SSN
+                         /*SET OTHER4 = 'SERVICE PROVIDED'*/
+                         SET OTHER4 = :strDesc
+                         WHERE SSN_ID = :OBJECT;
+                END
+        END
+    END
+    UPDATE SSN_TEST_RESULTS SET PROCESSED = 'P'
+        WHERE SSN_TEST_ID = :WK_SSN_TEST_ID;
+    EXECUTE PROCEDURE UPDATE_TRAN (RECORD_ID, 'T','Processed successfully');
+END ^
+

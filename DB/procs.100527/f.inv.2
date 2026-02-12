@@ -1,0 +1,25 @@
+
+alter table person add sale_area_code code_two;
+
+alter table pick_order  add invoice_count integer;
+alter table pick_order add sale_area_code code_two;
+
+alter table pick_invoice add pick_order pick_order ;
+alter table pick_invoice add legacy_ledger_admin_fee_code code;
+alter table pick_invoice add legacy_ledger_freight_code code;
+alter table pick_invoice add legacy_ledger_deposit_code code;
+alter table pick_invoice add invoice_exported_date timestamp;
+alter table pick_invoice add sub_total_amount numeric(9, 2) default 0.00;
+alter table pick_invoice add sub_total_tax numeric(9, 2);
+alter table pick_invoice add freight numeric(9, 2) default 0.00;
+alter table pick_invoice add freight_tax_amount numeric(9, 2);
+alter table pick_invoice add admin_fee_rate double precision ;
+alter table pick_invoice add admin_fee_amount numeric(9, 2) default 0.00;
+alter table pick_invoice add admin_tax_amount numeric(9, 2);
+alter table pick_invoice add tax_amount numeric(9, 2) default 0.00;
+alter table pick_invoice add due_amount numeric(9, 2) default 0.00;
+alter table pick_invoice add amount_paid numeric(9, 2) default 0.00;
+alter table pick_invoice add inv_total_amount numeric(9, 2);
+
+alter table pick_invoice add last_update_by user_id;
+

@@ -1,0 +1,20 @@
+Done
+1 reset_issn_orders procedure to allow for zone AZ - treat as though null = NONE
+
+=================================================================================
+Todo
+
+2 options record for CMPPKHELD used in
+  update_sale_order_status proc
+  update_pick_item_time    trig
+  run_transaction_pkal2    trig
+  run_transaction_pkal3    trig
+  should move to a field in the company table the records without a country
+  have the import_pick_held_status - cannot use this
+  so create a field pick_held_status
+
+3 in eparcel manifest want to add email address and phone number
+
+4 Alter length of Person_ID to be 15 ?.
+5 Alter length of pick_order to be 25 ?.
+

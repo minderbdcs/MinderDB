@@ -1,0 +1,2 @@
+alter table pack_id add ssn_id ssn_id;
+

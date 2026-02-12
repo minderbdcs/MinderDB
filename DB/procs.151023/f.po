@@ -1,0 +1,1 @@
+alter domain pick_order type varchar(25);

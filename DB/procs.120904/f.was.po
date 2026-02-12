@@ -1,0 +1,2 @@
+alter table purchase_order add po_sale_channel_code code_two_var;
+

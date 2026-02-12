@@ -1,0 +1,4 @@
+select * from query_layout where code='mssn';
+update query_layout set label='ST' where code='mssn' and sequence=7;
+update query_layout set label='Barcode' where code='mssn' and sequence=0;
+update query_layout set label='WH' where code='mssn' and sequence=2 and description='issn.wh_id';

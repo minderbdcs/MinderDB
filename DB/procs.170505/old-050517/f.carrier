@@ -1,0 +1,2 @@
+alter table carrier add default_connote_isso value_tf;
+update carrier set default_connote_isso ='F';

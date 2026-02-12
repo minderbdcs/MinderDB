@@ -1,0 +1,2 @@
+alter table ssn add best_before_date use_by_date;
+alter table ssn_dx add best_before_date use_by_date;

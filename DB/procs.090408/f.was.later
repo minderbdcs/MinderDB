@@ -1,0 +1,88 @@
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+CREATE PROCEDURE PC_LABEL_LATER (
+PRINT_DEVICE_ID CHAR(2),
+PRN_TYPE VARCHAR(40),
+PRN_COPY INTEGER,
+PRN_FILE_NAME VARCHAR(70),
+PRN_DATA VARCHAR(32000),
+PERSON_ID VARCHAR(10) ,
+DEVICE_ID CHAR(2) )
+RETURNS (RES INTEGER, ERROR_TEXT VARCHAR(1024))
+AS 
+DECLARE VARIABLE WK_DEVICE_ID CHAR(2);
+DECLARE VARIABLE WK_LABEL_TYPE VARCHAR(70);
+DECLARE VARIABLE WK_COPIES INTEGER;
+DECLARE VARIABLE WK_DO_SYSLABEL CHAR(2);
+DECLARE VARIABLE WK_FORMAT VARCHAR(40);
+DECLARE VARIABLE WK_FORMAT_LINES INTEGER;
+BEGIN 
+  
+  /* insert into print_requests */
+  /* with status NP  new request
+			create the print file
+                 CP  created print file
+			send to the device
+                 XP  completed */
+  WK_DO_SYSLABEL = '';
+  SELECT GENERATE_LABEL_TEXT 
+  FROM CONTROL
+  INTO :WK_DO_SYSLABEL;
+  IF (WK_DO_SYSLABEL = 'F') THEN
+  BEGIN
+     /* check that the format exists */
+     WK_FORMAT = '';
+     SELECT DESCRIPTION 
+     FROM OPTIONS
+     WHERE GROUP_CODE = (:PRINT_DEVICE_ID || '_FORMAT') 
+     AND   CODE = :PRN_TYPE
+     INTO :WK_FORMAT;
+     IF (WK_FORMAT IS NULL) THEN
+     BEGIN
+        WK_FORMAT = '';
+     END
+     IF (WK_FORMAT = '') THEN
+     BEGIN
+        RES = -10;
+        ERROR_TEXT = 'No Format for Type ' || :PRN_TYPE;
+     END
+     ELSE
+     BEGIN
+        WK_FORMAT_LINES = 0;
+        SELECT COUNT(*)
+        FROM SYS_LABEL
+        WHERE SL_NAME = :WK_FORMAT
+        INTO :WK_FORMAT_LINES;
+        IF (WK_FORMAT_LINES IS NULL) THEN
+        BEGIN
+           WK_FORMAT_LINES = 0;
+        END
+        IF (WK_FORMAT_LINES > 0) THEN
+        BEGIN
+           INSERT INTO PRINT_REQUESTS (DEVICE_ID, PRN_TYPE, PRN_COPY, BASE_FILE_NAME, PRN_DATA, PERSON_ID, REQUEST_STATUS, ERROR_TEXT, FROM_DEVICE_ID)
+           VALUES ( :PRINT_DEVICE_ID, :PRN_TYPE, :PRN_COPY, '', :PRN_DATA, :PERSON_ID, 'LP', '', :DEVICE_ID);
+           RES = 0;
+           ERROR_TEXT = 'Print Request Sent';
+        END
+        ELSE
+        BEGIN
+           RES = -20;
+           ERROR_TEXT = 'No Format Lines for Type ' || :PRN_TYPE || ' and Format ' || :WK_FORMAT;
+        END
+     END
+  END
+  ELSE
+  BEGIN
+     RES = -1;
+     ERROR_TEXT = 'Bartender File - Not able to create Bartender files yet';
+  END
+  SUSPEND;
+
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

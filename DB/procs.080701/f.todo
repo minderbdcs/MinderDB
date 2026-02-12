@@ -1,0 +1,10 @@
+for alstom
+pick conform 
+	if its a transfer order
+	setup loan order ...
+	of status 'PL' planned loan
+
+In DSDX if there is a PL order for this
+	then make it 'OP'
+
+

@@ -1,0 +1,10 @@
+/*
+198:DECLARE EXTERNAL FUNCTION DQUOTEDSTR
+201:ENTRY_POINT 'Dquotedstr' MODULE_NAME 'udf_file';
+628:DECLARE EXTERNAL FUNCTION SQUOTEDSTR
+631:ENTRY_POINT 'Squotedstr' MODULE_NAME 'udf_file';
+*/
+
+drop external function squotedstr;
+drop external function dquotedstr;
+

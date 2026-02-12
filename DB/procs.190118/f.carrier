@@ -1,0 +1,8 @@
+create domain connote_prefix varchar(18);
+alter table carrier alter connote_prefix type connote_prefix;
+
+create domain connote_version varchar(2);
+alter table carrier add c_version connote_version; 
+
+create domain connote_max_sequence int;
+alter table carrier add c_max_sequence connote_max_sequence; 

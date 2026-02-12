@@ -1,0 +1,1 @@
+insert into transactions (trn_type,qty,wh_id,device_id,person_id,record_id) values ('PKAL',2,'SS','SS','ss',102);

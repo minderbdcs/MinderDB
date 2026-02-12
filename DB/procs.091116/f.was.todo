@@ -1,0 +1,11 @@
+create sys_screen
+holds the fields
+	for search
+	for result set
+
+from clause
+	use sequence of tables
+where clause = uses selected fields
+
+order by clause
+

@@ -1,0 +1,23 @@
+create domain grn_label_no varchar(20);
+
+drop trigger run_transaction_grnd;
+drop trigger save_grn_order;
+
+commit;
+
+alter table grn_order drop constraint integ_368;
+alter table grn_order drop constraint integ_330;
+alter table grn_order drop constraint integ_305;
+
+commit;
+
+alter table grn_order alter grn_label_no type grn_label_no;
+
+alter table grn_order add grn_parent_label_id grn_label_no;
+
+commit;
+
+/* update grn_order set label_extension='00'; */
+
+alter table grn_order add constraint grn_order_primary  primary key  (grn_label_no);
+

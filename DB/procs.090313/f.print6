@@ -1,0 +1,5 @@
+alter table print_requests alter column prn_data position 5;
+alter table print_requests alter column request_status  position 4;
+
+alter table print_requests alter column prn_data position 5;
+alter table print_requests alter column request_status  position 4;

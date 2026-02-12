@@ -1,0 +1,360 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+ 
+CREATE OR ALTER  TRIGGER RUN_TRANSACTION_STKA FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 119 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_SUB_LOCN VARCHAR(10);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_OBJECT VARCHAR(30);
+/* DECLARE VARIABLE WK_REF VARCHAR(40); */
+DECLARE VARIABLE WK_REF VARCHAR(1024);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_TRN_TYPE VARCHAR(4);
+DECLARE VARIABLE WK_TRN_CODE CHAR(1);
+
+DECLARE VARIABLE WK_WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_CREATE_QTY INTEGER;
+DECLARE VARIABLE WK_STATUS VARCHAR(40);
+DECLARE VARIABLE WK_COMPONENT_ID VARCHAR(30);
+DECLARE VARIABLE WK_COMPONENT_QTY INTEGER;
+DECLARE VARIABLE WK_NEED_QTY INTEGER;
+DECLARE VARIABLE WK_AUDIT_DESC VARCHAR(40);
+DECLARE VARIABLE WK_QTY_REMAINING INTEGER;
+DECLARE VARIABLE WK_ALLOWED_STATUS VARCHAR(40);
+DECLARE VARIABLE WK_IS_FOUND INTEGER;
+
+DECLARE VARIABLE WK_IS_QTY INTEGER;
+DECLARE VARIABLE WK_QTY_TO_USE INTEGER;
+DECLARE VARIABLE WK_IS_SSN VARCHAR(20);
+DECLARE VARIABLE WK_IS_ORIGINAL_SSN VARCHAR(20);
+DECLARE VARIABLE WK_IS_QTY_REMAINING INTEGER;
+DECLARE VARIABLE WK_USED_SSN VARCHAR(20);
+DECLARE VARIABLE WK_IS_USED_QTY INTEGER;
+DECLARE VARIABLE WK_LOG VARCHAR(120);
+DECLARE VARIABLE WK_DUMMY INTEGER;
+DECLARE VARIABLE WK_SN_FOUND INTEGER;
+DECLARE VARIABLE WK_SN_SSN VARCHAR(20);
+DECLARE VARIABLE WK_OWNER VARCHAR(20);
+DECLARE VARIABLE WK_SUPPLIER VARCHAR(40);
+DECLARE VARIABLE WK_PROD_TYPE VARCHAR(10);
+DECLARE VARIABLE WK_PROD_DESC VARCHAR(255);
+DECLARE VARIABLE SSN_LENGTH INTEGER;
+DECLARE VARIABLE P_SSN_ID INTEGER;
+DECLARE VARIABLE LEN_SSN_ID INTEGER;
+DECLARE VARIABLE W_SSN_ID VARCHAR(20);
+DECLARE VARIABLE WK_DO_UASL CHAR(1);
+DECLARE VARIABLE WK_ISSN_PREFIX VARCHAR(20);
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'STKA') THEN
+  BEGIN
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_SUB_LOCN = NEW.SUB_LOCN_ID;
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_OBJECT = NEW.OBJECT;
+     /* WK_REF = ALLTRIM(NEW.REFERENCE); */
+     WK_REF = V4ALLTRIM(NEW.REFERENCE);
+     WK_QTY = NEW.QTY;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_TRN_CODE = NEW.TRN_CODE;
+     WK_TRN_TYPE = NEW.TRN_TYPE;
+
+     WK_AUDIT_DESC = 'Create Kitted Product Qty' ;
+/*
+     in this transaction
+     the object is the product
+     the qty is the create qty
+     the wh_id and locn_id specify the location
+     the reference is a comment for the ssn_hist
+
+     here we must create a qty of a kit
+     in order to do this we must transfer 
+     qtys of its components from the locations with most stock
+     and only a pickable status
+     (in product_kit status = 'OK'
+      need prod_qty * create qty in transaction)
+      for all components involved
+      only when we have all the components can we merge them
+      into the new product kit
+      the status of the new product must be the store area of the 
+      location
+
+     So see if we have enough of the 1st level components for this
+
+     if so then remove from the locations involved
+     create 1 ssn and issn for the kit
+
+
+*/
+
+     IF (NEW.TRN_CODE = 'P')  THEN
+     BEGIN
+        SELECT SEND_UASL_V4 FROM CONTROL INTO :WK_DO_UASL;
+
+        WK_CREATE_QTY = WK_QTY;
+        WK_STATUS = 'OK';
+
+        FOR SELECT PROD_ID, PROD_QTY
+           FROM PRODUCT_KIT
+           WHERE KIT_ID = :WK_OBJECT
+           AND STATUS = 'OK'
+        INTO :WK_COMPONENT_ID, :WK_COMPONENT_QTY
+        DO 
+        BEGIN
+           WK_NEED_QTY = WK_CREATE_QTY * WK_COMPONENT_QTY;
+           /* do we have this much pickable */
+           WK_IS_QTY = 0;
+           SELECT SUM(ISSN.CURRENT_QTY)
+           FROM ISSN
+           JOIN CONTROL ON CONTROL.RECORD_ID = 1
+           WHERE ISSN.PROD_ID = :WK_COMPONENT_ID
+           AND (POS(CONTROL.PICK_IMPORT_SSN_STATUS,ISSN.ISSN_STATUS,0,1) > -1)
+           INTO :WK_IS_QTY;
+           IF (WK_IS_QTY IS NULL) THEN
+           BEGIN
+              WK_IS_QTY = 0;
+           END
+           IF (WK_IS_QTY >= WK_NEED_QTY) THEN
+           BEGIN
+              /* ok we have enough */
+              WK_DUMMY = 1;
+           END
+           ELSE
+           BEGIN
+              /* dont have enough */
+              WK_STATUS = 'NOTOK';
+              WK_LOG = 'Not enough of Product ' || WK_COMPONENT_ID || '(' || WK_IS_QTY || ') (' || WK_NEED_QTY || ') to Make ' || WK_OBJECT || ' (' || WK_CREATE_QTY || ')';
+           END
+        END
+        IF (WK_STATUS = 'NOTOK') THEN
+        BEGIN
+           IF (LEN(WK_LOG) > 70) THEN
+           BEGIN
+              WK_LOG = SUBSTR(WK_LOG, 1,70);
+           END
+           EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F',WK_LOG);
+        END
+        ELSE
+        BEGIN
+           /* ok we have enough - so go and get the components
+              taking from locations in order of size of product */
+           FOR SELECT PROD_ID, PROD_QTY
+              FROM PRODUCT_KIT
+              WHERE KIT_ID = :WK_OBJECT
+              AND STATUS = 'OK'
+              INTO :WK_COMPONENT_ID, :WK_COMPONENT_QTY
+           DO 
+           BEGIN
+              /* DELETE FROM TRANSACTIONS_WORK
+              WHERE RECORD_ID = :WK_RECORD; */
+              WK_NEED_QTY = WK_CREATE_QTY * WK_COMPONENT_QTY;
+              WK_QTY_REMAINING = WK_NEED_QTY;
+              WK_IS_QTY_REMAINING = WK_QTY_REMAINING;
+
+              /* calc the qtys for this product */
+              FOR SELECT SUM(CURRENT_QTY), WH_ID, LOCN_ID 
+                  FROM ISSN
+                  JOIN CONTROL ON CONTROL.RECORD_ID = 1
+                  WHERE PROD_ID = :WK_COMPONENT_ID
+                  AND (POS(CONTROL.PICK_IMPORT_SSN_STATUS,ISSN.ISSN_STATUS,0,1) > -1)
+                  AND CURRENT_QTY > 0
+                  GROUP BY WH_ID, LOCN_ID
+                  INTO :WK_IS_QTY, :WK_WK_WH_ID, :WK_WK_LOCN_ID 
+              DO
+              BEGIN
+                 INSERT INTO TRANSACTIONS_WORK(
+                    RECORD_ID,
+                    WH_ID,
+                    LOCN_ID,
+                    OBJECT,
+                    QTY)
+                    VALUES(
+                    :WK_RECORD,
+                    :WK_WK_WH_ID,
+                    :WK_WK_LOCN_ID,
+                    :WK_COMPONENT_ID,
+                    :WK_IS_QTY);
+              END
+              /* get the  qtys for this product in order of qty 
+                 in transactions_work */
+              FOR SELECT ISSN.CURRENT_QTY, ISSN.SSN_ID, ISSN.ORIGINAL_SSN
+                  FROM TRANSACTIONS_WORK
+                  JOIN ISSN ON ISSN.WH_ID = TRANSACTIONS_WORK.WH_ID
+                  AND ISSN.LOCN_ID = TRANSACTIONS_WORK.LOCN_ID  
+                  AND ISSN.PROD_ID = TRANSACTIONS_WORK.OBJECT
+                  JOIN CONTROL ON CONTROL.RECORD_ID = 1
+                  WHERE TRANSACTIONS_WORK.OBJECT = :WK_COMPONENT_ID
+                  AND TRANSACTIONS_WORK.RECORD_ID = :WK_RECORD
+                  AND (POS(CONTROL.PICK_IMPORT_SSN_STATUS,ISSN.ISSN_STATUS,0,1) > -1)
+                  AND ISSN.CURRENT_QTY > 0
+                  ORDER BY TRANSACTIONS_WORK.QTY DESC
+                  INTO :WK_IS_QTY, :WK_IS_SSN, :WK_IS_ORIGINAL_SSN 
+              DO
+              BEGIN
+                 IF (WK_IS_QTY_REMAINING > 0) THEN
+                 BEGIN
+                    /* how much can I take */
+                    /* either issn qty or remaining qty if its less */
+                    WK_USED_SSN = WK_IS_SSN;
+                    WK_IS_USED_QTY = WK_IS_QTY;
+                    IF (WK_IS_QTY_REMAINING < WK_IS_QTY) THEN
+                    BEGIN
+                       WK_IS_USED_QTY = WK_IS_QTY_REMAINING;
+                       /*  wk_is_qty_remaining */
+                       /* so end of issns that we take */
+                    END
+                    UPDATE ISSN SET 
+                     CURRENT_QTY = CURRENT_QTY - :WK_IS_USED_QTY
+                     WHERE SSN_ID = :WK_USED_SSN;
+                    UPDATE SSN SET 
+                     CURRENT_QTY = CURRENT_QTY - :WK_IS_USED_QTY
+                     WHERE SSN_ID = :WK_IS_ORIGINAL_SSN;
+                    /* must reduce wk_is_qty_remaining by wk_is_used_qty */
+                    WK_IS_QTY_REMAINING = WK_IS_QTY_REMAINING - WK_IS_USED_QTY;
+                    WK_IS_USED_QTY = 0 - WK_IS_USED_QTY;
+                    EXECUTE PROCEDURE ADD_SSN_HIST(:WK_WK_WH_ID, :WK_WK_LOCN_ID, :WK_USED_SSN, 
+                             :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                             :WK_AUDIT_DESC , :WK_REF, :WK_IS_USED_QTY, :WK_USER, :WK_DEVICE); 
+                 END
+              END /* end for issns loop */
+              IF (WK_DO_UASL = 'T') THEN
+              BEGIN
+                 /* send of tot of avail of the make prod */
+                 EXECUTE PROCEDURE SEND_PICKABLE_STOCK (:WK_COMPONENT_ID,
+                    :WK_USER,
+                    :WK_DEVICE,
+                    :WK_DATE);
+              END
+           END
+           /* ok now have taken enough of all the components 
+              so create ssn and issn for the new kit */
+          WK_ALLOWED_STATUS = '';
+          SELECT MOVE_STAT
+          FROM LOCATION
+          WHERE WH_ID = :WK_WH_ID
+          AND LOCN_ID = :WK_LOCN_ID
+          INTO :WK_ALLOWED_STATUS;
+          IF (WK_ALLOWED_STATUS IS NULL) THEN
+          BEGIN
+             SELECT NEW_PROD_STATUS
+             FROM CONTROL
+             INTO :WK_ALLOWED_STATUS;
+          END
+          WK_SN_FOUND = 0;
+          SELECT FIRST 1 1, SSN_ID
+          FROM SSN
+          WHERE PROD_ID = :WK_OBJECT
+          INTO :WK_SN_FOUND, :WK_SN_SSN;
+          
+          WK_IS_FOUND = 0;
+          SELECT FIRST 1 1, SSN_ID, ORIGINAL_SSN
+          FROM ISSN
+          WHERE PROD_ID = :WK_OBJECT
+          AND ISSN_STATUS = :WK_ALLOWED_STATUS
+          AND WH_ID = :WK_WH_ID
+          AND LOCN_ID = :WK_LOCN_ID
+          INTO :WK_IS_FOUND, :WK_IS_SSN, :WK_IS_ORIGINAL_SSN;
+          /* if I dont have any of this product in the location
+             of the right status */
+          IF (WK_IS_FOUND = 0) THEN
+          BEGIN
+             SELECT FIRST 1 SHORT_DESC, SUPPLIER_NO1, PROD_TYPE, COMPANY_ID
+             FROM PROD_PROFILE
+             WHERE PROD_ID = :WK_OBJECT
+             INTO :WK_PROD_DESC, :WK_SUPPLIER, :WK_PROD_TYPE, :WK_OWNER;
+             IF (WK_OWNER IS NULL) THEN
+             BEGIN
+                SELECT COMPANY_ID FROM CONTROL INTO :WK_OWNER;
+             END
+             WK_ISSN_PREFIX = '';
+             /* Get length for Barcode */   
+             EXECUTE PROCEDURE GET_BARCODE_LENGTH RETURNING_VALUES SSN_LENGTH;
+             SELECT DATA_PREFIX FROM PARAM WHERE DATA_ID = 'BARCODE' INTO :WK_ISSN_PREFIX;
+             IF (WK_ISSN_PREFIX IS NULL) THEN
+             BEGIN
+                WK_ISSN_PREFIX = '';
+             END
+             P_SSN_ID = GEN_ID(ISSN_SSN_ID, 1) -1;
+/*
+             -* LEN_SSN_ID = STRLEN(P_SSN_ID); *-  
+             LEN_SSN_ID = STRLEN(P_SSN_ID) + STRLEN(WK_ISSN_PREFIX);     
+         
+             -* W_SSN_ID = ''; *-
+             W_SSN_ID = WK_ISSN_PREFIX;
+             -* Padding leading with 0 *-
+             WHILE (LEN_SSN_ID < :SSN_LENGTH) DO
+             BEGIN
+                W_SSN_ID = W_SSN_ID || '0';      
+                LEN_SSN_ID = LEN_SSN_ID + 1;
+             END
+             W_SSN_ID = W_SSN_ID || P_SSN_ID;
+*/
+/*           SELECT ISSN_ID FROM GET_ISSN_BARCODE('BARCODE', :P_SSN_ID, 36) INTO :W_SSN_ID; */
+             SELECT ISSN_ID FROM GET_ISSN_BARCODE('BARCODE', :P_SSN_ID, 36, :WK_WH_ID) INTO :W_SSN_ID;
+   
+             IF (WK_SN_FOUND = 0) THEN
+             BEGIN
+                INSERT INTO ISSN (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, CURRENT_QTY,ISSN_STATUS, PROD_ID, COMPANY_ID, ORIGINAL_QTY, CREATE_DATE,USER_ID, INTO_DATE, ORIGINAL_WH_ID)
+                VALUES (:W_SSN_ID, :W_SSN_ID, :WK_WH_ID, :WK_LOCN_ID, :WK_QTY, :WK_ALLOWED_STATUS, :WK_OBJECT, :WK_OWNER, :WK_QTY, :WK_DATE, :WK_USER, :WK_DATE , :WK_WH_ID); 
+                /* create new ssn */
+                INSERT INTO SSN (SSN_ID, WH_ID, LOCN_ID, STATUS_SSN, ORIGINAL_QTY,
+                    CURRENT_QTY, PROD_ID, SSN_DESCRIPTION, SUPPLIER_ID, COMPANY_ID, SSN_TYPE)
+                VALUES (:W_SSN_ID, :WK_WH_ID, :WK_LOCN_ID, :WK_ALLOWED_STATUS, :WK_QTY, :WK_QTY, :WK_OBJECT,:WK_PROD_DESC, :WK_SUPPLIER, :WK_OWNER, :WK_PROD_TYPE);     
+             END
+             ELSE
+             BEGIN
+                INSERT INTO ISSN (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, CURRENT_QTY,ISSN_STATUS, PROD_ID, COMPANY_ID, ORIGINAL_QTY, CREATE_DATE,USER_ID, INTO_DATE, ORIGINAL_WH_ID)
+                VALUES (:W_SSN_ID, :WK_SN_SSN, :WK_WH_ID, :WK_LOCN_ID, :WK_QTY, :WK_ALLOWED_STATUS, :WK_OBJECT, :WK_OWNER, :WK_QTY, :WK_DATE, :WK_USER, :WK_DATE , :WK_WH_ID); 
+/*               CURRENT_QTY = CURRENT_QTY + :WK_QTY */
+                UPDATE SSN SET 
+                 CURRENT_QTY = COALESCE(CURRENT_QTY, 0) + :WK_QTY
+                 WHERE SSN_ID = :WK_SN_SSN;
+             END
+          END
+          ELSE
+          BEGIN
+              /* update qty of issn and ssn */
+/*             CURRENT_QTY = CURRENT_QTY + :WK_QTY */
+              UPDATE ISSN SET 
+               CURRENT_QTY = COALESCE(CURRENT_QTY, 0) + :WK_QTY
+               WHERE SSN_ID = :WK_IS_SSN;
+/*             CURRENT_QTY = CURRENT_QTY + :WK_QTY */
+              UPDATE SSN SET 
+               CURRENT_QTY = COALESCE(CURRENT_QTY, 0) + :WK_QTY
+               WHERE SSN_ID = :WK_IS_ORIGINAL_SSN;
+          END
+          EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+          IF (WK_DO_UASL = 'T') THEN
+          BEGIN
+             /* send of tot of avail of the make prod */
+             EXECUTE PROCEDURE SEND_PICKABLE_STOCK (:WK_OBJECT,
+                :WK_USER,
+                :WK_DEVICE,
+                :WK_DATE);
+          END
+       END
+    END /* of code P */
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+  END
+ END
+END ^
+ 
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

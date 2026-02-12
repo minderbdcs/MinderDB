@@ -1,0 +1,23 @@
+ok so now glen wants to have a despatch db on the same server as live db at tifs
+instead of creating a csv
+copy data to a table on a remote db
+so add a map type
+remote table name
+
+then in insert into pick_order 
+mirror the nominated fields into the remote db
+
+when the list of fields is changed wants to mirror the changes into the remote db
+
+when the remote db inserts or updates the pick_despatch, pack_id
+must mirror these into the live pick_despatch and pack_id tables.
+also mirror back updates to remote pick_order table.
+
+This is infact a 2 way db mirroring with a restricted number of fields.
+the current db mirroring is one way and all fields 
+run via a crontask
+this is wanted to be run via a db event.
+so all tables must include the primary key and mirror date
+
+for this create sys_mirror
+                sys_mirror_var

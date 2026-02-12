@@ -1,0 +1,7 @@
+
+alter table ssn add         DIMENSION_X NUMERIC(9, 3);
+alter table ssn add         DIMENSION_Y NUMERIC(9, 3);
+alter table ssn add         DIMENSION_Z NUMERIC(9, 3);
+alter table ssn add         DIMENSION_X_UOM CODE_TWO;
+alter table ssn add         DIMENSION_Y_UOM CODE_TWO;
+alter table ssn add         DIMENSION_Z_UOM CODE_TWO;

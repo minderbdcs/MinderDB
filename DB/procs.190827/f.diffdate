@@ -1,0 +1,6 @@
+/*
+183 DECLARE EXTERNAL FUNCTION DIFFDATE$
+186 ENTRY_POINT 'fudlib_diffdate' MODULE_NAME 'fudlib';$
+*/
+
+drop external function diffdate;

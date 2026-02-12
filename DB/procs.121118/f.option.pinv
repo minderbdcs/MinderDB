@@ -1,0 +1,39 @@
+/*
+insert into options(group_code,code,description) values('REF_CODE','PINV_STA','PICK_INVOICE.SUB_TOTAL_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_STT','PICK_INVOICE.SUB_TOTAL_TAX');
+insert into options(group_code,code,description) values('REF_CODE','PINV_DESPID','PICK_INVOICE.INVOICE_1ST_DESPATCH_ID');
+insert into options(group_code,code,description) values('REF_CODE','PINV_LLAFC','PICK_INVOICE.LEGACY_LEDGER_ADMIN_FEE_CODE');
+insert into options(group_code,code,description) values('REF_CODE','PINV_LLDC','PICK_INVOICE.LEGACY_LEDGER_DEPOSIT_CODE');
+insert into options(group_code,code,description) values('REF_CODE','PINV_FREIGHT','PICK_INVOICE.FREIGHT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_FTA','PICK_INVOICE.FREIGHT_TAX_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_AFR','PICK_INVOICE.ADMIN_FEE_RATE');
+insert into options(group_code,code,description) values('REF_CODE','PINV_AFA','PICK_INVOICE.ADMIN_FEE_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_TAX','PICK_INVOICE.TAX_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_DUE','PICK_INVOICE.DUE_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_PAID','PICK_INVOICE.AMOUNT_PAID');
+insert into options(group_code,code,description) values('REF_CODE','PINV_TOTAL','PICK_INVOICE.INV_TOTAL_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_TAXRATE','PICK_INVOICE.TAX_RATE');
+insert into options(group_code,code,description) values('REF_CODE','PINV_LLFC','PICK_INVOICE.LEGACY_LEDGER_FREIGHT_CODE');
+insert into options(group_code,code,description) values('REF_CODE','PINV_IS','PICK_INVOICE.INVOICE_STATUS');
+insert into options(group_code,code,description) values('REF_CODE','PINV_ATA','PICK_INVOICE.ADMIN_TAX_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_COMPANY','PICK_INVOICE.COMPANY_ID');
+insert into options(group_code,code,description) values('REF_CODE','PINV_WH','PICK_INVOICE.WH_ID');
+
+insert into options(group_code,code,description) values('REF_CODE','PINV_AWB','PICK_INVOICE.INVOICE_1ST_AWB_CONSIGNMENT_NO');
+insert into options(group_code,code,description) values('REF_CODE','PINV_SHIP_METH','PICK_INVOICE.SHIPPING_METHOD');
+*/
+/*
+alter table pick_invoice add net_total_amount double precision default 0.00;
+alter table pick_invoice add sum_total_amount double precision default 0.00;
+alter table pick_invoice add fees_amounts double precision default 0.00;
+alter table pick_invoice add fees_amounts_tax_amount double precision default 0.00;
+alter table pick_invoice add admin_fee_percent_amount double precision default 0.00;
+alter table pick_invoice add admin_fee_tax_amount double precision default 0.00;
+*/
+insert into options(group_code,code,description) values('REF_CODE','PINV_NTA','PICK_INVOICE.NET_TOTAL_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_STA2','PICK_INVOICE.SUM_TOTAL_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_FEESA','PICK_INVOICE.FEES_AMOUNTS');
+insert into options(group_code,code,description) values('REF_CODE','PINV_FEEST','PICK_INVOICE.FEES_AMOUNTS_TAX_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_ADFPA','PICK_INVOICE.ADMIN_FEE_PERCENT_AMOUNT');
+insert into options(group_code,code,description) values('REF_CODE','PINV_ADFTA','PICK_INVOICE.ADMIN_FEE_TAX_AMOUNT');
+

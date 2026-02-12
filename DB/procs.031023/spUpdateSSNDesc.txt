@@ -1,0 +1,25 @@
+CREATE PROCEDURE UPDATE_SSN_DESC   AS                       
+
+DECLARE VARIABLE sSSN VARCHAR(20);
+DECLARE VARIABLE sSSN_DESC VARCHAR(80);
+
+BEGIN    
+    
+    /* Get SSN to update */
+    FOR 
+      SELECT SSN_ID, LEFTS(NONULL(SSN_TYPE) || ' ' || NONULL(BRAND) || ' ' || NONULL(MODEL), 80) AS SSN_DESC
+      FROM SSN
+      WHERE (SSN_DESCRIPTION IS NULL OR SSN_DESCRIPTION = '')
+      AND (STATUS_SSN = 'PA' OR STATUS_SSN = 'ST' OR STATUS_SSN = 'TS')
+      AND WH_ID <> 'XX'
+      INTO :sSSN, :sSSN_DESC
+    DO
+    BEGIN      
+      /* Update SSN Description */
+      UPDATE SSN
+      SET SSN_DESCRIPTION = :sSSN_DESC
+      WHERE SSN_ID = :sSSN;
+              
+    END                     
+END^
+

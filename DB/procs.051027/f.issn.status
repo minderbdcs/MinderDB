@@ -1,0 +1,7 @@
+
+insert into options(group_code, code, description) values('ISSN_STATU','AR','Archive');
+
+insert into options(group_code, code, description) values('PICK_STATU','CF','Confirmed');
+insert into options(group_code, code, description) values('PICK_STATU','UC','UnConfirmed');
+insert into options(group_code, code, description) values('PICK_STATU','DA','Approved for Despatch');
+

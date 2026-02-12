@@ -1,0 +1,45 @@
+/*
+create domain connote_prefix varchar(18);
+alter table carrier alter connote_prefix type connote_prefix;
+
+create domain connote_version varchar(2);
+alter table carrier add c_version connote_version; 
+
+create domain connote_max_sequence int;
+alter table carrier add c_max_sequence connote_max_sequence; 
+*/
+
+/*
+create domain connote_version_from varchar(30);
+create domain connote_version_to varchar(30);
+create domain connote_freight_paid char(1);
+
+alter table carrier_service add cs_version connote_version; 
+alter table carrier_service add cs_date_version_from connote_version_from; 
+alter table carrier_service add cs_date_version_to   connote_version_to  ; 
+alter table carrier_service add cs_freight_paid connote_freight_paid; 
+*/
+
+/*
+create domain address_lines varchar(100);
+alter table pick_despatch add pd_send_to_addr1 address_lines; 
+alter table pick_despatch add pd_send_to_addr2 address_lines; 
+alter table pick_despatch add pd_send_to_addr3 address_lines; 
+alter table pick_despatch add pd_send_to_addr4 address_lines; 
+alter table pick_despatch add pd_send_to_addr5 address_lines; 
+alter table pick_despatch add pd_send_to_addr6 address_lines; 
+alter table pick_despatch add pd_send_to_addr7 address_lines; 
+*/
+
+/*
+pack_id al prefix 8008 + yymmddhhmmss
+*/
+
+
+create domain check_digit varchar(2);
+
+alter domain despatch_label_no type varchar(96);
+
+alter table pack_id add despatch_label_no_2d despatch_label_no; 
+alter table pack_id add pack_check_digit check_digit; 
+alter table pack_id add pack_freight_paid connote_freight_paid; 

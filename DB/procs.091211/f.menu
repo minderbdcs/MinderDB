@@ -1,0 +1,106 @@
+/*
+RECORD_ID
+SM_VARIANT        CODE NOT NULL  -* e.g. `LOAN', `MUSEUM', `PRODUCT', 'TOOL', 'ASSET' - Use new CONTROL.VARIANT field for value *-
+SM_TITLE          CODE30         -* VARCHAR(30) Menu Level 1 e.g.  `Home', `Warehouse', `Orders', `Receipts', `Despatches', `Reports'... *-
+SM_NAME           CODE30         -* PHP Application Name e.g.  `HOME_1', `WAREHOUSE_1', `ORDER_1', `RECEIPT_1' .....*-
+SM_SUB_NAME       CODE30         -*  <---------------------------Frank to explain *-
+SM_COMPANY_ID     COMPANY_ID     -* Used to limit access by User's Company ID, default CONTROL.COMPANY_ID   *-
+SM_WH_ID          WH_ID          -* Used to limit access by User's WH_ID Limits *-
+SM_USER_CATEGORY  CODE_TWO       -* New SYS_USER Table field = `USER_CATEGORY'. E.g. I1 = Inventory Operator Level 1, 
+                                    S1 = Sales Operator Level 1, V1 = Visitor Level 1, A1= Administration Level *-
+LAST_UPDATED      TIMESTAMP
+UPDATED_BY        USER_ID
+*/
+
+ALTER TABLE CONTROL ADD MINDER_VARIANT  CODE;
+ALTER TABLE CONTROL ADD WHM_VARIANT  CODE;
+insert into options(group_code, code, description) values ('StartMenu','WHM','xx');
+insert into options(group_code, code, description) values ('StartMenu','PRODUCT','xy');
+insert into options(group_code, code, description) values ('StartMenu','MUSEUM','xz');
+insert into options(group_code, code, description) values ('StartMenu','LOAN','xa');
+
+
+ALTER TABLE SYS_USER ADD USER_CATEGORY CODE_TWO;
+ALTER TABLE SYS_USER ADD WHM_START_MENU CODE;
+ALTER TABLE SYS_USER ADD MINDER_START_MENU CODE;
+
+CREATE TABLE SYS_MENU (RECORD_ID INTEGER NOT NULL,
+        SM_MENU_ID CODE,
+        SM_SUBMENU_ID CODE,
+        SM_SEQUENCE SEQUENCE_NO,
+        SM_TITLE CODE,
+        SM_MENU_TYPE CODE NOT NULL,
+        SM_NOTES NOTES,
+        SM_USER_CATEGORY CODE_TWO,
+        SM_DEVICE_TYPE DEVICE_TYPE,
+        SM_WH_ID WH_ID,
+        SM_COMPANY_ID COMPANY,
+        SM_MENU_STATUS STATUS,
+        LAST_UPDATE_DATE LAST_UPDATE_DATE,
+        LAST_UPDATE_BY USER_ID,
+        SM_MENU_ACTION CODE_255,
+        SM_NAME CODE_255,
+        SM_MENU_IMAGE CODE_255,
+        SM_MENU_METHOD CODE_TWO,
+        SM_MENU_ALT CODE_255,
+PRIMARY KEY (RECORD_ID));
+
+/*
+ok a user has a start menu eg 'AM'
+get the sys_menu for sm_MENU_ID = 'AM'
+
+if submenu id is not null then this is the id of the next menu that this option goes to
+the name is the location of the screen to run
+*/
+
+
+COMMENT ON TABLE  SYS_MENU IS 'A user has a start menu coming from either the control table or a field in sys_user
+so this will require a menu type to go with the start menu 
+- to differentiate a whm menu versus  another sort this is the field SM_MENU_TYPE ( it was SM_VARIANT - but I extended its use)
+for example the sys_user has "AM" for a start and SM_MENU_TYPE "product" 
+this will be the SM_MENU_ID to look for (for that SM_MENU_TYPE)
+(and matching SM_USER_TYPE, SM_DEVIVE_TYPE, SM_WH_ID and SM_COMPANY_ID) = as in the SYS_SCREEN
+so that if these fields are null then this record applies to all
+I have used SM_USER_TYPE rather then SM_USER_CATEGORY as that name was in the SYS_SCREEN - 
+
+ordered by the SM_SEQUENCE
+where the SM_MENU_STATUS is "OK"
+
+If the record retrieved has a non null SM_SUBMENU_ID then this is the next menu to go to
+(rather than using the SM_ACTION ...)
+
+The Handhelds use
+SM_MENU_ACTION as the action to be performed
+SM_MENU_ALT as the Alt part of the menu item
+SM_MENU_IMAGE as the source for the image used SRC
+SM_MENU_METHOD as the Menu Code ID to search for eg "PO4" for the forth Pick by Order that FPG Use
+SM_NAME as the forms Name
+
+';
+
+
+CREATE INDEX SYS_MENU_NAME_IDX ON SYS_MENU( SM_NAME);
+CREATE INDEX SYS_MENU_ID_IDX ON SYS_MENU( SM_MENU_ID);
+
+
+CREATE GENERATOR SYS_MENU_ID_GEN;
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+CREATE TRIGGER ADD_SYS_MENU FOR SYS_MENU
+ACTIVE BEFORE INSERT POSITION 10 
+AS
+BEGIN
+   IF ((NEW.RECORD_ID IS NULL) OR (NEW.RECORD_ID = 0)) THEN
+   BEGIN
+      NEW.RECORD_ID  = GEN_ID(SYS_MENU_ID_GEN,1);
+   END
+   NEW.LAST_UPDATE_DATE = 'NOW';
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

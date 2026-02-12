@@ -1,0 +1,2 @@
+update pick_despatch set last_update_date='NOW' where pickd_manifest_id is not null;
+

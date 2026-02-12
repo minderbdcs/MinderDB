@@ -1,0 +1,5 @@
+alter table prod_profile add CREATE_DATE CREATE_DATE;
+alter table prod_profile add CREATE_BY   PERSON;
+
+update prod_profile set create_date=last_update_date, create_by='bdcs';
+

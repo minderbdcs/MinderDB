@@ -1,0 +1,410 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP   TRIGGER RUN_TRANSACTION_PKTR ^
+COMMIT^
+
+CREATE TRIGGER RUN_TRANSACTION_PKTR FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 146 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_ISSUE_TO VARCHAR(10);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_PRODUCT VARCHAR(30);
+DECLARE VARIABLE WK_ISSN_ID VARCHAR(30);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_TRN_TYPE VARCHAR(4);
+DECLARE VARIABLE WK_TRN_CODE CHAR(1);
+DECLARE VARIABLE WK_AUDIT_DESC VARCHAR(40);
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_SO_ID VARCHAR(10);
+
+DECLARE VARIABLE WK_PICK_LABEL_NO CHAR(8);
+DECLARE VARIABLE WK_PICK_LABEL_START INTEGER;
+DECLARE VARIABLE WK_PICK_LABEL_STOP INTEGER;
+DECLARE VARIABLE WK_PICK_LABEL_PREFIX INTEGER;
+DECLARE VARIABLE WK_LEN_LABEL_NO INTEGER;
+DECLARE VARIABLE WK_LABEL_LENGTH INTEGER;
+DECLARE VARIABLE WK_PICK_ADJUSTMENT INTEGER;
+DECLARE VARIABLE WK_L_PICK_LABEL_NO  VARCHAR(7);
+DECLARE VARIABLE WK_PI_PICK_LABEL_NO  VARCHAR(7);
+DECLARE VARIABLE WK_PI_NEW  CHAR(1);
+DECLARE VARIABLE WK_QTY_TOGET INTEGER;
+DECLARE VARIABLE WK_SSN_QTY INTEGER;
+DECLARE VARIABLE WK_SSN_ID VARCHAR(30);
+DECLARE VARIABLE WK_SSN_PICK_ORDER VARCHAR(30);
+DECLARE VARIABLE WK_SSN_STATUS CHAR(2);
+DECLARE VARIABLE WK_SSN_OK CHAR(1);
+DECLARE VARIABLE WK_REASON VARCHAR(40);
+DECLARE VARIABLE WK_REFERENCE VARCHAR(40);
+DECLARE VARIABLE iSSN_LENGTH INTEGER;
+DECLARE VARIABLE iSSN_ID INTEGER;
+DECLARE VARIABLE I_SSN_ID VARCHAR(20);
+DECLARE VARIABLE I_LEN_SSN_ID INTEGER;
+DECLARE VARIABLE LEN_SSN_ID INTEGER;
+DECLARE VARIABLE P_SSN_ID INTEGER;
+DECLARE VARIABLE WK_PARENT_SSN_ID VARCHAR(30);
+DECLARE VARIABLE WK_SAVE_SSN_ID VARCHAR(30);
+DECLARE VARIABLE WK_SAVE_PARENT_SSN_ID VARCHAR(30);
+DECLARE VARIABLE WK_FROM_WH_ID CHAR(2);
+DECLARE VARIABLE WK_FROM_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_PICK_LINE_NO  CHAR(4);
+
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKTR') THEN
+  BEGIN
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_SO_ID = NEW.SUB_LOCN_ID;
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_ISSN_ID = NEW.OBJECT;
+     WK_REFERENCE = NEW.REFERENCE;
+     IF (WK_REFERENCE IS NULL) THEN
+     BEGIN
+        WK_REFERENCE = 'Transfer Picked to ';
+     END
+     WK_QTY = NEW.QTY;
+     IF (WK_QTY IS NULL) THEN
+     BEGIN
+        WK_QTY = 0;
+     END
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_TRN_CODE = NEW.TRN_CODE;
+     WK_TRN_TYPE = NEW.TRN_TYPE;
+     WK_SAVE_SSN_ID = 'SAVE';
+     WK_SAVE_PARENT_SSN_ID = 'SAVE';
+
+     WK_AUDIT_DESC = :WK_REFERENCE || :WK_DEVICE ;
+/*
+     get order that is passed
+     if passed issn is a product
+     then use that product in the pick item
+     else use the issns ssn_id
+     does the record for ssn or product exist in the order
+     then update it
+         if it is for a product just add to the total
+     else
+         get label no for pick_item
+         create pick_item
+    'DS' status 
+
+     set qtytoget from qty passed
+     if null or zero use the issn's qty
+
+          if current_qty > qtytoget
+                split the issn so that we take the qtytoget
+                and create a pick_item_detail for it
+                and change the status to 'DS' 
+                set the qtytoget to 0
+          else
+                take all current_qty
+                create a pick_item_detail
+                change status to 'DS' 
+                reduce the qtytoget by the current_qty
+          if (qtytoget is zero)
+               break
+*/
+     WK_SSN_ID = '';
+     WK_SSN_QTY = 0;
+     WK_PARENT_SSN_ID = '';
+     WK_PRODUCT = '';
+     WK_SSN_PICK_ORDER = '';
+     SELECT SSN_ID, CURRENT_QTY, ORIGINAL_SSN, PROD_ID, PICK_ORDER, ISSN_STATUS, PREV_WH_ID, PREV_LOCN_ID
+         FROM ISSN
+         WHERE SSN_ID = :WK_ISSN_ID
+          INTO :WK_SSN_ID, :WK_SSN_QTY, :WK_PARENT_SSN_ID, :WK_PRODUCT, :WK_SSN_PICK_ORDER, :WK_SSN_STATUS, :WK_FROM_WH_ID, :WK_FROM_LOCN_ID;
+     IF (WK_PRODUCT IS NULL) THEN
+     BEGIN
+        WK_PRODUCT = '';
+     END
+     IF ((WK_SSN_PICK_ORDER IS NULL) OR (WK_SSN_PICK_ORDER = '')) THEN
+     BEGIN
+        WK_SSN_OK = 'T';
+     END
+     ELSE
+     BEGIN
+        EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'F', 'Invalid ISSN - Already Reserved');
+        EXIT;
+     END
+     IF ((WK_SSN_QTY IS NULL) OR (WK_SSN_QTY = 0)) THEN
+     BEGIN
+        EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'F', 'Invalid ISSN - No Qty');
+        EXIT;
+     END
+     WK_L_PICK_LABEL_NO = '';
+     WK_PI_PICK_LABEL_NO = '';
+     IF (WK_PRODUCT = '') THEN
+     BEGIN
+        /* ok want to use the qty as orders qty for this issn */
+        FOR SELECT PICK_LABEL_NO 
+        FROM PICK_ITEM 
+        WHERE PICK_ORDER = :WK_SO_ID
+        AND   SSN_ID = :WK_ISSN_ID
+        AND   PICK_LINE_STATUS IN ('DS','PG','PL','AL','OP')
+        INTO :WK_PI_PICK_LABEL_NO
+        DO
+        BEGIN
+           WK_L_PICK_LABEL_NO = :WK_PI_PICK_LABEL_NO;
+        END
+     END
+     ELSE
+     BEGIN
+        /* ok want to add the qty to orders qty for this product */
+        FOR SELECT PICK_LABEL_NO 
+        FROM PICK_ITEM 
+        WHERE PICK_ORDER = :WK_SO_ID
+        AND   PROD_ID = :WK_PRODUCT
+        AND   PICK_LINE_STATUS IN ('DS','PG','PL','AL','OP')
+        INTO :WK_PI_PICK_LABEL_NO
+        DO
+        BEGIN
+           WK_L_PICK_LABEL_NO = :WK_PI_PICK_LABEL_NO;
+        END
+     END
+
+     WK_PI_NEW = 'F';
+     IF (WK_L_PICK_LABEL_NO = '') THEN
+     BEGIN
+        /* no pick item search get the next label */ 
+        WK_PI_NEW = 'T';
+        /* Get length for label */   
+        SELECT MAX_LENGTH
+        FROM PARAM
+        WHERE DATA_ID = 'PICK'
+        INTO :WK_LABEL_LENGTH;
+        WK_PICK_LABEL_NO = GEN_ID(PICK_LABEL_GEN, 1);
+        WK_PICK_LABEL_START = GEN_ID(PICK_LABEL_START, 0);
+        WK_PICK_LABEL_STOP = GEN_ID(PICK_LABEL_STOP, 0);
+        WK_PICK_LABEL_PREFIX = GEN_ID(PICK_LABEL_PREFIX , 0);
+        IF (WK_PICK_LABEL_NO > WK_PICK_LABEL_STOP) THEN
+        BEGIN
+           WK_PICK_ADJUSTMENT = WK_PICK_LABEL_START - WK_PICK_LABEL_STOP;
+           WK_PICK_LABEL_NO = GEN_ID(PICK_LABEL_GEN, WK_PICK_ADJUSTMENT);
+           WK_PICK_LABEL_PREFIX = GEN_ID(PICK_LABEL_PREFIX , 1);
+           WK_PICK_LABEL_NO = WK_PICK_LABEL_START;
+        END
+        WK_LEN_LABEL_NO = STRLEN(ALLTRIM(WK_PICK_LABEL_NO)) + 1;     
+        /* Get Label prefix */      
+        WK_L_PICK_LABEL_NO = chr(WK_PICK_LABEL_PREFIX);
+        /* Padding leading with 0 */
+        WHILE (WK_LEN_LABEL_NO < WK_LABEL_LENGTH) DO
+        BEGIN
+           WK_L_PICK_LABEL_NO = WK_L_PICK_LABEL_NO || '0';      
+           WK_LEN_LABEL_NO = WK_LEN_LABEL_NO + 1;
+        END
+        WK_L_PICK_LABEL_NO = WK_L_PICK_LABEL_NO || ALLTRIM(WK_PICK_LABEL_NO);
+     END
+
+     WK_QTY_TOGET = WK_QTY;
+     IF (WK_QTY_TOGET = 0) THEN
+     BEGIN
+        WK_QTY_TOGET = WK_SSN_QTY;
+     END
+     /* add pick item */
+     IF (WK_PI_NEW = 'T') THEN
+     BEGIN
+        SELECT PICK_ORDER_LINE_NO 
+        FROM GET_SALE_LINES_NO(:WK_SO_ID) 
+        INTO :WK_PICK_LINE_NO ;
+        /* a new record is required */
+        IF (WK_PRODUCT = '') THEN
+        BEGIN
+           INSERT INTO PICK_ITEM(PICK_LABEL_NO,PICK_ORDER,SSN_ID,PICK_ORDER_QTY,PICKED_QTY,CREATE_DATE,USER_ID,DEVICE_ID,PICK_LINE_STATUS,WH_ID,PICK_LOCATION,DESPATCH_LOCATION,SSN_CONFIRM,PICK_ORDER_LINE_NO) 
+                  VALUES (:WK_L_PICK_LABEL_NO,:WK_SO_ID,:WK_ISSN_ID,:WK_QTY_TOGET,:WK_QTY_TOGET,:WK_DATE,:WK_USER,:WK_DEVICE,'DS',:WK_WH_ID,:WK_LOCN_ID,:WK_LOCN_ID,'F',:WK_PICK_LINE_NO);
+        END
+        ELSE
+        BEGIN
+           INSERT INTO PICK_ITEM(PICK_LABEL_NO,PICK_ORDER,PROD_ID,PICK_ORDER_QTY,PICKED_QTY,CREATE_DATE,USER_ID,DEVICE_ID,PICK_LINE_STATUS,WH_ID,PICK_LOCATION,DESPATCH_LOCATION,SSN_CONFIRM,PICK_ORDER_LINE_NO) 
+                  VALUES (:WK_L_PICK_LABEL_NO,:WK_SO_ID,:WK_PRODUCT,:WK_QTY_TOGET,:WK_QTY_TOGET,:WK_DATE,:WK_USER,:WK_DEVICE,'DS',:WK_WH_ID,:WK_LOCN_ID,:WK_LOCN_ID,'F',:WK_PICK_LINE_NO);
+        END
+     END
+     ELSE
+     BEGIN
+        /* an old record exists */
+        IF (WK_PRODUCT = '') THEN
+        BEGIN
+           UPDATE PICK_ITEM
+           SET PICK_ORDER_QTY =  :WK_QTY_TOGET,
+           PICKED_QTY =  :WK_QTY_TOGET,
+           USER_ID =  :WK_USER,
+           DEVICE_ID = :WK_DEVICE,
+           PICK_LINE_STATUS = 'DS',
+           WH_ID = :WK_WH_ID,
+           PICK_LOCATION = :WK_LOCN_ID,
+           DESPATCH_LOCATION = :WK_LOCN_ID
+           WHERE PICK_LABEL_NO =  :WK_L_PICK_LABEL_NO ;
+        END
+        ELSE
+        BEGIN
+           UPDATE PICK_ITEM
+           SET PICK_ORDER_QTY = PICK_ORDER_QTY +  :WK_QTY_TOGET,
+           PICKED_QTY = PICKED_QTY +  :WK_QTY_TOGET,
+           USER_ID =  :WK_USER,
+           DEVICE_ID = :WK_DEVICE,
+           PICK_LINE_STATUS = 'DS',
+           WH_ID = :WK_WH_ID,
+           PICK_LOCATION = :WK_LOCN_ID,
+           DESPATCH_LOCATION = :WK_LOCN_ID
+           WHERE PICK_LABEL_NO =  :WK_L_PICK_LABEL_NO
+           AND (PICKED_QTY IS NOT NULL);
+           UPDATE PICK_ITEM
+           SET PICK_ORDER_QTY = PICK_ORDER_QTY +  :WK_QTY_TOGET,
+           PICKED_QTY =  :WK_QTY_TOGET,
+           USER_ID =  :WK_USER,
+           DEVICE_ID = :WK_DEVICE,
+           PICK_LINE_STATUS = 'DS',
+           WH_ID = :WK_WH_ID,
+           PICK_LOCATION = :WK_LOCN_ID,
+           DESPATCH_LOCATION = :WK_LOCN_ID
+           WHERE PICK_LABEL_NO =  :WK_L_PICK_LABEL_NO
+           AND PICKED_QTY IS  NULL;
+        END
+     END
+     /* reserve issn */
+     UPDATE ISSN 
+     SET PICK_ORDER = :WK_L_PICK_LABEL_NO,
+     PREV_PREV_PACK_ID = PREV_PACK_ID,
+     PREV_PACK_ID = PACK_ID,
+     PACK_ID = NULL,
+     PREV_PREV_DESPATCH_ID = PREV_DESPATCH_ID,
+     PREV_DESPATCH_ID = DESPATCH_ID,
+     DESPATCH_ID = NULL
+     WHERE SSN_ID = :WK_ISSN_ID;
+
+     BEGIN
+        WK_SAVE_SSN_ID = WK_SSN_ID;
+        WK_SAVE_PARENT_SSN_ID = WK_PARENT_SSN_ID;
+        IF (WK_QTY_TOGET > 0) THEN
+        BEGIN
+           IF (WK_SSN_QTY > WK_QTY_TOGET) THEN
+           BEGIN
+              /*  SPlit it */
+              /* Get length for Barcode */   
+              EXECUTE PROCEDURE GET_BARCODE_LENGTH RETURNING_VALUES iSSN_LENGTH;
+              iSSN_ID = GEN_ID(ISSN_SSN_ID, 1);
+              P_SSN_ID = iSSN_ID - 1;
+              LEN_SSN_ID = STRLEN(P_SSN_ID);
+              I_SSN_ID = '';
+              I_LEN_SSN_ID = STRLEN(P_SSN_ID);
+                 
+              /* Padding leading with 0 */
+              WHILE (I_LEN_SSN_ID < :iSSN_LENGTH) DO
+              BEGIN
+                 I_SSN_ID = I_SSN_ID || '0';
+                 I_LEN_SSN_ID = I_LEN_SSN_ID + 1;
+              END
+              I_SSN_ID = I_SSN_ID || P_SSN_ID;
+                 
+              EXECUTE PROCEDURE PC_TRSS 
+              :WK_RECORD ,
+              :WK_WH_ID,
+              :WK_LOCN_ID,
+              :WK_SSN_ID,
+              'TRSS',
+              'A',
+              :WK_DATE,
+              :I_SSN_ID,
+              :WK_QTY_TOGET,
+              :WK_USER,
+              :WK_DEVICE;
+              /* take all this of the split issn */
+              UPDATE ISSN SET ISSN_STATUS = 'DS'
+               WHERE SSN_ID = :I_SSN_ID;
+               WK_REASON = 'Issued Split ' || :WK_QTY_TOGET || 'to User ' || :WK_USER ;
+               EXECUTE PROCEDURE ADD_SSN_HIST(:WK_WH_ID, :WK_LOCN_ID, :WK_PARENT_SSN_ID, 
+                       :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                       :WK_AUDIT_DESC , :WK_REASON, :WK_QTY_TOGET, :WK_USER, :WK_DEVICE); 
+               INSERT INTO PICK_ITEM_DETAIL 
+                   (PICK_LABEL_NO, 
+                    SSN_ID, 
+                    PICK_DETAIL_STATUS, 
+                    QTY_PICKED,
+                    USER_ID, 
+                    DEVICE_ID, 
+                    CREATE_DATE,
+                    FROM_WH_ID,
+                    FROM_LOCN_ID,
+                    DESPATCH_LOCATION)
+               VALUES (:WK_L_PICK_LABEL_NO, 
+                    :I_SSN_ID,
+                    'DS',
+                    :WK_QTY_TOGET,
+                    :WK_USER,
+                    :WK_DEVICE,
+                    :WK_DATE,
+                    :WK_FROM_WH_ID,
+                    :WK_FROM_LOCN_ID,
+                    :WK_LOCN_ID);
+                WK_QTY_TOGET = 0;
+           END
+           ELSE
+           BEGIN
+              /* take all this qty */
+              UPDATE ISSN SET ISSN_STATUS = 'DS'
+               WHERE SSN_ID = :WK_SSN_ID;
+               WK_REASON = 'Issued All ' || :WK_QTY || 'to User ' || :WK_USER ;
+               EXECUTE PROCEDURE ADD_SSN_HIST(:WK_WH_ID, :WK_LOCN_ID, :WK_SSN_ID, 
+                       :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                       :WK_AUDIT_DESC , :WK_REASON, :WK_QTY, :WK_USER, :WK_DEVICE); 
+               INSERT INTO PICK_ITEM_DETAIL 
+                   (PICK_LABEL_NO, 
+                    SSN_ID, 
+                    PICK_DETAIL_STATUS, 
+                    QTY_PICKED,
+                    USER_ID, 
+                    DEVICE_ID, 
+                    CREATE_DATE,
+                    FROM_WH_ID,
+                    FROM_LOCN_ID,
+                    DESPATCH_LOCATION)
+               VALUES (:WK_L_PICK_LABEL_NO, 
+                    :WK_SSN_ID,
+                    'DS',
+                    :WK_SSN_QTY,
+                    :WK_USER,
+                    :WK_DEVICE,
+                    :WK_DATE,
+                    :WK_FROM_WH_ID,
+                    :WK_FROM_LOCN_ID,
+                    :WK_LOCN_ID);
+                WK_QTY_TOGET = WK_QTY_TOGET - WK_SSN_QTY;
+           END
+        END
+     END
+
+   IF (WK_QTY_TOGET > 0) THEN
+   BEGIN
+      WK_REASON = 'Still to Pick ' || :WK_QTY_TOGET || ' OF ' || :WK_QTY ;
+      EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'F',:WK_REASON);
+      IF (WK_SAVE_SSN_ID <> 'SAVE') THEN
+      BEGIN
+         UPDATE ISSN SET ISSN_STATUS = 'DS'
+         WHERE SSN_ID = :WK_SAVE_SSN_ID;
+         WK_REASON = 'Issued Negative ' || :WK_QTY_TOGET || 'to User ' || :WK_USER ;
+         EXECUTE PROCEDURE ADD_SSN_HIST(:WK_WH_ID, :WK_LOCN_ID, :WK_SAVE_PARENT_SSN_ID, 
+                       :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                       :WK_AUDIT_DESC , :WK_REASON, :WK_QTY_TOGET, :WK_USER, :WK_DEVICE); 
+      END
+   END
+   ELSE
+   BEGIN
+      EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+   END
+   /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+  END
+ END
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

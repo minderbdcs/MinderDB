@@ -1,0 +1,253 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+CREATE OR ALTER TRIGGER RUN_TRANSACTION_DSGS FOR TRANSACTIONS
+
+ACTIVE AFTER INSERT POSITION 137
+
+AS
+
+
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+
+DECLARE VARIABLE WK_USER VARCHAR(10);
+
+DECLARE VARIABLE WK_RECORD INTEGER;
+
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+
+DECLARE VARIABLE WK_SUB_LOCN_ID VARCHAR(10);
+
+DECLARE VARIABLE WK_OBJECT VARCHAR(30);
+
+DECLARE VARIABLE WK_REF VARCHAR(1024);
+
+DECLARE VARIABLE WK_QTY INTEGER;
+
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+
+
+
+DECLARE VARIABLE WK_SSCC_FOUND INTEGER;
+
+DECLARE VARIABLE WK_PS_DX INTEGER ;
+
+DECLARE VARIABLE WK_PS_DY INTEGER ;
+
+DECLARE VARIABLE WK_PS_DZ INTEGER ;
+
+DECLARE VARIABLE WK_PS_VOL INTEGER;
+
+DECLARE VARIABLE WK_PS_WT INTEGER ;
+
+DECLARE VARIABLE WK_PS_TOT_OUT INTEGER ;
+
+DECLARE VARIABLE WK_PS_DIM_UOM CHAR(2);
+
+DECLARE VARIABLE WK_PS_VOL_UOM CHAR(2) ;
+
+DECLARE VARIABLE WK_PS_WT_UOM CHAR(2) ;
+
+DECLARE VARIABLE WK_PS_STATUS CHAR(2);	 
+
+DECLARE VARIABLE WK_DESPATCH_ID INTEGER;
+
+DECLARE VARIABLE WK_CONSIGNMENT VARCHAR(30);
+
+
+
+DECLARE VARIABLE WK_FILENAME VARCHAR(255);
+
+DECLARE VARIABLE WK_RESULT INTEGER;
+
+DECLARE VARIABLE WK_RESPONSE_FINAL VARCHAR(255);
+
+
+
+/* Update PACK_SSCC record. 4 April 2014 GSN
+
+
+
+Required: At time of completing Awaiting Checking of an
+
+SSCC the Operator scans the SSCC to confirm completion.
+
+Updates the PACK_SSCC record Status from ‘GO’ to ‘DC’,
+
+Qty Shipped (on this SSCC), Despatch details - dimensions,
+
+weight, total Outers (Cartons).
+
+Processing required: (uses example data only)
+
+TRN_TYPE = 'DSGS' (was DSSS Feb 2014)
+
+TRN_CODE = 'D'
+
+OBJECT = ‘00393123450000000019’ - PS_SSCC - SSCC
+
+scanned Barcode Number use to search for record.
+
+Update PACK_SSCC.PS_LAST_UPDATE_DATE =NOW(),
+
+PACK_SSCC.PS_SSCC__STATUS =’DC’,
+
+PACK_SSCC.PS_LAST_UPDATE_BY =’glenn’,
+
+
+
+Example Reference field holds =
+
+‘|PS_SSCC_STATUS=DC|PS_SSCC_DIM_X=30|
+
+PS_SSCC_DIM_Y=30|PS_SSCC_DIM_Z=16|PS_SSCC_CUBIC=
+
+0.014|PS_SSCC_WEIGHT = 3.4|PS_TOTAL_OUTERS=1|'
+
+But realise we need to pass the UOM's as User can chnage these at time of Checking Order
+
+'PS_SSCC_DIM_UOM ='CM'|PS_SSCC_VOL_UOM='M3'|PS_SSCC_WEIGHT_UOM=KG'|
+
+
+
+QTY = 1 Quantity Shipped (scanned Item's with same PROD_ID)
+
+COMPANY_ID = ‘PSGROUP’ - Inventory Owner
+
+ORDER_NO = ’33333333’ - Order No.
+
+ORDER_TYPE = TBA i.e. ‘GO’, etc
+
+ORDER_SUB_TYPE = ‘SA’ - EDI Order, Type SA as previously
+
+extracted from import EDI Order data file.
+
+
+
+Further mods reqd - Handle no SSCC BArcode FL suggest the Screen should check this first that means double traffic, 
+
+What if PACK_STATUS already 'DC'
+
+*/
+
+BEGIN
+
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+
+ IF (WK_AUTORUN = 1) THEN
+
+ BEGIN
+
+  IF (NEW.TRN_TYPE = 'DSGS') THEN
+
+  BEGIN
+
+     WK_DEVICE = NEW.DEVICE_ID;
+
+     WK_OBJECT = NEW.OBJECT;
+
+     WK_WH_ID = NEW.WH_ID;
+
+     WK_LOCN_ID = NEW.LOCN_ID;
+
+     WK_SUB_LOCN_ID = NEW.SUB_LOCN_ID;
+
+     WK_USER = NEW.PERSON_ID;
+
+     WK_REF = ALLTRIM(NEW.REFERENCE);
+
+     WK_QTY = NEW.QTY;
+
+     WK_DATE = NEW.TRN_DATE;
+
+     WK_RECORD = NEW.RECORD_ID;
+
+     WK_FILENAME = '/tmp/DSGS.log'; /* whilst failed transaction gets rolled back the log file remains */
+
+     WK_DESPATCH_ID = 0 ;
+
+     WK_CONSIGNMENT = '' ;
+
+     WK_SSCC_FOUND = 0 ;
+
+     WK_PS_STATUS = '';
+
+     WK_PS_DX = 0 ;
+
+     WK_PS_DY = 0 ;
+
+     WK_PS_DZ = 0 ;
+
+     WK_PS_VOL = 0;
+
+     WK_PS_WT = 0 ;
+
+     WK_PS_TOT_OUT = 0 ;
+
+     WK_PS_DIM_UOM = '' ;
+
+     WK_PS_VOL_UOM = '' ;
+
+     WK_PS_WT_UOM = '' ;
+
+ 
+
+     SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REF, 2, '|' ) INTO :WK_PS_STATUS;
+
+     SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REF, 3, '|' ) INTO :WK_PS_DX ;
+
+     SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REF, 4, '|' ) INTO :WK_PS_DY ;
+
+     SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REF, 5, '|' ) INTO :WK_PS_DZ ;
+
+     SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REF, 6, '|' ) INTO :WK_PS_VOL ;
+
+     SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REF, 7, '|' ) INTO :WK_PS_WT ;
+
+     SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REF, 8, '|' ) INTO :WK_PS_TOT_OUT ;
+
+     SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REF, 9, '|' ) INTO :WK_PS_DIM_UOM ;
+
+     SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REF, 10, '|' ) INTO :WK_PS_VOL_UOM ;
+
+     SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REF, 11, '|' ) INTO :WK_PS_WT_UOM ;
+
+    	 WK_PS_DX = CAST(WK_PS_DX AS NUMERIC(9,3));
+
+            WHEN SQLCODE -413
+
+            DO
+
+            BEGIN
+
+               /* No Dimension X */
+
+               WK_PS_DX = 10.0;
+
+            END
+
+	 
+
+	 WK_PS_DY = CAST(WK_PS_DY AS NUMERIC(9,3));
+
+            WHEN SQLCODE -413
+
+            DO
+
+            BEGIN
+
+               /* No Dimension Y */
+
+               WK_PS_DY = 10.0;
+
+            END
+
+	 
+
+	 WK_PS_DZ = CAST(WK_PS_DZ AS NUMERIC(9,3));
+

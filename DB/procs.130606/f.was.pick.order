@@ -1,0 +1,21 @@
+transaction PKZO
+	pick of order with stock from the zones for the 
+	orders company 
+	thus the zones where the company is null
+	and the product of the location is not null
+	and the device  of the zone 
+	matches the device for the ugly area
+
+	transfer the order from the default device
+	(to the one specified ??)
+
+	for lines in pick_item for order
+		and line_line_status in ('AL','PG')
+		or (PL and no reason)
+	begin
+		find a location for product in zone
+		do PKOL/P
+	end
+	if any lines PG or PL on device
+	do PKIL/M to despatch locn ????
+

@@ -1,0 +1,3 @@
+ select pick_order.pick_order 
+from pick_order join pick_item on pick_item.pick_order = pick_order.pick_order join pick_item_detail on pick_item_detail.pick_label_no = pick_item.pick_label_no
+group by pick_order.pick_order ;

@@ -1,0 +1,9 @@
+/*
+generate sql for update to issn
+*/
+select 'update issn set label_date = cast(' || chr(39) || cast(label_date as varchar(24)) || chr(39) || ' as timestamp)' || 
+',original_qty=' || chr(39) || original_qty || chr(39) ||  
+',company_id=' || chr(39) || nonull(company_id) || chr(39) ||  
+',serial_number=' || chr(39) || nonull(serial_number) || chr(39) ||  
+',division_id=' || chr(39) || nonull(division_id) || chr(39) ||  
+' where original_ssn = ' || chr(39) || ssn_id || chr(39) || chr(59) from ssn;

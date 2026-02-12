@@ -1,0 +1,4 @@
+alter table sys_user add default_wh_id wh_id;
+
+update sys_user set default_wh_id = (select min(wh_id) from warehouse );
+

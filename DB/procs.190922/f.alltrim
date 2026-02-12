@@ -1,0 +1,21 @@
+/*
+43:DECLARE EXTERNAL FUNCTION ALLTRIM
+46:ENTRY_POINT 'fudlib_alltrim' MODULE_NAME 'fudlib';
+48:DECLARE EXTERNAL FUNCTION ALLTRIMC
+51:ENTRY_POINT 'fudlib_alltrimc' MODULE_NAME 'fudlib';
+563:DECLARE EXTERNAL FUNCTION V4ALLTRIM
+566:ENTRY_POINT 'fudlib_alltrim' MODULE_NAME 'fudlib';
+568:DECLARE EXTERNAL FUNCTION V6ALLTRIM
+571:ENTRY_POINT 'fudlib_alltrim' MODULE_NAME 'fudlib';
+578:DECLARE EXTERNAL FUNCTION VALLTRIM
+581:ENTRY_POINT 'fudlib_alltrim' MODULE_NAME 'fudlib';
+583:DECLARE EXTERNAL FUNCTION VALLTRIMC
+586:ENTRY_POINT 'fudlib_alltrimc' MODULE_NAME 'fudlib';
+*/
+
+drop external function valltrimc ;
+drop external function valltrim ;
+drop external function v6alltrim ;
+drop external function v4alltrim ;
+drop external function alltrimc ;
+drop external function alltrim ;

@@ -1,0 +1,1 @@
+alter table pick_order add over_sized_reason code;

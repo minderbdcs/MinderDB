@@ -1,0 +1,306 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+DROP TRIGGER RUN_TRANSACTION_PPPP ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_PPPP FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 115 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_PROD_ID VARCHAR(30);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_SUBLOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_REF_ID VARCHAR(40);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_REF_2 VARCHAR(60);
+DECLARE VARIABLE WK_PALLET_CFG VARCHAR(2);
+DECLARE VARIABLE WK_PALLET_CARTONS_X VARCHAR(10);
+DECLARE VARIABLE WK_PALLET_CARTONS INTEGER;
+DECLARE VARIABLE WK_PALLET_LAYERS_X VARCHAR(10);
+DECLARE VARIABLE WK_PALLET_LAYERS INTEGER;
+DECLARE VARIABLE WK_PALLET_DESC VARCHAR(50);
+DECLARE VARIABLE WK_RECORD_ID INTEGER;
+DECLARE VARIABLE WK_DUMMY INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF (NEW.TRN_TYPE = 'PPPP') THEN
+      BEGIN
+         /* check exists */
+         WK_FOUND = 0;
+         WK_PROD_ID = NEW.OBJECT;
+         WK_WH_ID = NEW.WH_ID;
+         WK_LOCN_ID = NEW.LOCN_ID;
+         WK_SUBLOCN_ID = NEW.SUB_LOCN_ID;
+         WK_REF_ID = NEW.REFERENCE;
+         WK_QTY = NEW.QTY;
+         WK_USER = NEW.PERSON_ID;
+         WK_DEVICE = NEW.DEVICE_ID;
+         WK_DATE = NEW.TRN_DATE;
+         WK_RECORD_ID = NEW.RECORD_ID;
+
+  WK_REF_2 = WK_WH_ID || WK_LOCN_ID || WK_SUBLOCN_ID ;
+         EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REF_2, 1  RETURNING_VALUES :WK_PALLET_CFG ; 
+         EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REF_2, 2  RETURNING_VALUES :WK_PALLET_CARTONS_X; 
+         EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REF_2, 3  RETURNING_VALUES :WK_PALLET_LAYERS_X; 
+  WK_PALLET_DESC = WK_REF_ID ;
+
+         IF (WK_PALLET_CARTONS_X = '') THEN
+            WK_DUMMY = 0;
+         ELSE
+            WK_PALLET_CARTONS = CAST(WK_PALLET_CARTONS_X AS INTEGER);
+         IF (WK_PALLET_LAYERS_X = '') THEN
+            WK_DUMMY = 0;
+         ELSE
+            WK_PALLET_LAYERS = CAST(WK_PALLET_LAYERS_X AS INTEGER);
+          
+         /* do pallet */
+         SELECT 1 FROM PALLET_CFG   
+         WHERE PALLET_CFG_CODE = :WK_PALLET_CFG
+         INTO :WK_FOUND;
+         IF (WK_FOUND IS NULL) THEN
+         BEGIN
+            WK_FOUND = 0;
+         END
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            IF (WK_PALLET_CARTONS_X > '') THEN
+            BEGIN
+               IF (WK_PALLET_LAYERS_X > '') THEN
+               BEGIN
+                  IF (WK_PALLET_DESC > '') THEN
+                  BEGIN
+                     /* have all 3 */
+                     INSERT INTO PALLET_CFG(PALLET_CFG_CODE, PALLET_CFG_DESCRIPTION, TOTAL_CARTONS_LAYER, TOTAL_LAYERS) VALUES(:WK_PALLET_CFG, :WK_PALLET_DESC, :WK_PALLET_CARTONS, :WK_PALLET_LAYERS);
+                  END
+                  ELSE
+                  BEGIN
+                     /* have all bar desc */
+                     INSERT INTO PALLET_CFG(PALLET_CFG_CODE, PALLET_CFG_DESCRIPTION, TOTAL_CARTONS_LAYER, TOTAL_LAYERS) VALUES(:WK_PALLET_CFG, :WK_PALLET_CFG, :WK_PALLET_CARTONS, :WK_PALLET_LAYERS);
+                  END
+               END
+               ELSE
+               BEGIN
+                  IF (WK_PALLET_DESC > '') THEN
+                  BEGIN
+                     /* have all bar layers */
+                     INSERT INTO PALLET_CFG(PALLET_CFG_CODE, PALLET_CFG_DESCRIPTION, TOTAL_CARTONS_LAYER ) VALUES(:WK_PALLET_CFG, :WK_PALLET_DESC, :WK_PALLET_CARTONS );
+                  END
+                  ELSE
+                  BEGIN
+                     /* have only cartons */
+                     INSERT INTO PALLET_CFG(PALLET_CFG_CODE, PALLET_CFG_DESCRIPTION, TOTAL_CARTONS_LAYER ) VALUES(:WK_PALLET_CFG, :WK_PALLET_CFG, :WK_PALLET_CARTONS );
+                  END
+               END
+            END
+            ELSE
+            BEGIN
+               IF (WK_PALLET_LAYERS_X > '') THEN
+               BEGIN
+                  IF (WK_PALLET_DESC > '') THEN
+                  BEGIN
+                     /* have all bar cartons */
+                     INSERT INTO PALLET_CFG(PALLET_CFG_CODE, PALLET_CFG_DESCRIPTION, TOTAL_LAYERS) VALUES(:WK_PALLET_CFG, :WK_PALLET_DESC, :WK_PALLET_LAYERS);
+                  END
+                  ELSE
+                  BEGIN
+                     /* have only layers */
+                     INSERT INTO PALLET_CFG(PALLET_CFG_CODE, PALLET_CFG_DESCRIPTION, TOTAL_LAYERS) VALUES(:WK_PALLET_CFG, :WK_PALLET_CFG, :WK_PALLET_LAYERS);
+                  END
+               END
+               ELSE
+               BEGIN
+                  IF (WK_PALLET_DESC > '') THEN
+                  BEGIN
+                     /* have only desc */
+                     INSERT INTO PALLET_CFG(PALLET_CFG_CODE, PALLET_CFG_DESCRIPTION ) VALUES(:WK_PALLET_CFG, :WK_PALLET_DESC );
+                  END
+                  ELSE
+                  BEGIN
+                     /* have nothing */
+                     INSERT INTO PALLET_CFG(PALLET_CFG_CODE, PALLET_CFG_DESCRIPTION ) VALUES(:WK_PALLET_CFG, :WK_PALLET_CFG );
+                  END
+               END
+            END
+         END
+         ELSE
+         BEGIN
+            /* already exists - so update it */
+            IF (WK_PALLET_CARTONS_X > '') THEN
+            BEGIN
+               IF (WK_PALLET_LAYERS_X > '') THEN
+               BEGIN
+                  IF (WK_PALLET_DESC > '') THEN
+                  BEGIN
+                     /* have all 3 */
+                     UPDATE PALLET_CFG SET 
+                        PALLET_CFG_DESCRIPTION = :WK_PALLET_DESC, 
+                        TOTAL_CARTONS_LAYER = :WK_PALLET_CARTONS, 
+                        TOTAL_LAYERS = :WK_PALLET_LAYERS
+                        WHERE PALLET_CFG_CODE = :WK_PALLET_CFG;
+                  END
+                  ELSE
+                  BEGIN
+                     /* have all bar desc */
+                     UPDATE PALLET_CFG SET 
+                        TOTAL_CARTONS_LAYER = :WK_PALLET_CARTONS, 
+                        TOTAL_LAYERS = :WK_PALLET_LAYERS
+                        WHERE PALLET_CFG_CODE = :WK_PALLET_CFG;
+                  END
+               END
+               ELSE
+               BEGIN
+                  IF (WK_PALLET_DESC > '') THEN
+                  BEGIN
+                     /* have all bar layers */
+                     UPDATE PALLET_CFG SET 
+                        PALLET_CFG_DESCRIPTION = :WK_PALLET_DESC, 
+                        TOTAL_CARTONS_LAYER = :WK_PALLET_CARTONS 
+                        WHERE PALLET_CFG_CODE = :WK_PALLET_CFG;
+                  END
+                  ELSE
+                  BEGIN
+                     /* have only cartons */
+                     UPDATE PALLET_CFG SET 
+                        TOTAL_CARTONS_LAYER = :WK_PALLET_CARTONS 
+                        WHERE PALLET_CFG_CODE = :WK_PALLET_CFG;
+                  END
+               END
+            END
+            ELSE
+            BEGIN
+               IF (WK_PALLET_LAYERS_X > '') THEN
+               BEGIN
+                  IF (WK_PALLET_DESC > '') THEN
+                  BEGIN
+                     /* have all bar cartons */
+                     UPDATE PALLET_CFG SET 
+                        PALLET_CFG_DESCRIPTION = :WK_PALLET_DESC, 
+                        TOTAL_LAYERS = :WK_PALLET_LAYERS
+                        WHERE PALLET_CFG_CODE = :WK_PALLET_CFG;
+                  END
+                  ELSE
+                  BEGIN
+                     /* have only layers */
+                     UPDATE PALLET_CFG SET 
+                        TOTAL_LAYERS = :WK_PALLET_LAYERS
+                        WHERE PALLET_CFG_CODE = :WK_PALLET_CFG;
+                  END
+               END
+               ELSE
+               BEGIN
+                  IF (WK_PALLET_DESC > '') THEN
+                  BEGIN
+                     /* have only desc */
+                     UPDATE PALLET_CFG SET 
+                        PALLET_CFG_DESCRIPTION = :WK_PALLET_DESC 
+                        WHERE PALLET_CFG_CODE = :WK_PALLET_CFG;
+                  END
+                  ELSE
+                  BEGIN
+                     /* have nothing */
+                     WK_DUMMY = 1;
+                  END
+               END
+            END
+         END
+         /* do product */
+         SELECT 1 FROM PROD_PROFILE   
+         WHERE PROD_ID = :WK_PROD_ID
+         INTO :WK_FOUND;
+         IF (WK_FOUND IS NULL) THEN
+         BEGIN
+            WK_FOUND = 0;
+         END
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            IF (WK_QTY = 1) THEN
+            BEGIN
+               INSERT INTO PROD_PROFILE (
+                  PROD_ID, 
+                  SHORT_DESC, 
+                  PALLET_CFG_C, 
+                  LAST_UPDATE_DATE, 
+                  LAST_UPDATE_BY)
+                VALUES (
+                  :WK_PROD_ID, 
+                  :WK_PROD_ID, 
+                  :WK_PALLET_CFG, 
+                  :WK_DATE, 
+                  :WK_USER);
+            END
+            IF (WK_QTY = 2) THEN
+            BEGIN
+               INSERT INTO PROD_PROFILE (
+                  PROD_ID, 
+                  SHORT_DESC, 
+                  PALLET_CFG_ALTERNATE, 
+                  LAST_UPDATE_DATE, 
+                  LAST_UPDATE_BY)
+                VALUES (
+                  :WK_PROD_ID, 
+                  :WK_PROD_ID, 
+                  :WK_PALLET_CFG, 
+                  :WK_DATE, 
+                  :WK_USER);
+            END
+            IF (WK_QTY = 3) THEN
+            BEGIN
+               INSERT INTO PROD_PROFILE (
+                  PROD_ID, 
+                  SHORT_DESC, 
+                  PALLET_CFG_INNER, 
+                  LAST_UPDATE_DATE, 
+                  LAST_UPDATE_BY)
+                VALUES (
+                  :WK_PROD_ID, 
+                  :WK_PROD_ID, 
+                  :WK_PALLET_CFG, 
+                  :WK_DATE, 
+                  :WK_USER);
+            END
+         END
+         ELSE
+         BEGIN
+            IF (WK_QTY = 1) THEN
+            BEGIN
+               UPDATE PROD_PROFILE SET  
+                  PALLET_CFG_C =  :WK_PALLET_CFG, 
+                  LAST_UPDATE_DATE =  :WK_DATE, 
+                  LAST_UPDATE_BY = :WK_USER
+               WHERE PROD_ID = :WK_PROD_ID;
+            END
+            IF (WK_QTY = 2) THEN
+            BEGIN
+               UPDATE PROD_PROFILE SET  
+                  PALLET_CFG_ALTERNATE =  :WK_PALLET_CFG, 
+                  LAST_UPDATE_DATE =  :WK_DATE, 
+                  LAST_UPDATE_BY = :WK_USER
+               WHERE PROD_ID = :WK_PROD_ID;
+            END
+            IF (WK_QTY = 3) THEN
+            BEGIN
+               UPDATE PROD_PROFILE SET  
+                  PALLET_CFG_INNER =  :WK_PALLET_CFG, 
+                  LAST_UPDATE_DATE =  :WK_DATE, 
+                  LAST_UPDATE_BY = :WK_USER
+               WHERE PROD_ID = :WK_PROD_ID;
+            END
+         END
+         EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD_ID, 'T','Processed successfully');
+         /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+      END
+   END
+END ^
+ 
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

@@ -1,0 +1,117 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/*
+have to deal with changed format of the code in the options table
+ie ending with the table name (not in the middle of the code)
+*/
+/*
+use controls 
+legacy_ledger_accounts to control whether todo chart of accounts
+
+then lookup in options table using the company and account type to get the account to use
+ using group code 'CMPLGRCODE' 
+*/
+/*
+use controls ssn_generate_legacy_id to say whether to use generator ssn_legacy_id_gen for null legacy_id
+only use this for ssns without a prod_id
+the length of the field from the param.max_length  for param.data_id LEGACY
+the prefix of the legacy_id must be in param.data_prefix
+*/
+
+CREATE OR ALTER TRIGGER ADD_SSN_TIME FOR SSN 
+ACTIVE BEFORE INSERT POSITION 20 
+AS
+DECLARE VARIABLE WK_DO_CHART CHAR(1);
+DECLARE VARIABLE WK_LEGACY_CODE VARCHAR(50);
+DECLARE VARIABLE WK_LEGACY_LEDGER_CODE VARCHAR(50);
+DECLARE VARIABLE WK_FOUND  INTEGER;
+DECLARE VARIABLE WK_DO_LEGACY CHAR(1);
+DECLARE VARIABLE WK_LEGACY_ID  VARCHAR(20);
+BEGIN
+   NEW.LAST_UPDATE_DATE = 'NOW';
+   IF (NEW.CREATE_DATE IS NULL) THEN
+   BEGIN
+      NEW.CREATE_DATE = 'NOW';
+   END
+
+   WK_DO_CHART = 'F';
+   WK_DO_LEGACY = 'F';
+   SELECT LEGACY_LEDGER_ACCOUNTS , SSN_GENERATE_LEGACY_ID 
+   FROM CONTROL
+   INTO :WK_DO_CHART, :WK_DO_LEGACY;
+   IF (WK_DO_CHART IS NULL) THEN
+   BEGIN
+      WK_DO_CHART = 'F';
+   END
+   IF (WK_DO_LEGACY IS NULL) THEN
+   BEGIN
+      WK_DO_LEGACY = 'F';
+   END
+   IF (WK_DO_CHART = 'T') THEN
+   BEGIN
+      IF ((NEW.LEGACY_LEDGER_SALE_CODE IS NULL) OR (NEW.LEGACY_LEDGER_SALE_CODE = '')) THEN
+      BEGIN
+         /* no sale account code */
+         /* WK_LEGACY_CODE = NEW.COMPANY_ID || '|%|SALE_CODE'; */
+         WK_LEGACY_CODE = NEW.COMPANY_ID || '|SALE_CODE|%';
+         WK_LEGACY_LEDGER_CODE = '';
+         WK_FOUND = 0;
+         FOR SELECT DESCRIPTION 
+         FROM OPTIONS
+         WHERE GROUP_CODE = 'CMPLGRCODE'
+         AND CODE LIKE :WK_LEGACY_CODE 
+         INTO :WK_LEGACY_LEDGER_CODE    
+         DO
+         BEGIN
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               NEW.LEGACY_LEDGER_SALE_CODE = WK_LEGACY_LEDGER_CODE;
+               WK_FOUND = 1;
+            END
+         END
+      END
+      IF ((NEW.LEGACY_LEDGER_SALE_SSN_ID_CODE IS NULL) OR (NEW.LEGACY_LEDGER_SALE_SSN_ID_CODE = '')) THEN
+      BEGIN
+         /* no admin fee account code */
+         /* WK_LEGACY_CODE = NEW.COMPANY_ID || '|%|SALE_CODE'; */
+         WK_LEGACY_CODE = NEW.COMPANY_ID || '|SSN_ID_SALE_CODE|%';
+         WK_LEGACY_LEDGER_CODE = '';
+         WK_FOUND = 0;
+         FOR SELECT DESCRIPTION 
+         FROM OPTIONS
+         WHERE GROUP_CODE = 'CMPLGRCODE'
+         AND CODE LIKE :WK_LEGACY_CODE 
+         INTO :WK_LEGACY_LEDGER_CODE    
+         DO
+         BEGIN
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               NEW.LEGACY_LEDGER_SALE_SSN_ID_CODE = WK_LEGACY_LEDGER_CODE;
+               WK_FOUND = 1;
+            END
+         END
+      END
+   END
+   /* now the legacy id */
+   IF (WK_DO_LEGACY = 'T') THEN
+   BEGIN
+      IF ((NEW.PROD_ID IS NULL) OR (NEW.PROD_ID  = '')) THEN
+      BEGIN
+         IF ((NEW.LEGACY_ID IS NULL) OR (NEW.LEGACY_ID  = '')) THEN
+         BEGIN
+            WK_LEGACY_ID  = '';
+            SELECT LEGACY_ID 
+            FROM GET_NEXT_LEGACY ('LEGACY') 
+            INTO :WK_LEGACY_ID;
+            NEW.LEGACY_ID = WK_LEGACY_ID ;
+         END
+      END
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

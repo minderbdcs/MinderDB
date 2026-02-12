@@ -1,0 +1,5 @@
+insert into options (group_code,code,description) values ('WH_ST_MV','ZA','AR');
+insert into options (group_code,code,description) values ('WH_ST_MV','FH','ST');
+/* LOC_ST_MV */
+/* default move stat for locations created in sys_moves when location does not exist */
+

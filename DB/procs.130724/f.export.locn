@@ -1,0 +1,97 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+/* want export of location given a wh_id 
+ we will need to be passed which MINDER Warehouse ID (e.g.  'MV') to export as MINDER is a multi-warehouse system:
+   *  WH_ID - CHAR(2) e.g. 'MV' = Marrickville Warehouse
+   *  LOCN_ID - VARCHAR(10) - BUT we only use 8 AN except for System locations such as Hand Held devices.  Note the
+      Barcoded Location ID = WH_ID||LOCN_ID i.e. 'MVA1030101'
+  
+   *  LOCN_ID2 VARCHAR(20) - Alternate Location ID
+   *  LOCN_NAME VARCHAR(50) - Defaults to the Human Readable Location ID i.e. '[MV-A1-03-01-01]'
+   *  ZONE_C - CHAR(2) - Not used at TIFS but will be if we were to be controlling Order Assembly and REPLENISH = 'T'
+   *  TOG_C - CHAR(2) - Turnover Group Code - not used (yet) at TIFS.
+   *  LOCN_STAT - CHAR(2) - Location Status - e.g. 'OK' to use for Storage, 'CL' = Closed, 'CS' = Closed for Stocktake
+   *  MOVE_STAT - CHAR(2) - Movement Status - Inventory may acquire this Status when transferred into the Location e.g. 'RC'
+      = Receive Area i.e all Inventory receipted gets 'RC' ( or 'PA') Status, 'PA' = Awaiting Put Away, 'ST' - Available
+      Stock, 'QR' = Quarantine, 'DS'= Awaiting Despatch.
+   *  REPLENISH CHAR(1) - 'T' or 'F' - indicates if location must be monitored for automatic Replenishment. Must have
+      PROD_ID and MAX/MIN/REORDER_QTY values.
+   *  STORE_TYPE CHAR(2) - Storage Construction e.g. 'PR' = Pallet Racking, 'FS' = Floor Stacked, 'MS' = Metal Shelving,
+      'LS'=Long Span Racking, 'CP' = Cold Room Pallet Racking
+   *  STORE_AREA CHAR(2) - Generic Storage Classification. e.g. 'ST' = Standard Storage Area,
+   *  STORE_METH CHAR(2) - Materials Handling Method. e.g 'FL' = Forklift, 'PD' = Pedestrian
+   *  LOCN_TYPE VARCHAR(40) - Hold Racking Supplier's classification. Can be used for monitoring max racking safe working
+      limits.
+   *  PROD_ID VARCHAR(30) - Only allowed to store in this location this Product Code, also required if auto replenished
+   *  MAX_QTY INTEGER - Used if REPLENISH= 'T'
+   *  MIN_QTY INTEGER - Used if REPLENISH= 'T'
+   *  REORDER_QTY INTEGER - Used if REPLENISH= 'T'
+   *  LOCN_INT_DIMENSION_X NUMERIC(9,3) - Location Width
+   *  LOCN_INT_DIMENSION_Y NUMERIC(9,3) - Location Depth
+   *  LOCN_INT_DIMENSION_Z NUMERIC(9,3) - Location Height
+   *  LOCN_INT_DIMENSION_UOM CHAR(2) - e.g. 'MM'
+   *  LAST_UPDATE_DATE TIMESTAMP,
+   *  LAST_AUDITED_DATE TIMESTAMP
+
+*/
+
+CREATE OR ALTER PROCEDURE EXPORT_LOCATION  (
+IN_WH_ID VARCHAR(2)  ) 
+RETURNS (
+WH_ID                  VARCHAR(2) ,
+LOCN_ID                VARCHAR(10) ,
+LOCN_ID2               VARCHAR(20) ,
+LOCN_NAME              VARCHAR(50) ,
+ZONE_C                 VARCHAR(2) ,
+TOG_C                  VARCHAR(2) ,
+LOCN_STAT              VARCHAR(2) ,
+MOVE_STAT              VARCHAR(2) ,
+REPLENISH              VARCHAR(1) ,
+STORE_TYPE             VARCHAR(2) ,
+STORE_AREA             VARCHAR(2) ,
+STORE_METH             VARCHAR(2) ,
+LOCN_TYPE              VARCHAR(40) ,
+PROD_ID                VARCHAR(30) ,
+MAX_QTY                INTEGER ,
+MIN_QTY                INTEGER ,
+REORDER_QTY            INTEGER ,
+LOCN_INT_DIMENSION_X   NUMERIC(9, 3) , 
+LOCN_INT_DIMENSION_Y   NUMERIC(9, 3) , 
+LOCN_INT_DIMENSION_Z   NUMERIC(9, 3) , 
+LOCN_INT_DIMENSION_UOM VARCHAR(2) , 
+LAST_UPDATE_DATE       TIMESTAMP ,
+LAST_AUDITED_DATE      TIMESTAMP 
+
+ )
+AS 
+BEGIN 
+   /* =================================================================================================== */
+   BEGIN
+      FOR SELECT T1.WH_ID , T1.LOCN_ID , T1.LOCN_ID2 , T1.LOCN_NAME , T1.ZONE_C , T1.TOG_C  ,
+                 T1.LOCN_STAT , T1.MOVE_STAT , T1.REPLENISH , T1.STORE_TYPE , T1.STORE_AREA , T1.STORE_METH ,
+                 T1.LOCN_TYPE , T1.PROD_ID , T1.MAX_QTY , T1.MIN_QTY , T1.REORDER_QTY , T1.LOCN_INT_DIMENSION_X ,
+                 T1.LOCN_INT_DIMENSION_Y , T1.LOCN_INT_DIMENSION_Z , T1.LOCN_DIMENSION_UOM , T1.LAST_UPDATE_DATE , 
+                 T1.LAST_AUDITED_DATE 
+       FROM LOCATION  T1  
+       WHERE T1.WH_ID = :IN_WH_ID 
+       ORDER BY T1.LOCN_ID
+       INTO :WH_ID , :LOCN_ID , :LOCN_ID2 , :LOCN_NAME , :ZONE_C , :TOG_C  ,
+            :LOCN_STAT , :MOVE_STAT , :REPLENISH , :STORE_TYPE , :STORE_AREA , :STORE_METH ,
+            :LOCN_TYPE , :PROD_ID , :MAX_QTY , :MIN_QTY , :REORDER_QTY , :LOCN_INT_DIMENSION_X ,
+            :LOCN_INT_DIMENSION_Y , :LOCN_INT_DIMENSION_Z , :LOCN_INT_DIMENSION_UOM , :LAST_UPDATE_DATE , 
+            :LAST_AUDITED_DATE 
+       DO
+       BEGIN
+          SUSPEND;
+       END
+   END
+
+END ^
+
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

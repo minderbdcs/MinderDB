@@ -1,0 +1,169 @@
+
+ALTER PROCEDURE ADD_MASTER_DATA (TRN_TYPE VARCHAR(4) ,
+TRN_DATE TIMESTAMP,
+FIELD_VALUE VARCHAR(30) )
+AS 
+ 
+ 
+  
+
+DECLARE VARIABLE REC_EXIST INTEGER; 
+DECLARE VARIABLE strDESC VARCHAR(50);
+
+BEGIN
+
+   REC_EXIST = 0;
+   /* strDESC = "Created during audit " || :TRN_DATE; */
+   strDESC = FIELD_VALUE;
+   /* Check if record exists */ 
+   IF (:TRN_TYPE = 'NITP') THEN
+   BEGIN   /* SSN Type Table */
+     SELECT 1 
+     FROM SSN_TYPE
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+   
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+       INSERT INTO SSN_TYPE (CODE, DESCRIPTION)
+       VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NIOB') THEN
+   BEGIN   /* Generic Table */                           
+     SELECT 1 
+     FROM GENERIC
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+   
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+       INSERT INTO GENERIC (CODE, DESCRIPTION)
+       VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NIBC') THEN
+   BEGIN   /* Brand Table */                           
+     SELECT 1 
+     FROM BRAND
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+      
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+        INSERT INTO BRAND (CODE, DESCRIPTION)
+        VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NIMO') THEN
+   BEGIN   /* Model Table */                           
+     SELECT 1 
+     FROM MODEL
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+         
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+        INSERT INTO MODEL (CODE, DESCRIPTION)
+        VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NICC') THEN
+   BEGIN   /* Cost Center Table */                           
+     SELECT 1 
+     FROM COST_CENTRE
+     WHERE CODE = :FIELD_VALUE   
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO COST_CENTRE (CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END
+   ELSE IF (:TRN_TYPE = 'NILG') THEN
+   BEGIN   /* Legacy Table */                           
+     SELECT 1 
+     FROM LEGACY
+     WHERE LEGACY_ID = :FIELD_VALUE   
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO LEGACY (LEGACY_ID, LEGACY_DESCRIPTION)
+         VALUES (:FIELD_VALUE, :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIO6') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :FIELD_VALUE   
+       AND FIELD_CODE = '1'
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, '1', :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIO7') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :FIELD_VALUE   
+       AND FIELD_CODE = '2'
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, '2', :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIO8') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :FIELD_VALUE   
+       AND FIELD_CODE = '3'
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, '3', :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIO9') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :FIELD_VALUE   
+       AND FIELD_CODE = '4'
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, '4', :strDESC); 
+     END
+   END   
+   ELSE IF (:TRN_TYPE = 'NIOA') THEN
+   BEGIN   /* Product Description */                           
+     SELECT 1 
+     FROM PRODUCT_DESCRIPTION
+     WHERE TYPE_CODE = :FIELD_VALUE   
+       AND FIELD_CODE = '5'
+     INTO :REC_EXIST;
+            
+     IF (REC_EXIST = 0) THEN
+     BEGIN
+         INSERT INTO PRODUCT_DESCRIPTION (TYPE_CODE, FIELD_CODE, DESCRIPTION)
+         VALUES (:FIELD_VALUE, '5', :strDESC); 
+     END
+   END   
+ 
+END ^
+

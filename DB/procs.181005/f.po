@@ -1,0 +1,2 @@
+alter table pick_order add ALLOCATED_BY DEVICE_ID;
+alter table pick_order_dx add ALLOCATED_BY DEVICE_ID;

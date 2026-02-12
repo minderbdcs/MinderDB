@@ -1,0 +1,8 @@
+alter trigger save_purchase_order_line inactive;
+drop trigger save_purchase_order_line;
+commit;
+ 
+alter domain unit_price   type double precision;
+
+alter table purchase_order_line alter po_line_total  type double precision;
+

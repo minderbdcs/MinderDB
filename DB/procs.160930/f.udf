@@ -1,0 +1,14 @@
+alter external function file_writeln module_name 'udf_file';
+alter external function file_write module_name 'udf_file';
+alter external function nonull module_name 'udf_file';
+alter external function dquotedstr module_name 'udf_file';
+alter external function file_create module_name 'udf_file';
+alter external function file_delete module_name 'udf_file';
+alter external function file_rename module_name 'udf_file';
+alter external function file_concat module_name 'udf_file';
+alter external function numberformat module_name 'udf_file';
+alter external function padleft      module_name 'udf_file';
+alter external function padright     module_name 'udf_file';
+alter external function squotedstr   module_name 'udf_file';
+alter external function strformat    module_name 'udf_file';
+

@@ -1,0 +1,695 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+ALTER PROCEDURE PC_EXPORT_DESPATCH (WK_DESPATCH_ID INTEGER,
+WK_PRINTER CHAR(2) ,
+WK_RECORD_ID INTEGER )
+AS 
+  DECLARE VARIABLE WK_FILE_PATH VARCHAR(70);
+  DECLARE VARIABLE WK_FILE_PATH2 VARCHAR(70);
+  DECLARE VARIABLE WK_LABEL VARCHAR(256);
+  DECLARE VARIABLE WK_COMPANY VARCHAR(20);
+  DECLARE VARIABLE WK_ORDER VARCHAR(20);
+  DECLARE VARIABLE WK_ORDER_PREFIX VARCHAR(20);
+  DECLARE VARIABLE WK_EXPORT_ORDER VARCHAR(20);
+  DECLARE VARIABLE WK_PACK_TYPE CHAR(1);
+  DECLARE VARIABLE WK_WEIGHT DECIMAL(9,3);
+  DECLARE VARIABLE WK_RESULT INTEGER;
+  DECLARE VARIABLE WK_TRAN_DATE VARCHAR(24);
+  DECLARE VARIABLE WK_TRAN_DATE2 VARCHAR(24);
+  DECLARE VARIABLE WK_COUNTRY VARCHAR(25);
+  DECLARE VARIABLE WK_SATCHEL_QTY INTEGER;
+  DECLARE VARIABLE WK_EXPORT_METHOD VARCHAR(40);
+
+  DECLARE VARIABLE WK_PD_CONNOTE VARCHAR(20);
+  DECLARE VARIABLE WK_PD_CARRIER_ID VARCHAR(10);
+
+  DECLARE VARIABLE WK_PI_PICK_ORDER_LINE_NO VARCHAR(4);
+  DECLARE VARIABLE WK_PI_PICK_LABEL_NO VARCHAR(10);
+  DECLARE VARIABLE WK_PI_PICK_ORDER_QTY INTEGER;
+  DECLARE VARIABLE WK_PI_PICKED_QTY INTEGER;
+  DECLARE VARIABLE WK_PI_EXPORT_DESPATCH_QTY INTEGER;
+  DECLARE VARIABLE WK_PI_PICK_LINE_STATUS CHAR(2);
+
+  DECLARE VARIABLE WK_STATUS CHAR(2);
+  DECLARE VARIABLE WK_LAST_ORDER VARCHAR(20);
+  DECLARE VARIABLE WK_LAST_LINE VARCHAR(10);
+  DECLARE VARIABLE WK_LAST_QTY INTEGER;
+  DECLARE VARIABLE WK_LAST_CONNOTE VARCHAR(40);
+  DECLARE VARIABLE WK_LAST_CARRIER_ID VARCHAR(40);
+  DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(80); 
+  DECLARE VARIABLE WK_LOG_BUFFER VARCHAR(250);
+  DECLARE VARIABLE WK_LOG_RESULT INTEGER;
+  DECLARE VARIABLE WK_PI_K_ORDER VARCHAR(20);
+  DECLARE VARIABLE WK_PI_EXPORT_DESPATCH VARCHAR(2);
+  DECLARE VARIABLE WK_PO_EXPORTED_DESPATCH_FILE VARCHAR(80); 
+  DECLARE VARIABLE WK_LAST_EXPORTED_DESPATCH_FILE VARCHAR(80); 
+  DECLARE VARIABLE WK_DATE TIMESTAMP;
+
+BEGIN 
+   WK_LOG_FILENAME = '/tmp/exportDespatch.log'; 
+   SELECT EXPORT_DESPATCH_METHOD 
+   FROM CONTROL
+   INTO :WK_EXPORT_METHOD;
+   IF (WK_EXPORT_METHOD IS NULL) THEN
+   BEGIN
+      WK_EXPORT_METHOD = '';
+   END
+   IF (WK_EXPORT_METHOD = 'MGM-SATCHEL WEIGHT') THEN
+   BEGIN
+      WK_PACK_TYPE = 'P';
+  
+      WK_TRAN_DATE = MER_YEAR('NOW') || LPAD(MER_MONTH('NOW'),'0',2) || LPAD(MER_DAY('NOW'),'0',2) || 'T' || LPAD(MER_HOUR('NOW'),'0',2) || LPAD(MER_MINUTE('NOW'),'0',2) ;
+      /* GET THE PRINTER DIR */
+  
+      /* NEED THE DIRECTORY FOR THIS LABEL SET */
+      SELECT WORKING_DIRECTORY FROM SYS_EQUIP 
+      WHERE DEVICE_ID = :WK_PRINTER
+      INTO :WK_FILE_PATH;
+  
+      SELECT PD.AWB_CONSIGNMENT_NO, PO.COMPANY_ID, PO.P_COUNTRY, PD.PICKD_WT_ACTUAL, PO.OTHER3, PD.PACK_TYPE, PD.PICKD_SATCHEL_QTY
+      FROM PICK_DESPATCH PD 
+      LEFT OUTER JOIN PICK_ORDER PO ON PD.AWB_CONSIGNMENT_NO = PO.PICK_ORDER
+      WHERE PD.DESPATCH_ID = :WK_DESPATCH_ID
+      INTO :WK_ORDER, :WK_COMPANY, :WK_COUNTRY, :WK_WEIGHT, :WK_ORDER_PREFIX, :WK_PACK_TYPE, :WK_SATCHEL_QTY;
+      IF (WK_ORDER IS NULL) THEN
+      BEGIN
+         WK_ORDER = '';
+      END
+      IF (WK_ORDER_PREFIX IS NULL) THEN
+      BEGIN
+         WK_ORDER_PREFIX = '';
+      END
+      IF (WK_PACK_TYPE IS NULL) THEN
+      BEGIN
+         WK_PACK_TYPE = 'P';
+      END
+      IF (WK_SATCHEL_QTY IS NULL) THEN
+      BEGIN
+         WK_SATCHEL_QTY = 0;
+      END
+      WK_EXPORT_ORDER = SUBSTR(WK_ORDER,LEN(WK_ORDER_PREFIX) + 1,LEN(WK_ORDER));
+      WK_FILE_PATH2 = WK_FILE_PATH || WK_ORDER_PREFIX || 'DESPATCH' || WK_TRAN_DATE || '.TXT';
+       
+      WK_LABEL = '"' || WK_COMPANY || '","' ||
+          WK_EXPORT_ORDER || '","' ||
+          WK_WEIGHT || '","' ||
+          WK_PACK_TYPE || '","' ||
+          WK_COUNTRY || '","' ||
+          WK_SATCHEL_QTY || '"';
+   
+       WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+      IF (WK_RESULT <> 0) THEN
+      BEGIN
+         WK_FILE_PATH2 = WK_FILE_PATH || WK_ORDER_PREFIX || 'DESPATCH' || WK_TRAN_DATE || '.2XT';
+          WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+      END   
+      IF (WK_RESULT <> 0) THEN
+      BEGIN
+         WK_FILE_PATH2 = WK_FILE_PATH || WK_ORDER_PREFIX || 'DESPATCH' || WK_TRAN_DATE || '.3XT';
+          WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+      END   
+   END   
+
+   IF (WK_EXPORT_METHOD = 'PIN-PICK_ITEM QTY') THEN
+   BEGIN
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, 'pin-pick by item qty export start');
+      WK_TRAN_DATE2 =  LPAD(MER_DAY('NOW'),'0',2) || ' ' || SUBSTR(MONTH_OF_YEAR('NOW'),1,3) || ' ' || MER_YEAR('NOW') ||  ' ' || LPAD(MER_HOUR('NOW'),'0',2) || ':' || LPAD(MER_MINUTE('NOW'),'0',2) || ':' || LPAD(SEC('NOW'), '0', 2) ;
+      WK_TRAN_DATE = MER_YEAR('NOW') || LPAD(MER_MONTH('NOW'),'0',2) || LPAD(MER_DAY('NOW'),'0',2) || 'T' || LPAD(MER_HOUR('NOW'),'0',2) || LPAD(MER_MINUTE('NOW'),'0',2) ;
+      SELECT TRN_DATE 
+      FROM TRANSACTIONS 
+      WHERE RECORD_ID = :WK_RECORD_ID 
+      INTO :WK_DATE;
+      WK_LOG_BUFFER = 'tran date2 ' || WK_TRAN_DATE2;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER = 'tran date ' || WK_TRAN_DATE;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      /* GET THE PRINTER DIR */
+  
+      /* NEED THE DIRECTORY FOR THIS LABEL SET */
+      SELECT WORKING_DIRECTORY FROM SYS_EQUIP 
+      WHERE DEVICE_ID = :WK_PRINTER
+      INTO :WK_FILE_PATH;
+      WK_LOG_BUFFER = 'file path ' || WK_FILE_PATH;
+  
+      WK_LAST_ORDER = 'DONTHAVE';
+      WK_LAST_LINE  = 'DONTHAVE';
+      WK_LAST_QTY = 0;
+      WK_SATCHEL_QTY = 0;
+      WK_LOG_BUFFER = 'first set last qty to 0 - init ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LAST_CONNOTE  = '';
+      WK_LAST_CARRIER_ID  = '';
+      WK_LAST_EXPORTED_DESPATCH_FILE = ''; 
+      WK_PI_K_ORDER = '';
+      /* need order, line no, qty picked, date, connote, carrier, status */
+      /* am passed a despatch_id
+         which most likely is kit components
+         so we need to include the kits lines as well which will be with as null despatch_ida and pick_detail_status 'DX'
+         only send a file if 1 order is DX status
+                             2 order is part shipped
+         now since this is of an order that is DX status
+         save the orders in trans_work
+         then use all despatch_id's for that order ?
+
+      */
+      FOR SELECT PD.AWB_CONSIGNMENT_NO, PD.PICKD_CARRIER_ID, PO.PICK_ORDER, PI.PICK_ORDER_LINE_NO, PI.PICK_LABEL_NO, PI.PICK_ORDER_QTY, PI.PICKED_QTY, PI.EXPORTED_DESPATCH_QTY, PI.PICK_LINE_STATUS, PI.EXPORTED_DESPATCH, PO.EXPORTED_DESPATCH_FILE
+         FROM PICK_DESPATCH PD 
+         JOIN PICK_ITEM_DETAIL PID ON PD.DESPATCH_ID = PID.DESPATCH_ID
+         JOIN PICK_ITEM  PI ON PID.PICK_LABEL_NO = PI.PICK_LABEL_NO 
+         JOIN PICK_ORDER PO ON PI.PICK_ORDER = PO.PICK_ORDER
+         WHERE PD.DESPATCH_ID = :WK_DESPATCH_ID
+         AND PI.EXPORTED_DESPATCH IN ( 'F', 'K' )
+         AND PI.PICK_LINE_STATUS IN ('OP','DX', 'CR')
+         GROUP BY  PD.AWB_CONSIGNMENT_NO, PD.PICKD_CARRIER_ID, PO.PICK_ORDER, PI.PICK_ORDER_LINE_NO, PI.PICK_LABEL_NO, PI.PICK_ORDER_QTY, PI.PICKED_QTY, PI.EXPORTED_DESPATCH_QTY, PI.PICK_LINE_STATUS, PI.EXPORTED_DESPATCH, PO.EXPORTED_DESPATCH_FILE   
+         INTO :WK_PD_CONNOTE, :WK_PD_CARRIER_ID, :WK_ORDER, :WK_PI_PICK_ORDER_LINE_NO, :WK_PI_PICK_LABEL_NO, :WK_PI_PICK_ORDER_QTY, :WK_PI_PICKED_QTY, :WK_PI_EXPORT_DESPATCH_QTY, :WK_PI_PICK_LINE_STATUS, :WK_PI_EXPORT_DESPATCH, :WK_PO_EXPORTED_DESPATCH_FILE
+      DO
+      BEGIN
+      WK_LOG_BUFFER = 'for loop of F K items got a record ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  WK_PD_CONNOTE;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+         IF (WK_ORDER IS NULL) THEN
+         BEGIN
+            WK_ORDER = '';
+         END
+         IF (WK_PD_CONNOTE IS NULL) THEN
+         BEGIN
+            WK_PD_CONNOTE = '';
+         END
+         IF (WK_PD_CARRIER_ID IS NULL) THEN
+         BEGIN
+            WK_PD_CARRIER_ID = '';
+         END
+         IF (WK_PI_PICK_ORDER_LINE_NO IS NULL) THEN
+         BEGIN
+            WK_PI_PICK_ORDER_LINE_NO = '';
+         END
+         IF (WK_PI_PICK_LABEL_NO IS NULL) THEN
+         BEGIN
+            WK_PI_PICK_LABEL_NO = '';
+         END
+         IF (WK_PI_PICK_ORDER_QTY IS NULL) THEN
+         BEGIN
+            WK_PI_PICK_ORDER_QTY = 0;
+         END
+         IF (WK_PI_PICKED_QTY IS NULL) THEN
+         BEGIN
+            WK_PI_PICKED_QTY = 0;
+         END
+         IF (WK_PI_EXPORT_DESPATCH_QTY IS NULL) THEN
+         BEGIN
+            WK_PI_EXPORT_DESPATCH_QTY = 0;
+         END
+         IF (WK_PO_EXPORTED_DESPATCH_FILE IS NULL) THEN
+         BEGIN
+            WK_PO_EXPORTED_DESPATCH_FILE = '';
+         END
+      WK_LOG_BUFFER =  'pi picked_qty ' || WK_PI_PICKED_QTY;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  'pi exported_qty ' || WK_PI_EXPORT_DESPATCH_QTY;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  'pi exported_despatch ' || WK_PI_EXPORT_DESPATCH;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  'pi label_no ' || WK_PI_PICK_LABEL_NO;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+         IF (WK_PI_EXPORT_DESPATCH = 'F') THEN
+         BEGIN
+            WK_SATCHEL_QTY = WK_PI_PICKED_QTY - WK_PI_EXPORT_DESPATCH_QTY;
+      WK_LOG_BUFFER =  'set satchel_qty ' || WK_SATCHEL_QTY;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+         WK_LOG_BUFFER = 'order ' || WK_ORDER ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+            /* need to sum the totals to get 1 line per pick_order_line_no */
+            /* if the net sum < 0 then status is RT
+               else DA  */
+            IF (WK_ORDER <> WK_LAST_ORDER) THEN
+            BEGIN
+      WK_LOG_BUFFER =  'last order different ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+               IF (WK_LAST_ORDER <> 'DONTHAVE') THEN
+               BEGIN
+                  /* calc the status */
+                  IF (WK_LAST_QTY < 0) THEN
+                  BEGIN
+                     WK_STATUS = 'RA';
+                  END
+                  ELSE
+                  BEGIN
+                     WK_STATUS = 'DA';
+                  END
+      WK_LOG_BUFFER =  'last order not donthave ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  WK_LAST_ORDER  ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  'last qty2 ' || :WK_LAST_QTY ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+                  /* write the sum line */
+                  WK_FILE_PATH2 = WK_FILE_PATH ||  'ORDER_STATUS' || WK_TRAN_DATE || '.CSV';
+         WK_LOG_BUFFER = 'file ' || WK_FILE_PATH2 ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+                  WK_LABEL =  WK_LAST_ORDER || ',' ||
+                      WK_LAST_LINE || ',' ||
+                      WK_LAST_QTY || ',' ||
+                      WK_TRAN_DATE2 || ',' ||
+                      WK_LAST_CONNOTE || ',' ||
+                      WK_LAST_CARRIER_ID || ',' ||
+                      WK_STATUS  ;
+         WK_LOG_BUFFER = 'file ' || WK_LABEL ;
+                  IF (WK_LAST_EXPORTED_DESPATCH_FILE = '') THEN
+                  BEGIN
+                     /* add to trans work for this order */
+                     INSERT INTO TRANSACTIONS_WORK (RECORD_ID, OBJECT, TRN_DATE)
+                     VALUES( :WK_RECORD_ID, :WK_LAST_ORDER,:WK_DATE) ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+                   WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                     IF (WK_RESULT <> 0) THEN
+                     BEGIN
+                        WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.2SV';
+                        WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                     END   
+                     IF (WK_RESULT <> 0) THEN
+                     BEGIN
+                        WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.3SV';
+                        WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                     END   
+                  END   
+               END
+               /* save the last fields */
+               WK_LAST_ORDER = WK_ORDER;
+               WK_LAST_LINE =  WK_PI_PICK_ORDER_LINE_NO;
+               WK_LAST_QTY =  0 ;
+      WK_LOG_BUFFER = 'set last qty to 0 - after write order changed ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+               WK_LAST_CONNOTE =  WK_PD_CONNOTE;
+               WK_LAST_EXPORTED_DESPATCH_FILE = WK_PO_EXPORTED_DESPATCH_FILE;
+               /* WK_LAST_CARRIER_ID =  WK_PD_CARRIER_ID; */
+            END
+            IF (WK_PI_PICK_ORDER_LINE_NO <> WK_LAST_LINE) THEN
+            BEGIN
+      WK_LOG_BUFFER =  'last line  different ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+               IF (WK_LAST_LINE  <> 'DONTHAVE') THEN
+               BEGIN
+                  /* calc the status */
+                  IF (WK_LAST_QTY < 0) THEN
+                  BEGIN
+                     WK_STATUS = 'RA';
+                  END
+                  ELSE
+                  BEGIN
+                     WK_STATUS = 'DA';
+                  END
+      WK_LOG_BUFFER =  'last line  not donthave ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  WK_LAST_LINE   ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  'last qty2 ' || :WK_LAST_QTY ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+                  /* write the sum line */
+                  WK_FILE_PATH2 = WK_FILE_PATH ||  'ORDER_STATUS' || WK_TRAN_DATE || '.CSV';
+                  WK_LABEL =  WK_LAST_ORDER || ',' ||
+                      WK_LAST_LINE || ',' ||
+                      WK_LAST_QTY || ',' ||
+                      WK_TRAN_DATE2 || ',' ||
+                      WK_LAST_CONNOTE || ',' ||
+                      WK_LAST_CARRIER_ID || ',' ||
+                      WK_STATUS ;
+       WK_LOG_BUFFER = WK_LABEL;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+                  IF (WK_LAST_EXPORTED_DESPATCH_FILE = '') THEN
+                  BEGIN
+                     WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                     IF (WK_RESULT <> 0) THEN
+                     BEGIN
+                        WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.2SV';
+                        WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                     END   
+                     IF (WK_RESULT <> 0) THEN
+                     BEGIN
+                        WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.3SV';
+                        WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                     END   
+                  END   
+               END
+               /* save the last fields */
+               WK_LAST_LINE = WK_PI_PICK_ORDER_LINE_NO;
+               WK_LAST_QTY =  0 ;
+      WK_LOG_BUFFER = 'set last qty to 0 - after write line changed ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+               WK_LAST_CONNOTE =  WK_PD_CONNOTE;
+               /* WK_LAST_CARRIER_ID =  WK_PD_CARRIER_ID; */
+            END
+      WK_LOG_BUFFER = 'wk_last_qty before ' || WK_LAST_QTY ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+            WK_LAST_QTY =  WK_LAST_QTY + WK_SATCHEL_QTY ;
+      WK_LOG_BUFFER = 'add to last qty ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER = 'wk_last_qty after  ' || WK_LAST_QTY ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+   
+   /*
+            WK_FILE_PATH2 = WK_FILE_PATH ||  'ORDER_STATUS' || WK_TRAN_DATE || '.CSV';
+          
+            WK_LABEL = '"' || WK_EXPORT_ORDER || '","' ||
+                WK_PI_PICK_ORDER_LINE_NO || '","' ||
+                WK_SATCHEL_QTY || '","' ||
+                WK_TRAN_DATE2 || '","' ||
+                WK_PD_CONNOTE || '","' ||
+                WK_PD_CARRIER_ID || '","' ||
+                WK_STATUS || '"';
+      
+            IF (WK_LAST_EXPORTED_DESPATCH_FILE = '') THEN
+            BEGIN
+             WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+               IF (WK_RESULT <> 0) THEN
+               BEGIN
+                  WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.2SV';
+                  WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+               END   
+               IF (WK_RESULT <> 0) THEN
+               BEGIN
+                  WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.3SV';
+                  WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+               END   
+            END   
+   */
+            /* now update this pick item */
+            UPDATE PICK_ITEM 
+            SET EXPORTED_DESPATCH = 'T',
+                EXPORTED_DESPATCH_QTY = :WK_PI_PICKED_QTY
+            WHERE PICK_LABEL_NO = :WK_PI_PICK_LABEL_NO;
+       WK_LOG_BUFFER = 'update pick item exported_despatch to T';
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+            /* add to trans work for this order */
+         END
+         ELSE
+         BEGIN
+            WK_PI_K_ORDER = WK_ORDER;
+         END
+      END /* end of do */  
+      /* now the same but for the Kitted Items */
+      WK_PI_EXPORT_DESPATCH = 'F';
+      WK_LOG_BUFFER = 'now for kit items  '  ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER = 'current order  ' || WK_LAST_ORDER ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER = 'current line   ' || WK_LAST_LINE  ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER = 'current qty    ' || WK_LAST_QTY   ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER = 'try to get for for order ' || WK_PI_K_ORDER ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      FOR SELECT PO.PICK_ORDER, PI.PICK_ORDER_LINE_NO, PI.PICK_LABEL_NO, PI.PICK_ORDER_QTY, PI.PICKED_QTY, PI.EXPORTED_DESPATCH_QTY, PI.PICK_LINE_STATUS, PI.EXPORTED_DESPATCH , PO.EXPORTED_DESPATCH_FILE
+         FROM PICK_ORDER PO    
+         JOIN PICK_ITEM  PI ON PO.PICK_ORDER  = PI.PICK_ORDER    
+         JOIN PICK_ITEM_DETAIL PID ON PI.PICK_LABEL_NO  = PID.PICK_LABEL_NO
+         WHERE PO.PICK_ORDER  = :WK_PI_K_ORDER
+         AND PI.EXPORTED_DESPATCH =  'F' 
+         AND PI.PICK_LINE_STATUS IN ('OP','DX', 'CR')
+         AND PID.DESPATCH_ID IS NULL
+         AND PID.PICK_DETAIL_STATUS IN ( 'DX', 'CR')
+         GROUP BY  PO.PICK_ORDER, PI.PICK_ORDER_LINE_NO, PI.PICK_LABEL_NO, PI.PICK_ORDER_QTY, PI.PICKED_QTY, PI.EXPORTED_DESPATCH_QTY, PI.PICK_LINE_STATUS, PI.EXPORTED_DESPATCH   
+         INTO :WK_ORDER, :WK_PI_PICK_ORDER_LINE_NO, :WK_PI_PICK_LABEL_NO, :WK_PI_PICK_ORDER_QTY, :WK_PI_PICKED_QTY, :WK_PI_EXPORT_DESPATCH_QTY, :WK_PI_PICK_LINE_STATUS, :WK_PI_EXPORT_DESPATCH , :WK_PO_EXPORTED_DESPATCH_FILE
+      DO
+      BEGIN
+      WK_LOG_BUFFER = 'got a record ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  WK_PD_CONNOTE;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+         IF (WK_ORDER IS NULL) THEN
+         BEGIN
+            WK_ORDER = '';
+         END
+         IF (WK_PI_PICK_ORDER_LINE_NO IS NULL) THEN
+         BEGIN
+            WK_PI_PICK_ORDER_LINE_NO = '';
+         END
+         IF (WK_PI_PICK_LABEL_NO IS NULL) THEN
+         BEGIN
+            WK_PI_PICK_LABEL_NO = '';
+         END
+         IF (WK_PI_PICK_ORDER_QTY IS NULL) THEN
+         BEGIN
+            WK_PI_PICK_ORDER_QTY = 0;
+         END
+         IF (WK_PI_PICKED_QTY IS NULL) THEN
+         BEGIN
+            WK_PI_PICKED_QTY = 0;
+         END
+         IF (WK_PI_EXPORT_DESPATCH_QTY IS NULL) THEN
+         BEGIN
+            WK_PI_EXPORT_DESPATCH_QTY = 0;
+         END
+         IF (WK_PO_EXPORTED_DESPATCH_FILE IS NULL) THEN
+         BEGIN
+            WK_PO_EXPORTED_DESPATCH_FILE = '';
+         END
+      WK_LOG_BUFFER =  'pi picked_qty ' || WK_PI_PICKED_QTY;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  'pi exported_qty ' || WK_PI_EXPORT_DESPATCH_QTY;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  'pi exported_despatch ' || WK_PI_EXPORT_DESPATCH;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  'pi label_no ' || WK_PI_PICK_LABEL_NO;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+         BEGIN
+            WK_SATCHEL_QTY = WK_PI_PICKED_QTY - WK_PI_EXPORT_DESPATCH_QTY;
+      WK_LOG_BUFFER =  'set satchel_qty ' || WK_SATCHEL_QTY;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+         WK_LOG_BUFFER = 'order ' || WK_ORDER ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+            /* need to sum the totals to get 1 line per pick_order_line_no */
+            /* if the net sum < 0 then status is RT
+               else DA  */
+            IF (WK_ORDER <> WK_LAST_ORDER) THEN
+            BEGIN
+      WK_LOG_BUFFER =  'last order different ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+               IF (WK_LAST_ORDER <> 'DONTHAVE') THEN
+               BEGIN
+                  /* calc the status */
+                  IF (WK_LAST_QTY < 0) THEN
+                  BEGIN
+                     WK_STATUS = 'RA';
+                  END
+                  ELSE
+                  BEGIN
+                     WK_STATUS = 'DA';
+                  END
+      WK_LOG_BUFFER =  'last line  not donthave ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  WK_LAST_ORDER  ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  'last qty2 ' || :WK_LAST_QTY ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+                  /* write the sum line */
+                  WK_FILE_PATH2 = WK_FILE_PATH ||  'ORDER_STATUS' || WK_TRAN_DATE || '.CSV';
+         WK_LOG_BUFFER = 'file ' || WK_FILE_PATH2 ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+                  WK_LABEL =  WK_LAST_ORDER || ',' ||
+                      WK_LAST_LINE || ',' ||
+                      WK_LAST_QTY || ',' ||
+                      WK_TRAN_DATE2 || ',' ||
+                      WK_LAST_CONNOTE || ',' ||
+                      WK_LAST_CARRIER_ID || ',' ||
+                      WK_STATUS  ;
+         WK_LOG_BUFFER = 'file ' || WK_LABEL ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+                  IF (WK_LAST_EXPORTED_DESPATCH_FILE = '') THEN
+                  BEGIN
+                     INSERT INTO TRANSACTIONS_WORK (RECORD_ID, OBJECT, TRN_DATE)
+                     VALUES( :WK_RECORD_ID, :WK_LAST_ORDER,:WK_DATE) ;
+                      WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                     IF (WK_RESULT <> 0) THEN
+                     BEGIN
+                        WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.2SV';
+                        WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                     END   
+                     IF (WK_RESULT <> 0) THEN
+                     BEGIN
+                        WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.3SV';
+                        WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                     END   
+                  END   
+               END
+               /* save the last fields */
+               WK_LAST_ORDER = WK_ORDER;
+               WK_LAST_LINE =  WK_PI_PICK_ORDER_LINE_NO;
+               WK_LAST_QTY =  0 ;
+      WK_LOG_BUFFER = 'set last qty to 0 - after write order changed ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+	       WK_LAST_EXPORTED_DESPATCH_FILE = WK_PO_EXPORTED_DESPATCH_FILE;
+               WK_LAST_CONNOTE =  WK_PD_CONNOTE;
+               /* WK_LAST_CARRIER_ID =  WK_PD_CARRIER_ID; */
+            END
+            IF (WK_PI_PICK_ORDER_LINE_NO <> WK_LAST_LINE) THEN
+            BEGIN
+      WK_LOG_BUFFER =  'last line  different ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+               IF (WK_LAST_LINE  <> 'DONTHAVE') THEN
+               BEGIN
+                  /* calc the status */
+                  IF (WK_LAST_QTY < 0) THEN
+                  BEGIN
+                     WK_STATUS = 'RA';
+                  END
+                  ELSE
+                  BEGIN
+                     WK_STATUS = 'DA';
+                  END
+      WK_LOG_BUFFER =  'last line  not donthave ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  WK_LAST_LINE   ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  'last qty2 ' || :WK_LAST_QTY ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+                  /* write the sum line */
+                  WK_FILE_PATH2 = WK_FILE_PATH ||  'ORDER_STATUS' || WK_TRAN_DATE || '.CSV';
+                  WK_LABEL =  WK_LAST_ORDER || ',' ||
+                      WK_LAST_LINE || ',' ||
+                      WK_LAST_QTY || ',' ||
+                      WK_TRAN_DATE2 || ',' ||
+                      WK_LAST_CONNOTE || ',' ||
+                      WK_LAST_CARRIER_ID || ',' ||
+                      WK_STATUS ;
+                  IF (WK_LAST_EXPORTED_DESPATCH_FILE = '') THEN
+                  BEGIN
+                     WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                     IF (WK_RESULT <> 0) THEN
+                     BEGIN
+                        WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.2SV';
+                        WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                     END   
+                     IF (WK_RESULT <> 0) THEN
+                     BEGIN
+                        WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.3SV';
+                        WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                     END   
+                  END   
+               END
+               /* save the last fields */
+               WK_LAST_LINE = WK_PI_PICK_ORDER_LINE_NO;
+               WK_LAST_QTY =  0 ;
+      WK_LOG_BUFFER = 'set last qty to 0 - after write order changed ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+               WK_LAST_CONNOTE =  WK_PD_CONNOTE;
+               /* WK_LAST_CARRIER_ID =  WK_PD_CARRIER_ID; */
+            END
+      WK_LOG_BUFFER = 'wk_last_qty before ' || WK_LAST_QTY ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+            WK_LAST_QTY =  WK_LAST_QTY + WK_SATCHEL_QTY ;
+      WK_LOG_BUFFER = 'add to last qty ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER = 'wk_last_qty after  ' || WK_LAST_QTY ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+   
+   /*
+            WK_FILE_PATH2 = WK_FILE_PATH ||  'ORDER_STATUS' || WK_TRAN_DATE || '.CSV';
+          
+            WK_LABEL = '"' || WK_EXPORT_ORDER || '","' ||
+                WK_PI_PICK_ORDER_LINE_NO || '","' ||
+                WK_SATCHEL_QTY || '","' ||
+                WK_TRAN_DATE2 || '","' ||
+                WK_PD_CONNOTE || '","' ||
+                WK_PD_CARRIER_ID || '","' ||
+                WK_STATUS || '"';
+      
+             WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+            IF (WK_RESULT <> 0) THEN
+            BEGIN
+               WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.2SV';
+               WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+            END   
+            IF (WK_RESULT <> 0) THEN
+            BEGIN
+               WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.3SV';
+               WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+            END   
+   */
+            /* now update this pick item */
+            UPDATE PICK_ITEM 
+            SET EXPORTED_DESPATCH = 'T',
+                EXPORTED_DESPATCH_QTY = :WK_PI_PICKED_QTY
+            WHERE PICK_LABEL_NO = :WK_PI_PICK_LABEL_NO;
+            /* add to trans work for this order */
+         END
+      END /* end of do */  
+
+      WK_LOG_BUFFER = 'end of do ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      BEGIN
+            IF ((WK_LAST_ORDER <> 'DONTHAVE') AND (WK_LAST_LINE  <> 'DONTHAVE')) THEN
+            BEGIN
+               /* calc the status */
+               IF (WK_LAST_QTY < 0) THEN
+               BEGIN
+                  WK_STATUS = 'RA';
+               END
+               ELSE
+               BEGIN
+                  WK_STATUS = 'DA';
+               END
+      WK_LOG_BUFFER =  'last line  not donthave and last order not donthave ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  :WK_LAST_LINE   ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  WK_LAST_ORDER  ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+      WK_LOG_BUFFER =  'last qty2 ' || :WK_LAST_QTY ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+               /* write the sum line */
+               WK_FILE_PATH2 = WK_FILE_PATH ||  'ORDER_STATUS' || WK_TRAN_DATE || '.CSV';
+      WK_LOG_BUFFER = 'file path2 ' || WK_FILE_PATH2;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+               WK_LABEL =  WK_LAST_ORDER || ',' ||
+                   WK_LAST_LINE || ',' ||
+                   WK_LAST_QTY || ',' ||
+                   WK_TRAN_DATE2 || ',' ||
+                   WK_LAST_CONNOTE || ',' ||
+                   WK_LAST_CARRIER_ID || ',' ||
+                   WK_STATUS ;
+      WK_LOG_BUFFER = 'label ' ;
+               IF (WK_LAST_EXPORTED_DESPATCH_FILE = '') THEN
+               BEGIN
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+                  INSERT INTO TRANSACTIONS_WORK (RECORD_ID, OBJECT, TRN_DATE)
+                  VALUES( :WK_RECORD, :WK_LAST_ORDER,:WK_DATE) ;
+                  WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                  IF (WK_RESULT <> 0) THEN
+                  BEGIN
+                     WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.2SV';
+                     WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                  END   
+                  IF (WK_RESULT <> 0) THEN
+                  BEGIN
+                     WK_FILE_PATH2 = WK_FILE_PATH || 'ORDER_STATUS' || WK_TRAN_DATE || '.3SV';
+                     WK_RESULT = FILE_WRITELN(:WK_FILE_PATH2, :WK_LABEL);
+                  END   
+               END   
+            END   
+      END
+      /* read the trans work to update the order exported_despatch */
+      FOR SELECT OBJECT 
+      FROM TRANSACTIONS_WORK
+        WHERE RECORD_ID  = :WK_RECORD_ID  
+        GROUP BY OBJECT
+        INTO :WK_ORDER
+      DO
+      BEGIN
+         UPDATE PICK_ORDER
+         SET EXPORTED_DESPATCH_FILE = :WK_FILE_PATH2,
+             EXPORTED_DESPATCH_DATE = :WK_DATE
+         WHERE PICK_ORDER = :WK_ORDER;
+      END   
+   END   
+  
+      WK_LOG_BUFFER = 'end of pc_export_despatch ' ;
+       WK_LOG_RESULT = FILE_WRITELN(:WK_LOG_FILENAME, :WK_LOG_BUFFER);
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

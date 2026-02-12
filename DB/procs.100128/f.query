@@ -1,0 +1,9 @@
+/*
+CREATE DOMAIN QUERY_PROMPT_TYPE AS CHAR(1)
+         DEFAULT 'C'
+         CHECK (VALUE IN ('C','D','F','I','L'));
+*/
+alter domain query_prompt_type drop constraint;
+alter domain query_prompt_type add constraint 
+         CHECK (VALUE IN ('C','D','F','I','L','S'));
+

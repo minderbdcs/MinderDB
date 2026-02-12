@@ -1,0 +1,104 @@
+want tables for data in /out in mysql db
+
+table bdcs_inout
+record_id sequence
+data_type   
+status
+layout_id
+process_id
+direction
+create_date
+last_update_date
+	primary key(record_id)
+
+table bdcs_layout
+record_id sequence
+layout_id
+sequence
+id_name
+is_key
+create_date
+last_update_date
+	primary key(record_id)
+index on  layout_id, sequence
+
+table bdcs_inout_data
+record_id sequence
+inout_id
+record_no
+layout_record_id
+inout_data
+create_date
+last_update_date
+	primary key(record_id)
+index on inout_id
+         record_no
+
+inout_id = bdcs_inout.record_id - an effective batch or file no. (is an integer)
+data_type is a code varchar(40)
+ with values sales order, purchase order, stock adjustment, prod_profile
+status is a varchar(2) field with values
+	NI  New Import
+	WP  Work in Progress
+	CL  Complete
+	ER  Error in Import or Export
+
+layout_id is an integer is the layout type to use
+process_id is the pid of the Working process for the import/export
+direction is a varchar(3) with values IN or OUT
+
+all the record_id's are integer sequences.
+
+the sequence field controls the ordering of the fields when exporting to a flat file.
+The ID_NAME is the Minder field name to populate
+
+
+the is_key field sets whether to use this field for keyed updates
+
+It is likely that there will be only a few bdcs_layout.layout_id's
+
+The table bdcs_inout_data has the individual data entries.
+
+
+The layout_record_id = the bdcs_layout.record_id referred to.
+The inout_data a varchar(8196) field - but which character set are you planning to use?.
+Are you using innoDB to hold the data?.
+(I was forced to expand this for the special instructions).
+I might have to change this to be a text field.
+
+The record_no ties the data for one row together.
+
+With this data layout I can have any number of columns in a row
+Any number of differing import layouts
+when the status becomes NI it is ready to be processed. So that all the rows are filled.
+I suggest that the status be WP before it is NI.
+
+Now for some example data
+Start with bdcs_layout
+
+record_id 5              6             7            8
+layout_id 2              2             2            2
+sequence  1              2             3            4
+id_name   H_PICK_ORDER   H_WH_ID       H_COMPANY_ID H_CONTACT_NAME
+is_key    T              F             F            F
+for pinpoint the sales fields are
+h_pick_order,h_person_id,h_contact_name,h_pick_priority,h_special_instructions1,h_special_instructions2,h_ship_via,h_pick_status,
+h_partial_pick_allowed,h_other1,p_first_name,p_last_name,p_address_line1,p_address_line2,p_address_line3,p_address_line4,p_city,p_state,
+p_post_code,p_country,p_aust_post_4state_id,l_pick_order_line_no,l_prod_id,l_pick_order_qty
+
+bdcs_inout
+record_id  50
+data_type  SALES_ORDER
+status     NI
+layout_id  2
+process_id 2234
+direction  IN
+
+bdcs_inout_data
+record_id        100       101       102       103             104        105        106        107
+inout_id         50        50        50        50              50         50         50         50
+record_no        1         1         1         1               2          2          2          2
+layout_record_id 5         6         7         8               5          6          7          8
+inout_data       S7357682  TF        IMSTIFS   Henry Latiser   S7376271   TF         IMSBDCS    James Brown
+
+

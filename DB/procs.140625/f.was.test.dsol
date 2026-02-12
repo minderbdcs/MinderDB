@@ -1,0 +1,19 @@
+execute procedure add_tran('MV','','CPASVYC5000755','DSOL','O','NOW','',1,'F','','MASTER   ',0,'','SSSSSSSSS','BDCS','XX');
+/*
+WH_ID                             INPUT CHAR(2)
+LOCN_ID                           INPUT VARCHAR(10)
+OBJECT                            INPUT VARCHAR(30)
+TRN_TYPE                          INPUT VARCHAR(4)
+TRN_CODE                          INPUT CHAR(1)
+TRN_DATE                          INPUT TIMESTAMP
+REFERENCE                         INPUT VARCHAR(1024)
+QTY                               INPUT INTEGER
+COMPLETE                          INPUT CHAR(1)
+ERROR_TEXT                        INPUT VARCHAR(255)
+INSTANCE_ID                       INPUT CHAR(10)
+EXPORTED                          INPUT INTEGER
+SUB_LOCN_ID                       INPUT VARCHAR(10)
+INPUT_SOURCE                      INPUT VARCHAR(10)
+PERSON_ID                         INPUT VARCHAR(10)
+DEVICE_ID                         INPUT CHAR(2)
+*/

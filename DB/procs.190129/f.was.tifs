@@ -1,0 +1,7 @@
+set generator carrier_connote_id_gen6 to 4000001;
+/*
+update pick_order set s_address_line1='Un B 35 STENNETT Rd' where s_address_line1='Unit B, 35 STENNETT ROAD';
+update person_address set addr_line1 =  'Un B 35' , addr_line2 = 'STENNETT Rd'
+ where addr_line like '%STENNETT%';
+*/
+update carrier set  connote_export_method='AUSTPOST'  where carrier_id='EPARCEL';

@@ -1,0 +1,8 @@
+/*
+select object from transactions where object starting '100' ;
+*/
+select distinct pick_order.pick_order,pick_order.create_date,pick_order.pick_status from transactions_archive join pick_order on pick_order.pick_order=transactions_archive.object
+ where trn_date>'YESTERDAY' and
+ trn_date<'TODAY' and
+ trn_type='PKOZ' and 
+pick_status<>'DX' and pick_status  <> 'CN'  and pick_status <> 'HD';

@@ -1,0 +1,10 @@
+/*
+583:DECLARE EXTERNAL FUNCTION RIGHTS
+586:ENTRY_POINT 'fudlib_rights' MODULE_NAME 'fudlib';
+803:DECLARE EXTERNAL FUNCTION VRIGHTS
+806:ENTRY_POINT 'fudlib_rights' MODULE_NAME 'fudlib';
+
+*/
+
+drop external function rights;
+drop external function vrights;

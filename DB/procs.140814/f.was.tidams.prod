@@ -1,0 +1,114 @@
+EXECUTE PROCEDURE IMPORT_PROD_PROFILE(
+    [PROD_ID] 
+    [SHORT_DESC] 
+    [LONG_DESC] 
+    [COMPANY_ID] 
+    [STOCK]
+    [UOM]
+    [SPECIAL_INSTR] 
+    [PROD_TYPE] 
+    [SSN_TYPE]  *****
+    [TOG_C] 
+    [STOCK_ON_HAND] 
+    [DIMENSION_X]
+    [DIMENSION_Y] 
+    [DIMENSION_Z] 
+    [DIMENSION_X_UOM]
+    [DIMENSION_Y_UOM]
+    [DIMENSION_Z_UOM]
+    [ORDER_WEIGHT] 
+    [SSN_TRACK]  *****
+    [NET_WEIGHT_UOM]
+    [ORDER_WEIGHT_UOM] 
+    [NET_WEIGHT] 
+    [INNER_WEIGHT] 
+    [PACK_WEIGHT] 
+
+    [ISSUE_PER_PALLET] 
+    [ISSUE_PER_OUTER_CARTON]
+    [ISSUE_PER_INNER_UNIT] 
+    [ISSUE_PER_ORDER_UNIT] 
+    [INNER_WEIGHT_UOM] 
+    [ORDER_QTY] 
+    [ALTERNATE_ID] )"
+ 
+"EXECUTE PROCEDURE IMPORT_PROD_PROFILE(
+       '4544539',
+       '5020 GONK - HOVER PETZ GONK',
+       '5020 GONK - HOVER PETZ GONK-5020 GONK - HOVER PETZ GONK -
+long description',
+       'INSPIRE',
+       'C',
+       'M2',
+       'spec. instrn',
+       'ELECTRICAL', /* should be varchar(2) */
+       '', /* ssn type this is the one that should be electrical */
+       'A',
+       3121,
+       120.000,
+       120.000,
+       120.000,
+       '',
+       '',
+       '',
+
+       2,
+       '', /* they want this to be ssn_track */
+       '',
+       '', 
+        400.000,
+        400.000,
+        400.000,       
+       1,
+       1,
+       1,
+       1,
+       'KG',
+       40,
+       '')"
+
+Parameters:
+P_PROD_ID                         INPUT VARCHAR(30)
+P_SHORT_DESC                      INPUT VARCHAR(255)
+P_LONG_DESC                       INPUT VARCHAR(255)
+P_COMPANY_ID                      INPUT VARCHAR(20)
+P_STOCK                           INPUT CHAR(1)
+P_UOM                             INPUT CHAR(2)
+P_SPECIAL_INSTR                   INPUT VARCHAR(50)
+P_PROD_TYPE                       INPUT CHAR(2)
+they expect ssn_type here not ssn_track
+P_SSN_TRACK                       INPUT CHAR(1)
+
+P_TOG_C                           INPUT CHAR(2)
+P_STOCK_ON_HAND                   INPUT INTEGER
+P_DIMENSION_X                     INPUT NUMERIC(9, 3)
+P_DIMENSION_Y                     INPUT NUMERIC(9, 3)
+P_DIMENSION_Z                     INPUT NUMERIC(9, 3)
+P_DIMENSION_X_UOM                 INPUT CHAR(2)
+P_DIMENSION_Y_UOM                 INPUT CHAR(2)
+P_DIMENSION_Z_UOM                 INPUT CHAR(2)
+P_ORDER_WEIGHT                    INPUT DECIMAL(5, 3)
+they expect ssn_track here
+P_NET_WEIGHT_UOM                  INPUT CHAR(2)
+P_ORDER_WEIGHT_UOM                INPUT CHAR(2)
+
+P_NET_WEIGHT                      INPUT DECIMAL(4, 3)
+P_INNER_WEIGHT                    INPUT DECIMAL(4, 3)
+
+they expect this higher in the list by prod_type
+P_SSN_TYPE                        INPUT VARCHAR(40)
+
+P_PACK_WEIGHT                     INPUT DECIMAL(4, 3)
+P_ISSUE_PER_PALLET                INPUT INTEGER
+P_ISSUE_PER_OUTER_CARTON          INPUT INTEGER
+P_ISSUE_PER_INNER_UNIT            INPUT INTEGER
+P_ISSUE_PER_ORDER_UNIT            INPUT INTEGER
+P_INNER_WEIGHT_UOM                INPUT CHAR(2)
+P_ORDER_QTY                       INPUT DOUBLE PRECISION
+P_ALTERNATE_ID                    INPUT VARCHAR(30)
+they do not supply these at all - but these were in the original procedure and are required fields
+S_CREATE_WH_ID                    INPUT CHAR(2)
+S_CREATE_LOCN_ID                  INPUT VARCHAR(10)
+S_CREATE_QTY                      INPUT INTEGER
+S_CREATE_COMPANY_ID               INPUT VARCHAR(20)
+S_CREATE_PER_ISSN_QTY             INPUT INTEGER

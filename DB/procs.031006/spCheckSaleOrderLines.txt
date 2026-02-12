@@ -1,0 +1,47 @@
+/*
+CREATE PROCEDURE CHECK_SALE_ORDER_LINES (
+*/
+ALTER PROCEDURE CHECK_SALE_ORDER_LINES (
+  PICK_ORDER VARCHAR(10)
+) RETURNS (
+  VALID_SO CHAR(1),
+  INVALID_SSN VARCHAR(256)
+) AS      
+
+
+DECLARE VARIABLE sSSN VARCHAR(20);
+DECLARE VARIABLE sStatusSSN CHAR(2);
+
+
+BEGIN
+   VALID_SO = 'T';
+   INVALID_SSN = '';
+   
+      FOR 
+         SELECT SSN_ID 
+         FROM PICK_ITEM
+         WHERE PICK_ORDER = :PICK_ORDER               
+         INTO :sSSN
+      DO
+      BEGIN                     
+         IF (LEN(:sSSN) <> 0) THEN
+         BEGIN
+           SELECT STATUS_SSN
+           FROM SSN         
+           WHERE SSN_ID = :sSSN         
+           INTO :sStatusSSN;
+         
+           IF (:sStatusSSN <> 'PA' and :sStatusSSN <> 'ST' and :sStatusSSN <> 'TS') THEN
+           BEGIN      
+             VALID_SO = 'F';
+             INVALID_SSN = INVALID_SSN || :sSSN || ', ';                      
+           END
+         END
+      END  
+      
+      IF (LEN(INVALID_SSN) <> 0) THEN
+      BEGIN
+         INVALID_SSN = SUBSTR(INVALID_SSN, 1, LEN(INVALID_SSN)-2);
+      END   
+   
+END^

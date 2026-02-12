@@ -1,0 +1,9 @@
+in f.control.sql;
+in f.del.pick.0;
+in f.pick.item.cancel;
+set term ^;
+in f.cancel.line^
+in f.cancel.order^
+in f.del.pick.1^
+exit^
+

@@ -1,0 +1,11 @@
+
+alter table carrier_warehouse add CARRIER_DESPATCH_OTHER1 DESCR;
+alter table carrier_warehouse add CARRIER_DESPATCH_OTHER2 DESCR;
+alter table carrier_warehouse add CARRIER_DESPATCH_OTHER3 DESCR;
+alter table carrier_warehouse add CARRIER_DESPATCH_OTHER4 DESCR;
+alter table carrier_warehouse add CARRIER_DESPATCH_OTHER5 DESCR;
+alter table carrier_warehouse add CARRIER_DESPATCH_OTHER6 DESCR;
+alter table carrier_warehouse add CARRIER_DESPATCH_OTHER7 DESCR;
+alter table carrier_warehouse add CARRIER_DESPATCH_OTHER8 DESCR;
+alter table carrier_warehouse add CARRIER_DESPATCH_OTHER9 DESCR;
+alter table carrier_warehouse add CARRIER_DESPATCH_OTHER10 DESCR;

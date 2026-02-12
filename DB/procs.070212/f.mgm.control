@@ -1,0 +1,2 @@
+update control set pick_method=pick_method || 'PL3,';
+

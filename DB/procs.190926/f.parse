@@ -1,0 +1,104 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+
+CREATE OR ALTER PROCEDURE GET_PARSE (REFERENCE REFERENCE, DELIMITER CHAR(1), FIELDNO INTEGER )
+RETURNS (RESULT REFERENCE)
+AS 
+ 
+DECLARE VARIABLE WK_POS INTEGER; 
+DECLARE VARIABLE S_TEMP VARCHAR(40);
+DECLARE VARIABLE WK_STR VARCHAR(2048);
+DECLARE VARIABLE X INTEGER;
+DECLARE VARIABLE S_POS INTEGER;
+DECLARE VARIABLE E_POS INTEGER;
+DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(200);
+DECLARE VARIABLE WK_LOG_RESULT   INTEGER;
+ 
+BEGIN
+  WK_LOG_FILENAME = '/data/tmp/getparse.log';
+  X = 0;  
+  WK_POS = 1;
+  S_POS = 0;
+  E_POS = 0;
+  IF (:REFERENCE IS NULL) THEN
+  BEGIN
+     REFERENCE = '';
+  END
+  IF (COALESCE(:DELIMITER,'') = '') THEN
+  BEGIN
+     DELIMITER = '|';
+  END
+/*  WK_STR =  '|' || :REFERENCE || '|' ;  */
+  WK_STR =  :DELIMITER  || :REFERENCE || :DELIMITER ;  
+  RESULT = '';
+  
+  WHILE (WK_POS <= CHAR_LENGTH(:WK_STR)) DO  
+  BEGIN        
+     S_TEMP = SUBSTRING(:WK_STR FROM  WK_POS FOR 1);     
+/*   IF (S_TEMP = '|') THEN */
+     IF (S_TEMP = :DELIMITER) THEN
+     BEGIN
+        X = X + 1;
+        IF (X = (:FIELDNO )) THEN
+        BEGIN
+           /* fieldno | */
+           S_POS = WK_POS+1;
+           /* 1st char of fieldno field */
+        END
+        IF (X = (:FIELDNO + 1)) THEN
+        BEGIN
+           /* fieldno + 1 | */
+           E_POS = WK_POS-1;
+           /* last char of fieldno field */
+        END
+        IF (X = (:FIELDNO + 2)) THEN
+        BEGIN
+           /* fieldno + 2 | */
+           LEAVE;
+           /* ignore remaining blocks of | */
+        END
+     END   
+     WK_POS = WK_POS + 1;
+  END
+  IF (:S_POS = 0) THEN
+  BEGIN
+     /* no fieldno | found  */
+     IF ((:X = 0) AND (:FIELDNO = 1)) THEN
+     BEGIN
+        S_POS = 1;
+     END
+  END
+  IF ((:E_POS = 0) AND (:S_POS > 0)) THEN
+  BEGIN
+     /* no | found so use all of reference */
+     E_POS = CHAR_LENGTH(:WK_STR);
+  END
+  IF ((E_POS > 0) AND (S_POS > 0)) THEN
+  BEGIN
+     RESULT = SUBSTRING(:WK_STR FROM S_POS FOR  E_POS - S_POS + 1);
+  END
+  ELSE
+  BEGIN
+     RESULT = 'Token to long in parse';
+  END
+  
+/*  IF (RESULT = '|') THEN */
+  IF (RESULT = :DELIMITER) THEN
+  BEGIN
+     RESULT = '';
+  END
+  SUSPEND;
+    
+END ^
+/*
+a  case fieldno  1 and 2
+a| case fieldno  1 and 2
+b|| case fieldno  1 2 and 3
+a|b|c|d case fieldno  1 2 3 4 5
+*/
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

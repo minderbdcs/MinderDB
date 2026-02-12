@@ -1,0 +1,5 @@
+alter table control add can_get_order_pick_status code;
+
+update control set can_get_order_pick_status = ',UC,CF,OP,UP,HD,CN,AS,WP,';
+
+

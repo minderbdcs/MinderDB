@@ -1,0 +1,12 @@
+====================================================================
+for bhp have to do plpr for prod labels
+then pc_label_location for location labels
+plad transaction for addr labels
+plao transaction for addr labels
+
+adjust pkal g - 
+	save the orders allocated by this device in pick_order
+	get passed end of batch in 3rd field of reference ,
+		then get all the orders allocated by this device not get done a prcl 
+			then do a prcl for the lot of them in 1 batch
+	doing a prcl updates the pick_order.printed_date

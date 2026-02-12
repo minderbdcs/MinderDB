@@ -1,0 +1,10 @@
+
+update SSN_TYPE set mirror_data=last_update_date where mirror_data is null;
+update SSN_TYPE set mirror_data='NOW' where mirror_data is null;
+
+update PURCHASE_ORDER set mirror_data=last_update_date where mirror_data is null;
+update PURCHASE_ORDER set mirror_data='NOW' where mirror_data is null;
+
+update PURCHASE_ORDER_LINE set mirror_data=last_update_date where mirror_data is null;
+update PURCHASE_ORDER_LINE set mirror_data='NOW' where mirror_data is null;
+

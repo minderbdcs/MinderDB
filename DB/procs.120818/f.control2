@@ -1,0 +1,4 @@
+alter table control add cascade_grn_upd_to_grn_order  value_tf;
+update control set cascade_grn_upd_to_grn_order      = 'F';
+
+

@@ -1,0 +1,17 @@
+/* null empty ssn_sub_type */
+update ssn set ssn_sub_type=null where ssn_sub_type='';
+update ssn set ssn_sub_type=upper(ssn_sub_type) where (ssn_sub_type is not null) and ssn_sub_type <> upper(ssn_sub_type) ;
+
+
+insert into ssn_sub_type (code,description, ssn_type, generic)
+ select s1.ssn_sub_type, s1.ssn_sub_type as descr , s1.ssn_type, s1.generic
+ from ssn s1
+ left outer join ssn_sub_type s2 on s2.ssn_type = s1.ssn_type and s2.generic = s1.generic and s2.code    = s1.ssn_sub_type
+ where s2.code is null
+ and (s1.generic is not null)
+ and (s1.ssn_type is not null)
+ and (s1.ssn_sub_type is not null)
+ group by s1.ssn_type, s1.generic, s1.ssn_sub_type, descr
+ ;
+
+alter table SSN add  CONSTRAINT SSN_FK_SSN_SUB_TYPE foreign key (SSN_TYPE, GENERIC, SSN_SUB_TYPE) references SSN_SUB_TYPE(SSN_TYPE,GENERIC,CODE) ON UPDATE CASCADE;

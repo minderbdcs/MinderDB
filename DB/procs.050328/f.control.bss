@@ -1,0 +1,6 @@
+update control set default_connote_pack = 'S';
+update control set new_prod_status= 'ST';
+update control set order_update = '|SO=F|TO=F|PO=F|';
+update control set assemble_despatch = 'T';
+
+

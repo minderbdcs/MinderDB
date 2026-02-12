@@ -1,0 +1,10 @@
+delete from options where group_code='SCN_FORMAT' and CODE='GRNEDIT';
+
+delete from sys_screen where ss_name='FPGGRNEDIT';
+
+delete from sys_screen_order where ss_name='FPGGRNEDIT';
+
+delete from sys_screen_table where ss_name='FPGGRNEDIT';
+
+update sys_screen_var  set ss_name='FPGGRN',ssv_field_type='ER'  where ss_name='FPGGRNEDIT';
+

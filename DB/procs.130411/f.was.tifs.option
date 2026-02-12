@@ -1,0 +1,6 @@
+insert into options(group_code,code,description) values('REP_CODE','PROD_PROFILE.P_COMPANY_FROM_ISSN','T');
+insert into options(group_code,code,description) values('RECEIVE','GET_DELIVERY3' ,'T');
+insert into options(group_code,code,description,description2) values('RECEIVE','OTHER|OTHER_QTY1' ,'T','Pallet Qty');
+insert into options(group_code,code,description,description2) values('RECEIVE','OTHER|OTHER_QTY2' ,'T','Carton Qty');
+insert into options(group_code,code,description,description2) values('RECEIVE','OTHER|OTHER_QTY3' ,'T','Individual Qty');
+insert into options(group_code,code,description) values('REP_CODE','PROD_PROFILE.LONG_DESC' ,'F');

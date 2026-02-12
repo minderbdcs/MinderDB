@@ -1,0 +1,3 @@
+
+alter table pick_invoice add shipping_method carrier_account_no;
+

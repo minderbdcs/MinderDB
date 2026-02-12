@@ -1,0 +1,4 @@
+alter table pick_mode add pick_param_see_order_print value_tf;
+alter table pick_mode add pick_param_auto_pick value_tf;
+update pick_mode set pick_param_see_order_print='F', pick_param_auto_pick='F';
+

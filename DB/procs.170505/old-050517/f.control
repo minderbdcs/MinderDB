@@ -1,0 +1,2 @@
+alter table control add default_connote_pack_qty integer;
+

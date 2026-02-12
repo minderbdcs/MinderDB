@@ -1,0 +1,20 @@
+/*
+commit;
+alter table SSN add  CONSTRAINT SSN_FK_SSN_TYPE foreign key (SSN_TYPE) references SSN_TYPE(CODE) ON UPDATE CASCADE;
+alter table SSN add  CONSTRAINT SSN_FK_GENERIC foreign key (SSN_TYPE, GENERIC) references GENERIC(SSN_TYPE,CODE) ON UPDATE CASCADE;
+alter table SSN add  CONSTRAINT SSN_FK_SSN_SUB_TYPE foreign key (SSN_TYPE, GENERIC, SSN_SUB_TYPE) references SSN_SUB_TYPE(SSN_TYPE,GENERIC,CODE) ON UPDATE CASCADE;
+alter table SSN add  CONSTRAINT SSN_FK_BRAND foreign key (BRAND) references BRAND(CODE) ON UPDATE CASCADE;
+*/
+/*
+alter table ssn drop constraint SSN_FK_SSN_TYPE;
+commit;
+alter table SSN add  CONSTRAINT SSN_FK_SSN_TYPE foreign key (SSN_TYPE) references SSN_TYPE(CODE) ON UPDATE CASCADE;
+commit;
+*/
+/* now add ssn type constraint to generic */
+alter table GENERIC add  CONSTRAINT GENERIC_FK_SSN_TYPE foreign key (SSN_TYPE) references SSN_TYPE(CODE) ON UPDATE CASCADE;
+/* now add ssn type constraint to ssn_sub_type */
+alter table SSN_SUB_TYPE add  CONSTRAINT SSN_SUB_TYPE_FK_SSN_TYPE foreign key (SSN_TYPE) references SSN_TYPE(CODE) ON UPDATE CASCADE;
+
+/* now add generic constraint to ssn_sub_type */
+alter table SSN_SUB_TYPE add  CONSTRAINT SSN_SUB_TYPE_FK_GENERIC foreign key (SSN_TYPE, GENERIC) references GENERIC(SSN_TYPE, CODE) ON UPDATE CASCADE;

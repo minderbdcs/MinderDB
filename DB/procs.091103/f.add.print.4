@@ -1,0 +1,132 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP   TRIGGER ADD_PRN_REQUEST_NP ^
+COMMIT^
+
+CREATE TRIGGER ADD_PRN_REQUEST_NP FOR PRINT_REQUESTS 
+ACTIVE BEFORE INSERT POSITION 20 
+AS
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_GM_MESSAGE VARCHAR(10);
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(32000);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(32000);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(32000);
+DECLARE VARIABLE WK_WORK_AT_END CHAR(1);
+DECLARE VARIABLE WK_WH_ID VARCHAR(32000);
+DECLARE VARIABLE WK_ISSN_PRINTER CHAR(2);
+DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(80) ;
+DECLARE VARIABLE WK_LOG_RESULT   INTEGER;
+BEGIN
+   NEW.PRN_DATE = 'NOW';
+   IF (NEW.MESSAGE_ID IS NULL OR NEW.MESSAGE_ID = '') THEN
+   BEGIN
+      WK_GM_MESSAGE = '';
+      SELECT MESSAGE_ID 
+      FROM GET_NEXT_MESSAGE 
+      INTO :WK_GM_MESSAGE;
+      NEW.MESSAGE_ID =  WK_GM_MESSAGE;
+   END
+   ELSE
+   BEGIN
+      WK_GM_MESSAGE = NEW.MESSAGE_ID;
+   END
+   IF (NEW.REQUEST_STATUS IS NULL OR NEW.REQUEST_STATUS = '') THEN
+   BEGIN
+      NEW.REQUEST_STATUS = 'NP';
+   END
+   WK_LOG_FILENAME = '/tmp/addprint.request.log';
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'start add print request');
+   /* if an issn print type and user is not admin
+      then enforce the device to be either
+      the default_pick_printer from the wh_id
+      or the default_pick_printer from the control table
+    have the user in  person_id   
+    type in prn_type
+    data in prn_data
+    split the prn_data by |
+    split the resulting data by =
+    then have field = value
+    with the field wrapped by %
+    need %ISSN.WH_ID%
+    */
+   /* 
+   IF (NEW.PERSON_ID  <> 'Admin') THEN
+   BEGIN
+      IF (NEW.PRN_TYPE  = 'ISSN') THEN
+      BEGIN
+         WK_WH_ID = '';
+         WK_FIELD_NO = 1;
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'have ISSN type ' );
+         WHILE (WK_FIELD_NO > 0) DO
+         BEGIN
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'in while: ' || :WK_FIELD_NO);
+            SELECT WK_FIELD_TEXT , WK_AT_END
+            FROM GET_REFERENCE_FIELD4 (NEW.PRN_DATA, :WK_FIELD_NO, '|') 
+            INTO :WK_WORK_FIELD , :WK_WORK_AT_END;
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'at end: ' || :WK_WORK_AT_END);
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'field: ' || :WK_WORK_FIELD);
+            IF (WK_WORK_AT_END = 'F') THEN
+            BEGIN
+               -* now for this field get the label and data *-
+               SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+               FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '=')
+               INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+               IF (WK_WORK_LABEL = '%ISSN.WH_ID%') THEN
+               BEGIN
+                  WK_WH_ID = WK_WORK_DATA;
+               END
+
+               WK_FIELD_NO = WK_FIELD_NO + 1;
+            END
+            ELSE
+            BEGIN
+               WK_FIELD_NO = -1;
+            END
+         END
+         IF (WK_WH_ID = '') THEN
+         BEGIN
+            SELECT DEFAULT_WH_ID
+            FROM CONTROL
+            INTO :WK_WH_ID;
+         END 
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'wh_id: ' || :WK_WH_ID);
+         SELECT DEFAULT_PICK_PRINTER
+         FROM WAREHOUSE
+         WHERE WH_ID = :WK_WH_ID
+         INTO :WK_ISSN_PRINTER;
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'issn printer: ' || :WK_ISSN_PRINTER);
+         IF (WK_ISSN_PRINTER IS NULL) THEN
+         BEGIN
+            SELECT DEFAULT_PICK_PRINTER
+            FROM CONTROL 
+            INTO :WK_ISSN_PRINTER;
+         END
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'issn printer: ' || :WK_ISSN_PRINTER);
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'device: ' || NEW.DEVICE_ID);
+         IF (NEW.DEVICE_ID <> WK_ISSN_PRINTER) THEN
+         BEGIN
+            NEW.DEVICE_ID = WK_ISSN_PRINTER;
+         END
+      END
+   END
+    */
+   WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'end of changing device: ' || NEW.DEVICE_ID);
+
+   IF (NEW.REQUEST_STATUS  = 'NP') THEN
+   BEGIN
+      POST_EVENT 'PRN_REQUEST_NP';
+   END
+   IF (NEW.REQUEST_STATUS  = 'CP') THEN
+   BEGIN
+      POST_EVENT 'PRN_REQUEST_CP';
+   END
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

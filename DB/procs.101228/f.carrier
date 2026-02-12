@@ -1,0 +1,73 @@
+/*
+CREATE TABLE CARRIER_SERVICE (CARRIER_ID DESPATCH_CARRIER NOT NULL,
+        SERVICE_TYPE SERVICE_TYPE NOT NULL,
+        DESCRIPTION DESCRIPTION,
+        SERVICE_SERVICE_CODE PERSON,
+        CS_LABEL_NAME CODE,
+        SERVICE_REQD VALUE_TF,
+        SERVICE_MULTIPART_CONSIGNMENT VALUE_TF,
+        SERVICE_PARTIAL_DELIVERY VALUE_TF,
+        SERVICE_CASH_TO_COLLECT VALUE_TF,
+        SERVICE_PROFILE_ID PERSON,
+        SERVICE_CHARGE_CODES PERSON,
+        SERVICE_LOCATION_ID LOCN_ID,
+PRIMARY KEY (CARRIER_ID, SERVICE_TYPE));
+
+*/
+
+alter table carrier_service add last_update_date last_update_date ;
+alter table carrier_service add RECORD_ID RECORD_ID NOT NULL;
+update carrier_service set record_id = 0;
+commit;
+
+/* drop current primary */
+alter table carrier_service drop constraint integ_232;
+alter table carrier_service drop constraint integ_231;
+/* alter table carrier_service drop constraint integ_125; */
+
+/* add index for previous key */
+CREATE INDEX CARRIER_SERVICE_CS_TYPE_IDX ON CARRIER_SERVICE(CARRIER_ID, SERVICE_TYPE);
+
+/* add generator and add - update triggers */
+CREATE GENERATOR CARRIER_SERVICE_ID_GEN;
+SET GENERATOR CARRIER_SERVICE_ID_GEN TO 100;
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+CREATE TRIGGER ADD_CARRIER_SERVICE FOR CARRIER_SERVICE 
+ACTIVE BEFORE INSERT POSITION 10 
+AS
+BEGIN
+   IF ((NEW.RECORD_ID IS NULL) OR (NEW.RECORD_ID = 0)) THEN
+   BEGIN
+      NEW.RECORD_ID  = GEN_ID(CARRIER_SERVICE_ID_GEN,1);
+   END
+   NEW.LAST_UPDATE_DATE = 'NOW';
+END ^
+
+CREATE TRIGGER UPD_CARRIER_SERVICE FOR CARRIER_SERVICE
+ACTIVE BEFORE UPDATE POSITION 10 
+AS
+BEGIN
+   IF ((NEW.RECORD_ID IS NULL) OR (NEW.RECORD_ID = 0)) THEN
+   BEGIN
+      NEW.RECORD_ID  = GEN_ID(CARRIER_SERVICE_ID_GEN,1);
+   END
+   NEW.LAST_UPDATE_DATE = 'NOW';
+END ^
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+
+/* get new ids for 0 value */
+commit;
+update carrier_service set last_update_date = 'NOW'  where record_id=0;
+commit;
+
+/* set new primary */
+alter table carrier_service   add constraint carrier_service_primary primary key(record_id);
+
+

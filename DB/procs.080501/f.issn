@@ -1,0 +1,2 @@
+alter table issn add picked_qty qty;
+

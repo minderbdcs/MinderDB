@@ -1,0 +1,46 @@
+         /* check child1 product kit exists */
+         IF (WK_CHILD1_PROD > '') THEN
+         BEGIN
+            WK_CHILD_PROD_ID = WK_CHILD1_PROD || WK_CHILD1_EXTENSION;
+            /* does product exist */
+            WK_FOUND = 0;
+            SELECT 1 FROM PROD_PROFILE
+            WHERE PROD_ID = :WK_CHILD_PROD_ID
+            INTO :WK_FOUND;
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               /* no prod profile - so create a dummy */
+               INSERT INTO PROD_PROFILE(PROD_ID, SHORT_DESC, PROD_RETRIEVE_STATUS )
+               VALUES (:WK_CHILD_PROD_ID, :WK_CHILD_PROD_ID, :WK_STATUS);
+            END
+            ELSE
+            BEGIN
+               UPDATE PROD_PROFILE 
+               SET PROD_RETRIEVE_STATUS = :WK_STATUS
+               WHERE PROD_ID = :WK_CHILD_PROD_ID;
+            END
+            WK_FOUND = 0;
+            SELECT 1 FROM PROD_EAN
+            WHERE PROD_EAN = :WK_CHILD1_PROD AND 
+                  PROD_EAN_EXTENSION = :WK_CHILD1_EXTENSION
+            INTO :WK_FOUND;
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               /* no prod ean - so create one */
+               INSERT INTO PROD_EAN(PROD_ID, PROD_EAN, PROD_EAN_EXTENSION)
+               VALUES (:WK_CHILD_PROD_ID, :WK_CHILD1_PROD, :WK_CHILD1_EXTENSION);
+            END
+            /* check product kit */
+            WK_FOUND = 0;
+            SELECT 1 
+            FROM PRODUCT_KIT
+            WHERE KIT_ID = :WK_PROD_ID
+            AND   PROD_ID = :WK_CHILD_PROD_ID
+            INTO :WK_FOUND ;
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               /* no kit - so create a dummy */
+               INSERT INTO PRODUCT_KIT(KIT_ID, PROD_ID, CREATED_BY, CREATE_DATE, PROD_QTY )
+               VALUES (:WK_PROD_ID, :WK_CHILD_PROD_ID, NEW.PERSON_ID, NEW.TRN_DATE, :WK_CHILD1_QTY);
+            END
+         END

@@ -1,0 +1,2 @@
+alter table sys_equip add remote_system_id integer;
+

@@ -1,0 +1,4 @@
+/* SSB_MOUSE_OVER_MESSAGE and SSB_SCANNING_CODE */
+alter table sys_screen_button add SSB_MOUSE_OVER_MESSAGE DESCR;
+alter table sys_screen_button add SSB_SCANNING_CODE CODE;
+

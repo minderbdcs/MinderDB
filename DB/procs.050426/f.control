@@ -1,0 +1,3 @@
+alter table control add movement_trans varchar(255);
+
+update control set movement_trans = ',GRNV,ISIL,ISIZ,PKOL,TROL,TRIL,TRLO,TRLI,TRSS,DSDX,';

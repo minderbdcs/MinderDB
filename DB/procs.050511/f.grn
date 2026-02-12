@@ -1,0 +1,2 @@
+alter table grn add receipt_flag value_tf;
+update grn set receipt_flag = 'F';

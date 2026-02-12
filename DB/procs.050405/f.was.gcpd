@@ -1,0 +1,116 @@
+DROP TRIGGER RUN_TRANSACTION_GCPD ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GCPD FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 8 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_CAMPAIGN VARCHAR(10);
+DECLARE VARIABLE WK_TITLE VARCHAR(100);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_LOG VARCHAR(256);
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF ((NEW.TRN_TYPE = 'GCPD') AND (NEW.TRN_CLASS = 'C')) THEN
+      BEGIN
+         INSERT INTO LOG(DESCRIPTION) VALUES ('GOT GCPD C');
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the campaign ID
+            field 2 is the campaign Title
+         */
+         WK_STATUS = '';
+         WK_CAMPAIGN = '';
+         WK_TITLE = '';
+
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) -2;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            INSERT INTO LOG(DESCRIPTION) VALUES(:WK_WORK_FIELD);
+            INSERT INTO LOG(DESCRIPTION) VALUES('got work field');
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+            INSERT INTO LOG(DESCRIPTION) VALUES(:WK_WORK_LABEL);
+            INSERT INTO LOG(DESCRIPTION) VALUES(:WK_WORK_DATA);
+            INSERT INTO LOG(DESCRIPTION) VALUES('got work data');
+
+            IF (WK_WORK_LABEL = 'CampaignID') THEN
+            BEGIN
+               WK_CAMPAIGN = WK_WORK_DATA;
+               INSERT INTO LOG(DESCRIPTION) VALUES('set campaign');
+            END
+            ELSE
+            BEGIN
+               IF (WK_WORK_LABEL = 'CampaignTitle') THEN
+               BEGIN
+                  WK_TITLE = WK_WORK_DATA;
+                  INSERT INTO LOG(DESCRIPTION) VALUES('set title');
+               END
+               ELSE
+               BEGIN
+                  WK_LOG = 'nothing set ' || :WK_WORK_LABEL || ' data ' || :WK_WORK_DATA;
+                  INSERT INTO LOG(DESCRIPTION) VALUES(:WK_LOG);
+               END
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         /* does owner person type exist */
+         WK_FOUND = 0;
+         SELECT 1 FROM ORDER_GROUP
+         WHERE ORDER_GROUP_ID = :WK_CAMPAIGN
+         INTO :WK_FOUND ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            INSERT INTO LOG(DESCRIPTION) VALUES('insert order group');
+            INSERT INTO ORDER_GROUP(ORDER_GROUP_ID, DESCRIPTION, UPDATE_ID, CREATE_DATE, CREATED_BY, PICK_RETRIEVE_STATUS, STATUS)
+            VALUES (:WK_CAMPAIGN, :WK_TITLE, NEW.MESSAGE_ID, 'NOW',NEW.PERSON_ID, 'T', 'OK');
+         END
+         ELSE
+         BEGIN
+            INSERT INTO LOG(DESCRIPTION) VALUES('update order group');
+            UPDATE ORDER_GROUP
+            SET DESCRIPTION = :WK_TITLE,
+            PICK_RETRIEVE_STATUS = 'T',
+            STATUS = 'OK'
+            WHERE ORDER_GROUP_ID = :WK_CAMPAIGN;
+         END
+
+         /* Update transactions table */        
+         EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+      ELSE
+      IF ((NEW.TRN_TYPE = 'GCPD') AND (NEW.TRN_CLASS = 'S')) THEN
+      BEGIN
+         /* do any campaigns exist - */
+         WK_FOUND = 0;
+         SELECT FIRST 1 1  FROM ORDER_GROUP
+         INTO :WK_FOUND ;
+         IF (WK_FOUND = 1) THEN
+         BEGIN
+            /* have old campaigns */
+            /* so must delete them - this also deletes PICK_ORDER_GROUP */
+            UPDATE ORDER_GROUP SET STATUS = 'NC';
+
+            UPDATE PICK_ORDER_GROUP SET STATUS = 'NC';
+
+         END
+      END
+   END
+END ^
+ 

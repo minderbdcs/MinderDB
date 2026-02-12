@@ -1,0 +1,19 @@
+/*
+drop trigger add_pick_order_time;
+drop trigger update_pick_order_time;
+drop trigger add_pick_from_temp;
+drop trigger add_pick_item_time;
+drop trigger update_pick_item_time;
+drop trigger run_transaction_pinv;
+*/
+ 
+drop trigger run_transaction_piln;
+commit;
+
+
+alter table pick_invoice_line alter invline_sale_price        type double precision;
+alter table pick_invoice_line alter invline_line_total        type double precision;
+alter table pick_invoice_line alter invline_unit_cost         type double precision;
+alter table pick_invoice_line alter invline_total_cost        type double precision;
+
+

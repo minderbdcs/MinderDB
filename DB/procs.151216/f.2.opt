@@ -1,0 +1,13 @@
+/*
+create domain group_code varchar(15);
+*/
+
+/*
+alter table options alter group_code type group_code;
+*/
+/* need to drop constraints */
+alter table options drop constraint integ_188;
+
+alter table options alter group_code type group_code;
+
+alter table options add constraint options_primary primary key (group_code,code);

@@ -1,0 +1,2 @@
+
+CREATE EXCEPTION NO_DELETE_SSN 'Cannot Delete SSN.';

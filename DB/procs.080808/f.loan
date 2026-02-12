@@ -1,0 +1,2 @@
+alter domain percent type numeric(3,3);
+

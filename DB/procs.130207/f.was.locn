@@ -1,0 +1,3 @@
+add to location locn_sequence varchar(4);
+                locn_id_no2   varchar(20);
+

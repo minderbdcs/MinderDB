@@ -1,0 +1,11 @@
+insert into options (group_code, code, description) values('MUSEUM','SSN_HISTORY1','AUOB');
+insert into options (group_code, code, description) values('MUSEUM','SSN_HISTORY2','TROL');
+insert into options (group_code, code, description) values('MUSEUM','SSN_HISTORY3','TRIL');
+insert into options (group_code, code, description) values('MUSEUM','SSN_HISTORY4','STIS');
+insert into options (group_code, code, description) values('MUSEUM','SSN_HISTORY5','PKOL');
+insert into options (group_code, code, description) values('MUSEUM','SSN_HISTORY6','PKIL');
+insert into options (group_code, code, description) values('MUSEUM','SSN_HISTORY7','TRLO');
+insert into options (group_code, code, description) values('MUSEUM','SSN_HISTORY8','TRLI');
+insert into options (group_code, code, description) values('MUSEUM','SSN_HISTORY9','STOB');
+insert into options (group_code, code, description) values('MUSEUM','SSN_HISTORYA','STRC');
+insert into options (group_code, code, description) values('MUSEUM','SSN_HISTORYB','TRMI');

@@ -1,0 +1,2 @@
+update control set default_pick_printer = 'PH';
+insert into sys_equip(device_id, device_type, computer_name) values ('PH','PR', 'mailroomhp1.steeldirect.bluescopesteel.net');

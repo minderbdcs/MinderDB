@@ -1,0 +1,4 @@
+alter trigger insert_cost_centre inactive;
+alter trigger update_cost_centre inactive;
+alter trigger delete_cost_centre inactive;
+

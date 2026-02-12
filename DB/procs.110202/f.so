@@ -1,0 +1,22 @@
+drop trigger add_pick_order_time;
+drop trigger update_pick_order_time;
+drop trigger run_transaction_pinv;
+drop trigger add_pick_from_temp;
+commit;
+ 
+alter domain standard_cost   type double precision;
+alter domain volume          type double precision;
+
+alter table pick_order alter sub_total_amount  type double precision;
+alter table pick_order alter freight           type double precision;
+alter table pick_order alter amount_paid       type double precision;
+alter table pick_order alter admin_fee_amount  type double precision;
+/* alter table pick_order alter admin_tax_amount  type double precision; */
+alter table pick_order alter tax_amount        type double precision;
+alter table pick_order alter due_amount        type double precision;
+alter table pick_order alter sum_std_amount    type double precision;
+alter table pick_order alter sum_sale_amount   type double precision;
+alter table pick_order alter freight_tax_amount type double precision;
+alter table pick_order alter net_weight        type double precision;
+alter table pick_order alter sub_total_tax     type double precision;
+

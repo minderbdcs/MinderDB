@@ -1,0 +1,6 @@
+
+
+alter table carrier add FTP_MANIFEST_START_NO START_NO;
+alter table carrier add FTP_MANIFEST_END_NO END_NO;
+alter table carrier add FTP_manifest_prefix code_one;
+

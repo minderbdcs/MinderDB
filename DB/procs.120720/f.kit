@@ -1,0 +1,5 @@
+create domain kit_run integer;
+alter table product_kit add kit_action status;
+alter table product_kit add kit_run_no kit_run;
+create generator product_kit_run_no;
+

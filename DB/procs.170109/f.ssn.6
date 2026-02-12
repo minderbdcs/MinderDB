@@ -1,0 +1,2 @@
+update ssn set legacy_id = upper(legacy_id) where coalesce(legacy_id,'') <> ''  and upper(legacy_id) <> legacy_id;
+

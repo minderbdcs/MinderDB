@@ -1,0 +1,2 @@
+alter table company add default_carrier_id despatch_carrier;
+

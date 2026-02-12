@@ -1,0 +1,41 @@
+CREATE PROCEDURE CHECK_TYPE_HEADER (  
+  TYPE_CODE VARCHAR(40)    
+  
+) RETURNS (
+    VALID_TYPE CHAR(1),
+    T_HEADER_CODE VARCHAR(40) 
+) AS    
+
+DECLARE VARIABLE REC_EXIST INTEGER; 
+DECLARE VARIABLE sTypeCode VARCHAR(40);
+DECLARE VARIABLE sTypeHeaderCode VARCHAR(40);
+
+
+BEGIN
+   VALID_TYPE = 'T';
+      FOR 
+         SELECT TYPE_CODE, TYPE_HEADER_CODE 
+         FROM TYPE_HEADER
+         WHERE TYPE_CODE = :TYPE_CODE       
+         AND MANDATORY = 'T'
+         INTO sTypeCode, :sTypeHeaderCode
+      DO
+      BEGIN   
+         REC_EXIST = 0;
+         
+         SELECT COUNT(TYPE_LINE_CODE)
+         FROM TYPE_LINE         
+         WHERE TYPE_CODE = :sTypeCode
+         AND TYPE_HEADER_CODE = :sTypeHeaderCode
+         AND TYPE_LINE_CODE <> ''
+         INTO :REC_EXIST;
+         
+         IF (REC_EXIST = 0) THEN
+         BEGIN      
+           VALID_TYPE = 'F';
+           T_HEADER_CODE = :sTypeHeaderCode;
+	   EXIT;	                      
+         END
+      END                              
+   
+END^

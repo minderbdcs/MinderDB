@@ -1,0 +1,72 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+CREATE OR ALTER PROCEDURE ADD_SSN_ISSN_LABEL (WH_ID WH_ID ,
+PRINTED_BY USER_ID ,
+LABEL_NO INTEGER,
+SSN_LENGTH INTEGER)
+RETURNS (ISSN SSN_ID )
+AS 
+        
+
+DECLARE VARIABLE SSN_ID INTEGER;
+DECLARE VARIABLE P_SSN_ID INTEGER;
+DECLARE VARIABLE W_SSN_ID SSN_ID;
+DECLARE VARIABLE I_SSN_ID SSN_ID;
+DECLARE VARIABLE LEN_SSN_ID INTEGER;
+DECLARE VARIABLE I_LEN_SSN_ID INTEGER;
+DECLARE VARIABLE WK_NEW_LOCN_ID LOCN_ID;
+
+
+BEGIN          
+   SSN_ID = GEN_ID(ISSN_SSN_ID, :LABEL_NO);
+   P_SSN_ID = SSN_ID - :LABEL_NO;
+/* LEN_SSN_ID = STRLEN(P_SSN_ID); */    
+   LEN_SSN_ID = CHAR_LENGTH(P_SSN_ID);     
+   SELECT NEW_LABEL_LOCN_ID FROM CONTROL INTO :WK_NEW_LOCN_ID;
+         
+   W_SSN_ID = '';
+   /* Padding leading with 0 */
+   WHILE (LEN_SSN_ID < :SSN_LENGTH) DO
+   BEGIN
+      W_SSN_ID = W_SSN_ID || '0';      
+      LEN_SSN_ID = LEN_SSN_ID + 1;
+   END
+   W_SSN_ID = W_SSN_ID || P_SSN_ID;
+   
+   /* Insert data into SSN table */   
+   INSERT INTO SSN (SSN_ID, WH_ID, LOCN_ID, STATUS_SSN, LABEL_DATE, PRINTED_BY)
+   VALUES (:W_SSN_ID, :WH_ID, :WK_NEW_LOCN_ID, 'LB', 'NOW', :PRINTED_BY);     
+   
+   /* Return ISSN value to the caller */
+   ISSN = W_SSN_ID;
+        
+   
+   /* Insert data into ISSN table */
+   WHILE (P_SSN_ID < SSN_ID) DO
+   BEGIN
+      I_SSN_ID = '';
+/*    I_LEN_SSN_ID = STRLEN(P_SSN_ID); */
+      I_LEN_SSN_ID = CHAR_LENGTH(P_SSN_ID);
+      
+      /* Padding leading with 0 */
+      WHILE (I_LEN_SSN_ID < :SSN_LENGTH) DO
+      BEGIN
+      	I_SSN_ID = I_SSN_ID || '0';
+      	I_LEN_SSN_ID = I_LEN_SSN_ID + 1;
+      END
+      I_SSN_ID = I_SSN_ID || P_SSN_ID;
+      
+      INSERT INTO ISSN (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID)
+      VALUES (:I_SSN_ID, :W_SSN_ID, :WH_ID, :WK_NEW_LOCN_ID); 
+      
+      P_SSN_ID = P_SSN_ID + 1;
+   END
+                
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

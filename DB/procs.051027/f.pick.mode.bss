@@ -1,0 +1,2 @@
+update pick_mode set pick_param_see_order_print='T', pick_param_auto_pick='F' where pick_mode_no='PU';
+

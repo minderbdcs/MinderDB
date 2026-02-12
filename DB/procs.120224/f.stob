@@ -1,0 +1,607 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/*
+requires vrtrim
+         lefts
+         became v4alltrim
+         substr
+         len
+*/
+
+CREATE OR ALTER PROCEDURE PC_STOB (RECORD_ID INTEGER,
+WH_ID CHAR(2) CHARACTER SET NONE,
+LOCN_ID VARCHAR(10) CHARACTER SET NONE,
+OBJECT VARCHAR(30) CHARACTER SET NONE,
+TRN_TYPE VARCHAR(4) CHARACTER SET NONE,
+TRN_CODE CHAR(1) CHARACTER SET NONE,
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(1024) CHARACTER SET NONE,
+QTY INTEGER,
+PERSON_ID VARCHAR(10) CHARACTER SET NONE,
+DEVICE_ID CHAR(2) CHARACTER SET NONE,
+INSTANCE_ID VARCHAR(10) CHARACTER SET NONE)
+AS 
+ 
+DECLARE VARIABLE strWH_ID CHAR(2);
+  DECLARE VARIABLE strINSTANCE VARCHAR(10); 
+  DECLARE VARIABLE strSSN VARCHAR(20);  
+  DECLARE VARIABLE strLOCN_ID VARCHAR(10);  
+  DECLARE VARIABLE strAUDIT_DESC VARCHAR(40); 
+  DECLARE VARIABLE REC_ID INTEGER;    
+  DECLARE VARIABLE LOCN_NAME VARCHAR(50); 
+  DECLARE VARIABLE strLOCN_exists INTEGER;  
+  DECLARE VARIABLE Currentqty INTEGER;  
+  DECLARE VARIABLE strUOM CHAR(2); 
+  DECLARE VARIABLE WK_PROD VARCHAR(30); 
+/*  DECLARE VARIABLE WK_REFERENCE VARCHAR(40); */ 
+  DECLARE VARIABLE WK_REFERENCE VARCHAR(1024); 
+  DECLARE VARIABLE WK_COMPANY VARCHAR(20); 
+  DECLARE VARIABLE WK_LAST_PROD VARCHAR(30); 
+  DECLARE VARIABLE WK_SUB_LOCN VARCHAR(10); 
+  DECLARE VARIABLE WK_NEW_COMPANY VARCHAR(20); 
+  DECLARE VARIABLE WK_PROD_SSN_TYPE VARCHAR(40); 
+  DECLARE VARIABLE WK_NEW_PROD VARCHAR(30); 
+  
+BEGIN
+    strWH_ID = '';
+    strINSTANCE = '';
+    strSSN = '';
+    strWH_ID = '';
+    strLOCN_ID = '';   
+    strAUDIT_DESC = '';  
+    strUOM = '';
+    WK_PROD = '';
+    WK_SUB_LOCN = '';
+/*    WK_REFERENCE = VRTRIM(REFERENCE); */
+    WK_REFERENCE = V4ALLTRIM(REFERENCE);
+
+/*    strUOM = LEFTS(:WK_REFERENCE,2); */
+    strUOM = SUBSTR(:WK_REFERENCE,1,2);
+    IF (STRLEN(:WK_REFERENCE) > 2) THEN
+    BEGIN
+/*
+       EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 2  RETURNING_VALUES :WK_PROD ; 
+*/
+       SELECT WK_FIELD_TEXT FROM GET_REFERENCE_FIELD4 (:WK_REFERENCE, 2, '|' ) INTO :WK_PROD ;
+    END
+
+    /* added 06/08/07 for owner */
+    SELECT SUB_LOCN_ID 
+    FROM TRANSACTIONS 
+    WHERE RECORD_ID = :RECORD_ID
+    INTO :WK_SUB_LOCN;
+   
+    IF (WK_SUB_LOCN IS NULL) THEN
+    BEGIN
+         WK_SUB_LOCN = '';
+    END
+    WK_NEW_COMPANY = vrtrim(WK_SUB_LOCN); 
+
+    /* Check trasaction code */
+    IF (:TRN_CODE = 'A') THEN
+    BEGIN
+
+       strLOCN_exists = 0;
+       SELECT 1 FROM LOCATION 
+       WHERE WH_ID = :WH_ID AND LOCN_ID = :LOCN_ID 
+       INTO :strLOCN_exists;
+       IF (strLOCN_exists = 0) THEN /* Location not found */
+       BEGIN
+           LOCN_NAME = LOCN_ID || :TRN_DATE;
+           /* Add new Location record */
+           INSERT INTO LOCATION (LOCN_ID, WH_ID, LOCN_NAME , LAST_UPDATE_DATE, LAST_UPDATE_BY )
+           VALUES (:LOCN_ID, :WH_ID, :LOCN_NAME, :TRN_DATE, :PERSON_ID);
+       END
+   
+       /* Check if warehouse exists */
+       SELECT WH_ID, INSTANCE_ID 
+       FROM WAREHOUSE
+       WHERE WH_ID = :WH_ID
+       INTO :strWH_ID, :strINSTANCE;
+   
+       /* Check warehouse*/
+       IF (strWH_ID <> '') THEN
+       BEGIN
+             /* Check instance */
+             /* IF (strINSTANCE = :INSTANCE_ID) THEN */  
+             BEGIN
+                WK_COMPANY = '';
+                WK_COMPANY = WK_NEW_COMPANY;
+
+                   /* Check ObjectLocation */
+     /* please check issn first */
+     /* since it may not be in ssn table then update
+     original_ssn */
+                   SELECT SD.ORIGINAL_SSN, SD.WH_ID, SD.LOCN_ID, SD.CURRENT_QTY
+                   FROM ISSN SD JOIN SSN SN ON SN.SSN_ID = SD.ORIGINAL_SSN
+                   WHERE SD.SSN_ID = :OBJECT
+                   INTO :strSSN, :strWH_ID, :strLOCN_ID, :Currentqty ;
+                   
+                   /* Check SSN */
+                   IF (strSSN = '') THEN
+                   BEGIN
+                   /* Object not found */
+                          /* Add SSN */
+                           /* DATE: 11TH NOV 07 - SUMEER SHOREE, MODIFIED INSERTS TO INCLUDE CREATE DATE, INTO_DATE(ONLY ISSN), LABEL_DATE(THOUGH NOT SURE - WHETHER LABEL_DATE SHOULD BE UPDATED NOW), CREATED_BY (SSN), USER_ID (ISSN) */
+                          SELECT SSN_TYPE 
+                          FROM PROD_PROFILE
+                          WHERE PROD_ID = :WK_PROD
+                          INTO  :WK_PROD_SSN_TYPE;
+
+                          INSERT INTO SSN (SSN_ID, WH_ID, LOCN_ID, INTO_DATE, AUDITED, AUDIT_DATE, AUDITED_QTY, STATUS_SSN, CURRENT_QTY, STORAGE_UOM,ORIGINAL_QTY,COMPANY_ID, CREATE_DATE, CREATED_BY, LABEL_DATE, LAST_UPDATE_DATE, LAST_UPDATE_BY, SSN_TYPE )
+                          VALUES (:OBJECT, :WH_ID, :LOCN_ID, :TRN_DATE, 'N', :TRN_DATE, :QTY, 'ST', :QTY, :strUOM, :QTY, :WK_COMPANY, :TRN_DATE, :PERSON_ID, :TRN_DATE, :TRN_DATE, :PERSON_ID, :WK_PROD_SSN_TYPE  );
+                          INSERT INTO ISSN (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, CURRENT_QTY, ISSN_STATUS,AUDITED,ORIGINAL_QTY,COMPANY_ID,AUDIT_DATE, USER_ID, CREATE_DATE, INTO_DATE, LABEL_DATE, LAST_UPDATE_DATE )
+                          VALUES (:OBJECT, :OBJECT, :WH_ID, :LOCN_ID, :QTY, 'ST', 'N', :QTY, :WK_COMPANY, :TRN_DATE, :PERSON_ID, :TRN_DATE, :TRN_DATE, :TRN_DATE, :TRN_DATE );
+                          IF (WK_PROD > '') THEN
+                          BEGIN
+                             IF (WK_NEW_COMPANY = '') THEN
+                             BEGIN
+                                SELECT COMPANY_ID, SSN_TYPE 
+                                FROM PROD_PROFILE
+                                WHERE PROD_ID = :WK_PROD
+                                INTO :WK_COMPANY, :WK_PROD_SSN_TYPE;
+                                IF (WK_PROD_SSN_TYPE IS NULL) THEN
+                                BEGIN
+                                   SELECT SSN_TYPE
+                                   FROM SSN
+                                   WHERE SSN_ID = :OBJECT
+                                   INTO :WK_PROD_SSN_TYPE;
+                                END
+                                UPDATE SSN SET PROD_ID = :WK_PROD,
+                                   COMPANY_ID = :WK_COMPANY,
+                                   SSN_TYPE   = :WK_PROD_SSN_TYPE,
+                                   LAST_UPDATE_DATE =  :TRN_DATE, 
+                                   LAST_UPDATE_BY  = :PERSON_ID
+                                WHERE SSN_ID = :OBJECT;
+                                UPDATE ISSN SET PROD_ID = :WK_PROD,
+                                   COMPANY_ID = :WK_COMPANY,
+                                   PROD_ID_UPDATE = :TRN_DATE,
+                                   LAST_UPDATE_DATE =  :TRN_DATE 
+                                WHERE SSN_ID = :OBJECT;
+                             END
+                             ELSE
+                             BEGIN
+                                SELECT COMPANY_ID, SSN_TYPE 
+                                FROM PROD_PROFILE
+                                WHERE PROD_ID = :WK_PROD
+                                INTO :WK_COMPANY, :WK_PROD_SSN_TYPE;
+                                IF (WK_PROD_SSN_TYPE IS NULL) THEN
+                                BEGIN
+                                   SELECT SSN_TYPE
+                                   FROM SSN
+                                   WHERE SSN_ID = :OBJECT
+                                   INTO :WK_PROD_SSN_TYPE;
+                                END
+                                UPDATE SSN SET PROD_ID = :WK_PROD,
+                                   SSN_TYPE   = :WK_PROD_SSN_TYPE,
+                                   LAST_UPDATE_DATE =  :TRN_DATE, 
+                                   LAST_UPDATE_BY  = :PERSON_ID
+                                WHERE SSN_ID = :OBJECT;
+                                UPDATE ISSN SET PROD_ID = :WK_PROD,
+                                   PROD_ID_UPDATE = :TRN_DATE,
+                                   LAST_UPDATE_DATE =  :TRN_DATE 
+                                WHERE SSN_ID = :OBJECT;
+                             END
+                          END
+                          strAUDIT_DESC = 'New object record created during audit';
+                          strSSN = OBJECT;
+                   END
+                   ELSE
+                   BEGIN
+                         IF (WK_PROD > '') THEN
+                         BEGIN
+                            IF (OBJECT = strSSN) THEN
+                            BEGIN
+                               IF (WK_NEW_COMPANY = '') THEN
+                               BEGIN
+                                  SELECT COMPANY_ID, SSN_TYPE 
+                                  FROM PROD_PROFILE
+                                  WHERE PROD_ID = :WK_PROD
+                                  INTO :WK_COMPANY, :WK_PROD_SSN_TYPE;
+                                  IF (WK_PROD_SSN_TYPE IS NULL) THEN
+                                  BEGIN
+                                     SELECT SSN_TYPE
+                                     FROM SSN
+                                     WHERE SSN_ID = :OBJECT
+                                     INTO :WK_PROD_SSN_TYPE;
+                                  END
+                               END
+                               ELSE
+                               BEGIN
+                                  SELECT SSN_TYPE 
+                                  FROM PROD_PROFILE
+                                  WHERE PROD_ID = :WK_PROD
+                                  INTO :WK_PROD_SSN_TYPE;
+                                  IF (WK_PROD_SSN_TYPE IS NULL) THEN
+                                  BEGIN
+                                     SELECT SSN_TYPE
+                                     FROM SSN
+                                     WHERE SSN_ID = :OBJECT
+                                     INTO :WK_PROD_SSN_TYPE;
+                                  END
+                               END
+                               UPDATE SSN SET PROD_ID = :WK_PROD,
+                                  COMPANY_ID = :WK_COMPANY,
+                                  SSN_TYPE   = :WK_PROD_SSN_TYPE,
+                                  LAST_UPDATE_DATE =  :TRN_DATE, 
+                                  LAST_UPDATE_BY  = :PERSON_ID
+                               WHERE SSN_ID = :OBJECT;
+                            END
+                            ELSE
+                            BEGIN
+                               IF (WK_NEW_COMPANY = '') THEN
+                               BEGIN
+                                  SELECT COMPANY_ID 
+                                  FROM PROD_PROFILE
+                                  WHERE PROD_ID = :WK_PROD
+                                  INTO :WK_COMPANY;
+                               END
+                            END
+                            WK_LAST_PROD = '';
+                            SELECT PROD_ID
+                            FROM ISSN
+                            WHERE SSN_ID = :OBJECT
+                            INTO :WK_LAST_PROD;
+                            IF (WK_LAST_PROD IS NULL) THEN
+                            BEGIN
+                               WK_LAST_PROD = '';
+                            END
+                            IF (WK_LAST_PROD <> WK_PROD) THEN
+                            BEGIN
+                               UPDATE ISSN SET 
+                                   PREV_PREV_PROD_ID_UPDATE = PREV_PROD_ID_UPDATE,
+                                   PREV_PROD_ID_UPDATE = PROD_ID_UPDATE,
+                                   PROD_ID_UPDATE = :TRN_DATE,
+                                   PREV_PREV_PROD_ID = PREV_PROD_ID,
+                                   PREV_PROD_ID = PROD_ID,
+                                   PROD_ID = :WK_PROD,
+                                   COMPANY_ID = :WK_COMPANY,
+                                   LAST_UPDATE_DATE =  :TRN_DATE 
+                               WHERE SSN_ID = :OBJECT;
+                            END
+                            ELSE
+                            BEGIN
+                               UPDATE ISSN SET PROD_ID = :WK_PROD,
+                                   COMPANY_ID = :WK_COMPANY,
+                                   LAST_UPDATE_DATE =  :TRN_DATE 
+                               WHERE SSN_ID = :OBJECT;
+                            END
+                         END
+                         IF ((strWH_ID <> :WH_ID) OR (strLOCN_ID <> :LOCN_ID)) THEN
+                         BEGIN          
+                               /* item found in different location, update object relocated */
+                               IF (Currentqty = QTY) THEN
+                               BEGIN
+                                     UPDATE ISSN
+                                     SET PREV_PREV_WH_ID = PREV_WH_ID, 
+                                         PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                                         PREV_WH_ID = WH_ID,
+                                         PREV_LOCN_ID = LOCN_ID,
+                                         WH_ID = :WH_ID, 
+                                         LOCN_ID = :LOCN_ID, 
+                                         INTO_DATE = :TRN_DATE,
+                                         AUDIT_DATE = :TRN_DATE,
+                                         AUDITED = 'C',
+                                         LAST_UPDATE_DATE =  :TRN_DATE 
+                                     WHERE SSN_ID = :OBJECT;
+                                     IF (OBJECT = strSSN) THEN
+                                     BEGIN
+                                           UPDATE SSN
+                                           SET WH_ID = :WH_ID, LOCN_ID = :LOCN_ID, INTO_DATE = :TRN_DATE,
+                                               AUDITED = 'C', AUDIT_DATE = :TRN_DATE, AUDITED_QTY = :QTY, STORAGE_UOM = :strUOM,
+                                               LAST_UPDATE_DATE =  :TRN_DATE, 
+                                               LAST_UPDATE_BY  = :PERSON_ID
+                                           WHERE SSN_ID = :strSSN;
+                                     END
+                                     ELSE
+                                     BEGIN
+                                           UPDATE SSN
+                                           SET STORAGE_UOM = :strUOM,
+                                               LAST_UPDATE_DATE =  :TRN_DATE, 
+                                               LAST_UPDATE_BY  = :PERSON_ID
+                                           WHERE SSN_ID = :strSSN;
+                                     END
+
+                               
+                                     strAUDIT_DESC = 'Item found in different location';  
+                               END
+                               ELSE
+                               BEGIN
+                                     UPDATE ISSN
+                                     SET PREV_PREV_WH_ID = PREV_WH_ID, 
+                                         PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                                         PREV_WH_ID = WH_ID,
+                                         PREV_LOCN_ID = LOCN_ID,
+                                         WH_ID = :WH_ID, 
+                                         LOCN_ID = :LOCN_ID, 
+                                         INTO_DATE = :TRN_DATE,
+                                         AUDIT_DATE = :TRN_DATE,
+                                         AUDITED = 'R',
+                                         LAST_UPDATE_DATE =  :TRN_DATE 
+                                     WHERE SSN_ID = :OBJECT;
+                                     IF (OBJECT = strSSN) THEN
+                                     BEGIN
+                                           UPDATE SSN
+                                           SET WH_ID = :WH_ID, LOCN_ID = :LOCN_ID, INTO_DATE = :TRN_DATE, AUDITED = 'R', STORAGE_UOM = :strUOM,
+                                               LAST_UPDATE_DATE =  :TRN_DATE, 
+                                               LAST_UPDATE_BY  = :PERSON_ID
+                                           WHERE SSN_ID = :strSSN;
+                                     END
+                                     ELSE
+                                     BEGIN
+                                           UPDATE SSN
+                                           SET STORAGE_UOM = :strUOM,
+                                               LAST_UPDATE_DATE =  :TRN_DATE, 
+                                               LAST_UPDATE_BY  = :PERSON_ID
+                                           WHERE SSN_ID = :strSSN;
+                                     END
+                                     strAUDIT_DESC = 'Recount Required';
+                               END
+                         END
+                         ELSE
+                         BEGIN                           
+                               /* object found in expected location, upload object found */
+                               IF (Currentqty = QTY) THEN
+                               BEGIN
+                                     IF (OBJECT = strSSN) THEN
+                                     BEGIN
+                                           UPDATE ISSN
+                                           SET INTO_DATE = :TRN_DATE, AUDITED = 'F', AUDIT_DATE = :TRN_DATE, 
+                                               LAST_UPDATE_DATE =  :TRN_DATE 
+                                           WHERE SSN_ID = :OBJECT;
+                                           UPDATE SSN
+                                           SET INTO_DATE = :TRN_DATE, AUDITED = 'F',  
+                                               AUDIT_DATE = :TRN_DATE, AUDITED_QTY = :QTY, STORAGE_UOM = :strUOM,
+                                               LAST_UPDATE_DATE =  :TRN_DATE, 
+                                               LAST_UPDATE_BY  = :PERSON_ID
+                                           WHERE SSN_ID = :strSSN;
+                                     END
+                                     ELSE
+                                     BEGIN
+                                           UPDATE ISSN
+                                           SET INTO_DATE = :TRN_DATE, AUDITED = 'F', AUDIT_DATE = :TRN_DATE, 
+                                               LAST_UPDATE_DATE =  :TRN_DATE 
+                                           WHERE SSN_ID = :OBJECT;
+                                           UPDATE SSN
+                                           SET STORAGE_UOM = :strUOM, 
+                                               LAST_UPDATE_DATE =  :TRN_DATE, 
+                                               LAST_UPDATE_BY  = :PERSON_ID
+                                           WHERE SSN_ID = :strSSN;
+                                     END
+
+                                     strAUDIT_DESC = 'Item found in correct location';
+                               END
+                               ELSE
+                               BEGIN
+                                     IF (OBJECT = strSSN) THEN
+                                     BEGIN
+                                           UPDATE ISSN
+                                           SET AUDITED = 'R',  
+                                               LAST_UPDATE_DATE =  :TRN_DATE 
+                                           WHERE SSN_ID = :OBJECT;
+                                           UPDATE SSN
+                                           SET AUDITED = 'R', STORAGE_UOM = :strUOM, 
+                                               LAST_UPDATE_DATE =  :TRN_DATE, 
+                                               LAST_UPDATE_BY  = :PERSON_ID
+                                           WHERE SSN_ID = :strSSN;
+                                     END
+                                     ELSE
+                                     BEGIN
+                                           UPDATE ISSN
+                                           SET AUDITED = 'R',  
+                                               LAST_UPDATE_DATE =  :TRN_DATE 
+                                           WHERE SSN_ID = :OBJECT;
+                                           UPDATE SSN
+                                           SET STORAGE_UOM = :strUOM, 
+                                               LAST_UPDATE_DATE =  :TRN_DATE, 
+                                               LAST_UPDATE_BY  = :PERSON_ID
+                                           WHERE SSN_ID = :strSSN;
+                                     END
+                                     strAUDIT_DESC = 'Recount Required';
+                               END
+                         END
+                   END
+   
+                  /* Update transactions table */               
+                  EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully'); 
+                  
+                  /* Add transaction history */                                                                                     
+                  EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :strSSN, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                                 :strAUDIT_DESC, :REFERENCE, :QTY,  :PERSON_ID, :DEVICE_ID);
+             END
+       END
+    END
+    ELSE
+    BEGIN
+       /* Update transactions table */               
+       EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid class code');
+       EXIT;
+    END 
+END ^
+
+CREATE OR ALTER PROCEDURE PC_STRC (RECORD_ID INTEGER,
+WH_ID CHAR(2) CHARACTER SET NONE,
+LOCN_ID VARCHAR(10) CHARACTER SET NONE,
+OBJECT VARCHAR(30) CHARACTER SET NONE,
+TRN_TYPE VARCHAR(4) CHARACTER SET NONE,
+TRN_CODE CHAR(1) CHARACTER SET NONE,
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(1024) CHARACTER SET NONE,
+QTY INTEGER,
+PERSON_ID VARCHAR(10) CHARACTER SET NONE,
+DEVICE_ID CHAR(2) CHARACTER SET NONE,
+INSTANCE_ID VARCHAR(10) CHARACTER SET NONE)
+AS 
+ 
+ 
+                             
+  DECLARE VARIABLE strWH_ID CHAR(2); 
+  DECLARE VARIABLE strINSTANCE VARCHAR(10); 
+  DECLARE VARIABLE strSSN VARCHAR(20);  
+  DECLARE VARIABLE strLOCN_ID VARCHAR(10);  
+  DECLARE VARIABLE strAUDIT_DESC VARCHAR(40); 
+  DECLARE VARIABLE REC_ID INTEGER;    
+  DECLARE VARIABLE LOCN_NAME VARCHAR(50); 
+  DECLARE VARIABLE strLOCN_exists INTEGER;  
+  DECLARE VARIABLE Currentqty INTEGER;  
+  DECLARE VARIABLE strUOM CHAR(2); 
+  DECLARE VARIABLE diff_qty INTEGER;  
+  DECLARE VARIABLE WK_REFERENCE VARCHAR(1024); 
+  
+BEGIN
+    strWH_ID = "";
+    strINSTANCE = "";
+    strSSN = "";
+    strWH_ID = "";
+    strLOCN_ID = "";   
+    strAUDIT_DESC = "";  
+    strUOM = "";
+
+    /* strUOM = lefts(alltrim(REFERENCE),2); */
+    WK_REFERENCE = V4ALLTRIM(REFERENCE);
+
+/*    strUOM = LEFTS(:WK_REFERENCE,2); */
+    strUOM = SUBSTR(:WK_REFERENCE,1,2);
+    /* Check trasaction code */
+    IF (:TRN_CODE = 'A') THEN
+    BEGIN
+
+       strLOCN_exists = 0;
+       SELECT 1 FROM LOCATION 
+       WHERE WH_ID = :WH_ID AND LOCN_ID = :LOCN_ID 
+       INTO :strLOCN_exists;
+       IF (strLOCN_exists = 0) THEN /* Location not found */
+       BEGIN
+           LOCN_NAME = LOCN_ID || :TRN_DATE;
+           /* Add new Location record */
+           INSERT INTO LOCATION (LOCN_ID, WH_ID, LOCN_NAME , LAST_UPDATE_DATE, LAST_UPDATE_BY )
+           VALUES (:LOCN_ID, :WH_ID, :LOCN_NAME, :TRN_DATE, :PERSON_ID);
+       END
+   
+       /* Check if warehouse exists */
+       SELECT WH_ID, INSTANCE_ID 
+       FROM WAREHOUSE
+       WHERE WH_ID = :WH_ID
+       INTO :strWH_ID, :strINSTANCE;
+   
+       /* Check warehouse*/
+       IF (strWH_ID <> '') THEN
+       BEGIN
+             /* Check instance */
+             /* IF (strINSTANCE = :INSTANCE_ID) THEN  */ 
+             BEGIN
+                   /* Check ObjectLocation */
+     /* please check issn first */
+     /* since it may not be in ssn table then update
+     original_ssn */
+                   SELECT SD.ORIGINAL_SSN, SD.WH_ID, SD.LOCN_ID, SD.CURRENT_QTY
+                   FROM ISSN SD JOIN SSN SN ON SN.SSN_ID = SD.ORIGINAL_SSN
+                   WHERE SD.SSN_ID = :OBJECT
+                   INTO :strSSN, :strWH_ID, :strLOCN_ID, :Currentqty ;
+                   
+                   /* Check SSN */
+                   IF (strSSN = "") THEN
+                   BEGIN
+                   /* Object not found */
+                          /* Add SSN */
+                          INSERT INTO SSN (SSN_ID, WH_ID, LOCN_ID, INTO_DATE, AUDITED, AUDIT_DATE, AUDITED_QTY, STATUS_SSN, CURRENT_QTY, STORAGE_UOM, LAST_UPDATE_DATE, LAST_UPDATE_BY )
+                          VALUES (:OBJECT, :WH_ID, :LOCN_ID, :TRN_DATE, 'N', :TRN_DATE, :QTY, 'ST', :QTY, :strUOM, :TRN_DATE, :PERSON_ID );
+                          INSERT INTO ISSN (SSN_ID, ORIGINAL_SSN, WH_ID, LOCN_ID, CURRENT_QTY, ISSN_STATUS, AUDITED, AUDIT_DATE, LAST_UPDATE_DATE )
+                          VALUES (:OBJECT, :OBJECT, :WH_ID, :LOCN_ID, :QTY, 'ST', 'N', :TRN_DATE , :TRN_DATE);
+                          strAUDIT_DESC = "New object record created during audit";
+                          strSSN = OBJECT;
+                   END
+                   ELSE
+                   BEGIN
+                         diff_qty = QTY - Currentqty;
+                         IF ((strWH_ID <> :WH_ID) OR (strLOCN_ID <> :LOCN_ID)) THEN
+                         BEGIN          
+                               /* item found in different location, update object relocated */
+                               UPDATE ISSN
+                               SET PREV_PREV_WH_ID = PREV_WH_ID, 
+                                   PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                                   PREV_WH_ID = WH_ID,
+                                   PREV_LOCN_ID = LOCN_ID,
+                                   WH_ID = :WH_ID, 
+                                   LOCN_ID = :LOCN_ID, 
+                                   INTO_DATE = :TRN_DATE,
+                                   AUDIT_DATE = :TRN_DATE,
+                                   CURRENT_QTY = :QTY,
+                                   AUDITED = 'C',
+                                   LAST_UPDATE_DATE =  :TRN_DATE 
+                               WHERE SSN_ID = :OBJECT;
+                               IF (OBJECT = strSSN) THEN
+                               BEGIN
+                                     UPDATE SSN
+                                     SET WH_ID = :WH_ID, LOCN_ID = :LOCN_ID, INTO_DATE = :TRN_DATE,
+                                         AUDITED = 'C', AUDIT_DATE = :TRN_DATE, AUDITED_QTY = :QTY, CURRENT_QTY = CURRENT_QTY + :diff_qty , STORAGE_UOM = :strUOM,
+                                         LAST_UPDATE_DATE =  :TRN_DATE, 
+                                         LAST_UPDATE_BY  = :PERSON_ID
+                                     WHERE SSN_ID = :strSSN;
+                               END
+                               ELSE
+                               BEGIN
+                                     UPDATE SSN
+                                     SET CURRENT_QTY = CURRENT_QTY + :diff_qty , STORAGE_UOM = :strUOM,
+                                         LAST_UPDATE_DATE =  :TRN_DATE, 
+                                         LAST_UPDATE_BY  = :PERSON_ID
+                                     WHERE SSN_ID = :strSSN;
+                               END
+                               
+                               strAUDIT_DESC = "Item found in different location";  
+                         END
+                         ELSE
+                         BEGIN                           
+                               /* object found in expected location, upload object found */
+                               UPDATE ISSN
+                               SET INTO_DATE = :TRN_DATE,
+                                   AUDIT_DATE = :TRN_DATE,
+                                   CURRENT_QTY = :QTY,
+                                   AUDITED = 'F',
+                                   LAST_UPDATE_DATE =  :TRN_DATE 
+                               WHERE SSN_ID = :OBJECT;
+                               IF (OBJECT = strSSN) THEN
+                               BEGIN
+                                     UPDATE SSN
+                                     SET INTO_DATE = :TRN_DATE, AUDITED = 'F',  
+                                         AUDIT_DATE = :TRN_DATE, AUDITED_QTY = :QTY, STORAGE_UOM = :strUOM, CURRENT_QTY = CURRENT_QTY + :diff_qty ,
+                                         LAST_UPDATE_DATE =  :TRN_DATE, 
+                                         LAST_UPDATE_BY  = :PERSON_ID
+                                     WHERE SSN_ID = :strSSN;
+                               END
+                               ELSE
+                               BEGIN
+                                     UPDATE SSN
+                                     SET STORAGE_UOM = :strUOM, CURRENT_QTY = CURRENT_QTY + :diff_qty,
+                                         LAST_UPDATE_DATE =  :TRN_DATE, 
+                                         LAST_UPDATE_BY  = :PERSON_ID
+                                     WHERE SSN_ID = :strSSN;
+                               END
+   
+                               strAUDIT_DESC = "Item found in correct location";
+                         END
+                   END
+   
+                  /* Update transactions table */               
+                  EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully'); 
+                  
+                  /* Add transaction history */                                                                                     
+                  EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :strSSN, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                                 :strAUDIT_DESC, :REFERENCE, :QTY,  :PERSON_ID, :DEVICE_ID);
+             END
+       END
+    END
+    ELSE
+    BEGIN
+       /* Update transactions table */               
+       EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Invalid class code');
+       EXIT;
+    END 
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

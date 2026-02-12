@@ -1,0 +1,22 @@
+/* other 8 - uses product description and ssn_type */
+update or insert  into  product_description( description, type_code, field_code) values('UNKNOWN', 'UNKNOWN', '3');
+update ssn set other8 = upper(other8) where upper(other8) <> other8;
+/*
+update ssn set other8 = 'UNKNOWN'  where coalesce(other8,'') = '';
+update ssn set other8 = 'UNKNOWN'  where other8 = '';
+*/
+update ssn set other8 = null  where other8 = '';
+update ssn set other8 = alltrim(other8)  where other8 starting ' ';
+commit;
+insert into product_description (description, type_code, field_code)
+select s1.other8, s1.ssn_type , '3'
+from ssn s1
+left outer join product_description s2 on
+s2.type_code = s1.ssn_type and
+s2.field_code  = '3' and
+s2.description    = s1.other8
+where s2.description is null
+and (s1.other8 is not null)
+and (s1.ssn_type is not null)
+group by s1.ssn_type, s1.other8
+;

@@ -1,0 +1,7 @@
+alter table sys_email drop se_mail_from_domain;
+commit;
+alter table sys_email add se_mail_from_domain DOMAIN_NAME;
+alter table sys_email alter se_mail_from_domain position 2;
+alter domain DOMAIN_NAME        drop constraint;
+
+

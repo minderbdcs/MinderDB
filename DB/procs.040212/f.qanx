@@ -1,0 +1,147 @@
+CREATE PROCEDURE PC_QANX (RECORD_ID INTEGER,
+WH_ID CHAR(2) CHARACTER SET NONE,
+LOCN_ID VARCHAR(10) CHARACTER SET NONE,
+OBJECT VARCHAR(30) CHARACTER SET NONE,
+TRN_TYPE VARCHAR(4) CHARACTER SET NONE,
+TRN_CODE CHAR(1) CHARACTER SET NONE,
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(40) CHARACTER SET NONE,
+QTY INTEGER,
+PERSON_ID VARCHAR(10) CHARACTER SET NONE,
+DEVICE_ID CHAR(2) CHARACTER SET NONE,
+SUB_LOCN VARCHAR(10) CHARACTER SET NONE)
+AS 
+ 
+  DECLARE VARIABLE WK_QUESTION_NO INTEGER;
+  DECLARE VARIABLE WK_ANSWER_NO INTEGER;
+  DECLARE VARIABLE WK_CATEGORY VARCHAR(1);
+  DECLARE VARIABLE WK_INSPECT_PASS VARCHAR(6);
+  DECLARE VARIABLE WK_TEST_EXISTS INTEGER;
+  DECLARE VARIABLE WK_TEST_ID INTEGER;
+  DECLARE VARIABLE WK_ORIGINAL VARCHAR(1);
+  DECLARE VARIABLE WK_RESPONSE VARCHAR(50);
+  DECLARE VARIABLE WK_SSN_TEST_ID INTEGER;
+  DECLARE VARIABLE WK_COUNT INTEGER;
+  DECLARE VARIABLE WK_SSN_SSNID VARCHAR(30);
+  
+BEGIN /* Main */
+ /* ssn is in object
+           location is current location
+        */
+/*
+calc whether an original test for ssn
+calc test_id that is open for ssn
+calc last question and answer from ssn_test_results order by date
+calc 2nd to last question and answer from ssn_test_results
+remove last prod_con_status entry if a failure
+	if this was for an original then remove both
+if was for category 'E' update other5 to ''
+update ssn's question and answer - must read previous ssn_test_result
+	if no more then original and null
+update ssn_test_result processed to 'U' for last entry
+*/
+
+    SELECT ORIGINAL_SSN
+       FROM ISSN 
+       WHERE SSN_ID = :OBJECT
+        INTO :WK_SSN_SSNID;
+    WK_TEST_EXISTS = 0;
+    SELECT 1, TEST_ID FROM SSN_TEST
+        WHERE SSN_ID = :OBJECT AND
+              STATUS_TEST = 'OP'
+        INTO :WK_TEST_EXISTS, :WK_TEST_ID;
+    IF (WK_TEST_EXISTS = 0) THEN
+    BEGIN
+        /* no test for this - uggh */
+        WK_TEST_ID = -1;
+    END 
+    /* must get the last test id */
+    WK_COUNT = 0;
+    FOR SELECT FIRST 2 SSN_TEST_ID, QUESTION_ID, RESPONSE, RESPONSE_ID,
+        INSPECT_CATEGORY, INSPECT_PASS_CRITERIA, ORIGINAL_TEST 
+        FROM SSN_TEST_RESULTS
+        WHERE SSN_ID = :OBJECT
+        AND TEST_ID = :WK_TEST_ID
+        AND PROCESSED = 'P'
+        ORDER BY TIME_STAMP DESC
+        INTO :WK_SSN_TEST_ID, :WK_QUESTION_NO, :WK_RESPONSE, :WK_ANSWER_NO, :WK_CATEGORY, :WK_INSPECT_PASS, :WK_ORIGINAL
+    DO
+    BEGIN
+       WK_COUNT = WK_COUNT + 1;
+       IF (WK_COUNT = 1) THEN
+       BEGIN
+          IF (WK_INSPECT_PASS = 'FAILED') THEN
+          BEGIN
+             DELETE FROM PRODUCT_COND_STATUS
+                WHERE SSN_ID = :OBJECT
+                  AND CODE = :WK_CATEGORY
+                  AND DESCRIPTION = :WK_RESPONSE
+                  AND ORIGINAL_TEST = :WK_ORIGINAL;
+             IF (WK_ORIGINAL = 'O') THEN
+             BEGIN
+                DELETE FROM PRODUCT_COND_STATUS
+                   WHERE SSN_ID = :OBJECT
+                     AND CODE = :WK_CATEGORY
+                     AND DESCRIPTION = :WK_RESPONSE
+                     AND ORIGINAL_TEST = 'S';
+             END 
+          END
+          IF (WK_CATEGORY = 'E') THEN
+          BEGIN
+             UPDATE SSN SET OTHER5 = ''
+             WHERE SSN_ID = :WK_SSN_SSNID;
+          END
+          UPDATE SSN_TEST_RESULTS SET PROCESSED = 'U'
+          WHERE SSN_TEST_ID = :WK_SSN_TEST_ID;
+       END
+       IF (WK_COUNT = 2) THEN
+       BEGIN
+          UPDATE SSN SET QUESTION_ID = :WK_QUESTION_NO, ANSWER_ID = :WK_ANSWER_NO
+          WHERE SSN_ID = :WK_SSN_SSNID;
+       END
+    END
+    IF (WK_COUNT < 2) THEN
+    BEGIN
+       /* update ssn's answer and question to null and original */
+       SELECT TQ.QUESTION_ID
+           FROM SSN SN 
+                JOIN TEST_QUESTIONS TQ ON TQ.SSN_TYPE = SN.SSN_TYPE
+           WHERE SN.SSN_ID = :WK_SSN_SSNID
+                AND TQ.SEQUENCE = 0
+           INTO :WK_QUESTION_NO ;
+       UPDATE SSN SET ANSWER_ID = NULL, QUESTION_ID = :WK_QUESTION_NO
+       WHERE SSN_ID = :WK_SSN_SSNID;
+    END
+
+    EXECUTE PROCEDURE UPDATE_TRAN (RECORD_ID, 'T','Processed successfully');
+END ^
+
+ 
+CREATE TRIGGER RUN_TRANSACTION_QANX FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 79 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'QANX') THEN
+  BEGIN
+   EXECUTE PROCEDURE PC_QANX 
+    NEW.RECORD_ID ,
+    NEW.WH_ID,
+    NEW.LOCN_ID,
+    NEW.OBJECT,
+    NEW.TRN_TYPE,
+    NEW.TRN_CODE,
+    NEW.TRN_DATE,
+    NEW.REFERENCE,
+    NEW.QTY,
+    NEW.PERSON_ID,
+    NEW.DEVICE_ID,
+    NEW.SUB_LOCN_ID;
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+  END
+ END
+END ^
+ 

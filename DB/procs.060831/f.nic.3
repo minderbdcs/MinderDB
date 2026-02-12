@@ -1,0 +1,16 @@
+update ssn_type set code='UNKNOWN' where code='';
+commit;
+update generic set CODE='UNKNOWN' where code='';
+update generic set ssn_type='UNKNOWN' where ssn_type='';
+update generic set ssn_type='UNKNOWN' where ssn_type is null;
+commit;
+update ssn_sub_type set code='UNKNOWN' where code='';
+update ssn_sub_type set generic='UNKNOWN' where generic='';
+update ssn_sub_type set generic='UNKNOWN' where generic is null;
+update ssn_sub_type set ssn_type='UNKNOWN' where ssn_type='';
+update ssn_sub_type set ssn_type='UNKNOWN' where ssn_type is null;
+commit;
+update prod_profile set prod_id='UNKNOWN' where prod_id='';
+commit;
+update brand set code='UNKNOWN' where code='';
+commit;

@@ -1,0 +1,9 @@
+/*
+358:DECLARE EXTERNAL FUNCTION LEFTS
+361:ENTRY_POINT 'fudlib_lefts' MODULE_NAME 'fudlib';
+743:DECLARE EXTERNAL FUNCTION VLEFTS
+746:ENTRY_POINT 'fudlib_lefts' MODULE_NAME 'fudlib';
+*/
+
+drop external function lefts;
+drop external function vlefts;

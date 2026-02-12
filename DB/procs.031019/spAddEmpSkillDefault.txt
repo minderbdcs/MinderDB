@@ -1,0 +1,24 @@
+CREATE PROCEDURE ADD_EMP_SKILL_DEFAULT (
+  EMPLOYEE_ID VARCHAR(10)
+)  AS            
+
+DECLARE VARIABLE sCode VARCHAR(10);
+
+BEGIN    
+    
+    /* Get the compulsory skills */
+    FOR 
+      SELECT CODE 
+      FROM SKILL
+      WHERE COMPULSORY_SKILL = 'T'
+      INTO :sCode
+    DO
+    BEGIN  
+      /* Insert compulsory skills into table Employee Skill */
+      INSERT INTO EMPLOYEE_SKILL (EMPLOYEE_ID, SKILL_CODE, 
+         TRAINING_PASS, COMPULSORY_SKILL, TRAINING_DATE)
+      VALUES (:EMPLOYEE_ID, :sCode, 'T', 'T', 'DATE');
+              
+    END                     
+END^
+

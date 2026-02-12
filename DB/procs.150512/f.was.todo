@@ -1,0 +1,17 @@
+/*
+create transaction PKSN
+passed a pick_label_no and a serial no
+
+for the pick_label_no grab the first ssn_id (ISSN) with no serial no
+if qty < 1 do nothing
+if qty = 1 update the serial no and mark the issn as one to have its serial no dropped in sys moves transfer to ST status locn
+if qty > 1
+	want to split the issn.
+	Split one off into a new issn 
+	Create a new pick_item_detail for this issn
+	update the parent issn to be one less and the qty_picked one less.
+	then treat this as qty = 1
+	update the new issn's serial no and mark the issn as one to have its serial no dropped in sys moves transfer to ST status locn.
+
+*/
+	

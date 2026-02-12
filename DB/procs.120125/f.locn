@@ -1,0 +1,2 @@
+create domain pick_time float;
+alter table location add locn_pick_minutes pick_time ;

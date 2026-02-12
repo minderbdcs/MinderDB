@@ -1,0 +1,2 @@
+alter table uom_type add default_uom code_two;
+

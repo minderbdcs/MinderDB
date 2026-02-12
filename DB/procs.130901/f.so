@@ -1,0 +1,2 @@
+alter table pick_order add DESPATCH_DATE CLOSING_DATE ;
+alter table pick_order_dx add DESPATCH_DATE CLOSING_DATE ;

@@ -1,0 +1,2 @@
+alter table startrack_depot  drop constraint integ_235;
+alter table startrack_depot  drop constraint integ_234;

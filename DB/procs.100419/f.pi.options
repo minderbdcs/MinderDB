@@ -1,0 +1,5 @@
+update options set description2='UC' where group_code='PICK_STATU' and code='UC';
+update options set description2='OP' where group_code='PICK_STATU' and code='DA';
+update options set description2='OP' where group_code='PICK_STATU' and code='OP';
+update options set description2='CF' where group_code='PICK_STATU' and code='CF';
+update options set description2='CN' where group_code='PICK_STATU' and code='CN';

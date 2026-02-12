@@ -1,0 +1,27 @@
+/*
+
+    select rc.rdb$constraint_name
+    from rdb$relation_constraints rc
+    inner join rdb$check_constraints cc
+      on rc.rdb$constraint_name = cc.rdb$constraint_name
+    where rc.rdb$constraint_type = 'NOT NULL'
+    and rc.rdb$relation_name = 'COMPANY'
+    and cc.rdb$trigger_name  = 'ACN'
+    ;
+*/
+
+select rdb$null_flag, rdb$field_name from rdb$relation_fields
+where  rdb$relation_name  = 'COMPANY'
+       and rdb$field_name in ( 'ACN','ADDRESS1')
+;
+update rdb$relation_fields set rdb$null_flag = null    /* or 0 */
+where  rdb$relation_name  = 'COMPANY'
+       and rdb$field_name = 'ACN'
+;
+update rdb$relation_fields set rdb$null_flag = null    /* or 0 */
+where  rdb$relation_name  = 'COMPANY'
+       and rdb$field_name = 'ADDRESS1'
+;
+
+
+

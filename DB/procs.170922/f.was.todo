@@ -1,0 +1,6 @@
+
+================================================================================
+in the list of tables mirrored  are missing sequence 320 and 345
+PICK_ORDER_DX and GRN_DX
+these do not have primary keys
+

@@ -1,0 +1,1 @@
+alter table pick_item_cancel add cancel_method char(1);

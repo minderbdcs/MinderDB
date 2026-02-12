@@ -1,0 +1,6 @@
+/*
+518:DECLARE EXTERNAL FUNCTION PADLEFT
+521:ENTRY_POINT 'Padleft' MODULE_NAME 'udf_file';
+*/
+
+drop external function padleft;

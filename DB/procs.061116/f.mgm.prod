@@ -1,0 +1,3 @@
+update prod_profile set export_category='C' where prod_id in ('02438','10023','17024','90599','12359','12372','01189','09310','06103','06110','10033');
+update prod_profile set export_category='C' where prod_id in ('H378','F129','V236','H918','Z266','Z276','F130','K1023','D251/L','D251/M','F125');
+

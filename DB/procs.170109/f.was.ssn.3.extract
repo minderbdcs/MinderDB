@@ -1,0 +1,28 @@
+/*
+update or insert  into  generic(code, description, ssn_type) values('UNKNOWN','Unknown', 'UNKNOWN');
+update ssn set generic = upper(generic) where upper(generic) <> generic;
+*/
+/*
+update ssn set generic = 'UNKNOWN'  where generic = '';
+update ssn set generic = null  where generic = '';
+*/
+commit;
+/*
+update or insert into generic (code,description, ssn_type)
+select s1.generic, s1.generic as descr , s1.ssn_type 
+from ssn s1 
+left outer join generic s2 on s2.ssn_type = s1.ssn_type and s2.code    = s1.generic
+where s2.code is null
+and (s1.generic is not null)
+and (s1.ssn_type is not null)
+group by s1.ssn_type, s1.generic, descr
+;
+*/
+select 'update or insert into generic(code, description, ssn_type) values("'||s1.generic||'","'|| s1.generic || '","'|| s1.ssn_type || '")^'
+from ssn s1 
+left outer join generic s2 on s2.ssn_type = s1.ssn_type and s2.code    = s1.generic
+where s2.code is null
+and (s1.generic is not null)
+and (s1.ssn_type is not null)
+group by s1.ssn_type, s1.generic 
+;

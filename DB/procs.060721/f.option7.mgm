@@ -1,0 +1,8 @@
+insert into options(group_code,code,description) values('CMPPKPRO','001','1');
+insert into options(group_code,code,description) values('CMPPKPRO','030','2');
+insert into options(group_code,code,description) values('CMPPKPRO','040','3');
+insert into options(group_code,code,description) values('CMPPKPRO','060','5');
+insert into options(group_code,code,description) values('CMPPKPRO','090','6');
+insert into options(group_code,code,description) values('CMPPKPRO','110','7');
+insert into options(group_code,code,description) values('CMPPKPRO','120','8');
+

@@ -1,0 +1,4 @@
+alter table transfer_request add other1 other_char;
+alter table transfer_request add seq integer;
+
+create index transfer_request_seq_idx on transfer_request(other1, seq);

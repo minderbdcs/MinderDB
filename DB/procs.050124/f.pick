@@ -1,0 +1,8 @@
+update pick_order set printed_status='T',
+ pick_retrieve_status='T' 
+ where (printed_status is null) and
+ (pick_retrieve_status is null);
+update pick_order set printed_status='T' where printed_status is null;
+update pick_order set pick_retrieve_status='T' where pick_retrieve_status is null;
+update pick_item set pick_retrieve_status='T' where pick_retrieve_status is null;
+

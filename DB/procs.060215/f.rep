@@ -1,0 +1,34 @@
+create table transfer_request ( trn_line_no integer not null,
+trn_priority pick_priority,
+device_id device_id,
+prod_id product,
+qty qty,
+from_wh_id wh_id,
+from_locn_id locn_id,
+to_wh_id wh_id,
+to_locn_id locn_id,
+create_date create_date,
+trn_status status,
+primary key(trn_line_no));
+
+create index TRANSFER_REQUEST_PROCESS_IDX on transfer_request(trn_priority,trn_status,trn_line_no);
+create generator TRN_LINE_NO_GEN;
+
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+CREATE TRIGGER TRANSFER_REQUEST_TRN_LINE_NO FOR TRANSFER_REQUEST 
+ACTIVE BEFORE INSERT POSITION 0 
+AS
+BEGIN
+  IF (NEW.TRN_LINE_NO IS NULL) THEN
+      NEW.TRN_LINE_NO = GEN_ID(TRN_LINE_NO_GEN, 1);
+  NEW.CREATE_DATE = 'NOW';
+  NEW.TRN_STATUS = 'OP';
+END ^
+ 
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

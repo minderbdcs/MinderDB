@@ -1,0 +1,297 @@
+/* drop trigger add_prod_reservation_temp; */
+/*
+CREATE TABLE PROD_RESERVATION_TEMP (H_PROD_ID PRODUCT NOT NULL,
+        H_SALE_CHANNEL_CODE CODE,
+        H_RESERVED_QTY QTY,
+        H_COMPANY_ID COMPANY,
+        H_WH_ID WH_ID,
+        H_RESERVATION_STATUS STATUS,
+        H_RESERVATION_PRIORITY PICK_LINE_PRIORITY,
+        LAST_UPDATE_DATE                LAST_UPDATE_DATE,
+        H_COMMENTS COMMENTS,
+        H_USER_ID USER_ID,
+        RECORD_ID INTEGER NOT NULL);
+
+*/
+ 
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+
+CREATE OR ALTER TRIGGER ADD_PROD_RESERVATION_TEMP FOR PROD_RESERVATION_TEMP 
+ACTIVE BEFORE INSERT POSITION 0 
+AS
+DECLARE VARIABLE WK_FOUND                  INTEGER;
+DECLARE VARIABLE WK_H_PROD_ID              VARCHAR(30) ; 
+DECLARE VARIABLE WK_H_SALE_CHANNEL_CODE    VARCHAR(40);
+DECLARE VARIABLE WK_H_RESERVED_QTY         INTEGER ; 
+DECLARE VARIABLE WK_H_COMPANY_ID           VARCHAR(20) ; 
+DECLARE VARIABLE WK_H_WH_ID                VARCHAR(2) ; 
+DECLARE VARIABLE WK_H_RESERVATION_STATUS   CHAR(2) ; 
+DECLARE VARIABLE WK_H_RESERVATION_PRIORITY INTEGER ; 
+DECLARE VARIABLE WK_H_USER_ID              VARCHAR(10) ; 
+DECLARE VARIABLE WK_H_LAST_UPDATE_DATE     TIMESTAMP ; 
+DECLARE VARIABLE WK_H_COMMENTS             VARCHAR(512) ; 
+DECLARE VARIABLE WK_RESULT                 INTEGER;
+DECLARE VARIABLE WK_PICKED_QTY             INTEGER;
+DECLARE VARIABLE WK_ORDER_QTY              INTEGER;
+DECLARE VARIABLE WK_UNPICKED_ORDER_QTY     INTEGER;
+DECLARE VARIABLE WK_UNPICKEDSTATUS         VARCHAR(40) ; 
+DECLARE VARIABLE WK_PREV_RESERVED_QTY      INTEGER ; 
+DECLARE VARIABLE WK_PREV_AVAILABLE_QTY     INTEGER ; 
+DECLARE VARIABLE WK_EFFECTIVE_QTY          INTEGER ; 
+DECLARE VARIABLE WK_ALLOCATE_QTY           INTEGER ; 
+DECLARE VARIABLE WK_RESERVED_ID            INTEGER;
+DECLARE VARIABLE WK_PR_RECORD_ID           INTEGER;
+DECLARE VARIABLE WK_PR_RESERVED_QTY        INTEGER;
+DECLARE VARIABLE WK_PR_AVAILABLE_QTY       INTEGER;
+DECLARE VARIABLE WK_REQUIRED_ALLOCATE_QTY  INTEGER ; 
+DECLARE VARIABLE WK_USE_ALLOCATE_QTY       INTEGER ; 
+BEGIN
+   BEGIN
+      NEW.RECORD_ID  = GEN_ID(TEMP_ID_GEN ,1);
+   END
+   WK_H_USER_ID        = NEW.H_USER_ID        ;
+   IF (WK_H_USER_ID IS NULL) THEN
+   BEGIN
+      WK_H_USER_ID = 'BDCS';
+   END
+   WK_H_PROD_ID           = NEW.H_PROD_ID ;
+   WK_H_SALE_CHANNEL_CODE = NEW.H_SALE_CHANNEL_CODE ;
+   WK_H_LAST_UPDATE_DATE  = NEW.LAST_UPDATE_DATE ;
+
+   WK_H_COMPANY_ID     = NEW.H_COMPANY_ID ;
+   WK_H_WH_ID          = NEW.H_WH_ID ;
+   WK_H_RESERVATION_STATUS = NEW.H_RESERVATION_STATUS ;
+   WK_H_RESERVATION_PRIORITY = NEW.H_RESERVATION_PRIORITY ;
+   WK_H_COMMENTS       = NEW.H_COMMENTS       ;
+
+   WK_H_RESERVED_QTY = NEW.H_RESERVED_QTY ;
+   IF (WK_H_WH_ID IS NULL) THEN
+   BEGIN
+      SELECT DEFAULT_WH_ID
+      FROM CONTROL
+      INTO :WK_H_WH_ID;
+   END
+   IF (WK_H_COMPANY_ID IS NULL) THEN
+   BEGIN
+      SELECT COMPANY_ID
+      FROM CONTROL
+      INTO :WK_H_COMPANY_ID;
+   END
+   IF (WK_H_RESERVED_QTY IS NULL) THEN
+   BEGIN
+      WK_H_RESERVED_QTY = 0;
+   END
+   IF (WK_H_RESERVED_QTY = 0 ) THEN
+   BEGIN
+      WK_H_RESERVATION_STATUS = 'CL';
+   END
+   IF (WK_H_SALE_CHANNEL_CODE = '') THEN
+   BEGIN
+      WK_H_SALE_CHANNEL_CODE = 'NONE';
+   END
+   IF (WK_H_SALE_CHANNEL_CODE = '') THEN
+   BEGIN
+      WK_H_SALE_CHANNEL_CODE = 'NONE';
+   END
+
+   WK_FOUND = 0;
+   WK_PREV_RESERVED_QTY = 0;
+   WK_PREV_AVAILABLE_QTY = 0;
+   SELECT RECORD_ID, PR_RESERVED_QTY ,PR_AVAILABLE_QTY
+      FROM PROD_RESERVATION
+      WHERE PR_PROD_ID  = :WK_H_PROD_ID
+      AND   PR_SALE_CHANNEL_CODE = :WK_H_SALE_CHANNEL_CODE
+      INTO :WK_FOUND, :WK_PREV_RESERVED_QTY, :WK_PREV_AVAILABLE_QTY;
+   IF (WK_FOUND = 0) THEN
+   BEGIN
+      /* no record so insert it */
+      INSERT INTO PROD_RESERVATION (
+         PR_PROD_ID, 
+         PR_SALE_CHANNEL_CODE,
+         PR_RESERVED_QTY,      
+         PR_AVAILABLE_QTY,
+         WH_ID,
+         COMPANY_ID,
+         LAST_UPDATE_DATE,
+         LAST_UPDATE_BY,
+         LAST_UPDATE_DEVICE,
+         PR_RESERVATION_STATUS,
+         PR_RESERVATION_PRIORITY,
+         PR_NOTES)
+      VALUES (
+         :WK_H_PROD_ID    ,
+         :WK_H_SALE_CHANNEL_CODE  ,
+         :WK_H_RESERVED_QTY,
+         0,
+         :WK_H_WH_ID,
+         :WK_H_COMPANY_ID,
+         'NOW',
+         'BDCS',
+         'XX',
+         :WK_H_RESERVATION_STATUS,
+         :WK_H_RESERVATION_PRIORITY,
+         :WK_H_COMMENTS );
+   END
+   ELSE
+   BEGIN
+      WK_RESERVED_ID = WK_FOUND;
+      /* check for open orders for channel */
+      WK_PICKED_QTY = 0;
+      WK_ORDER_QTY = 0;
+      WK_UNPICKEDSTATUS = ',OP,UP,';
+      SELECT SUM( PICK_ITEM.PICK_ORDER_QTY ),
+             SUM( PICK_ITEM.PICKED_QTY )
+              FROM PICK_ITEM JOIN PICK_ORDER
+              ON PICK_ITEM.PICK_ORDER = PICK_ORDER.PICK_ORDER
+              WHERE PICK_ITEM.PROD_ID = :WK_H_PROD_ID
+              AND PICK_ORDER.COMPANY_ID = :WK_H_COMPANY_ID
+              AND PICK_ORDER.WH_ID = :WK_H_WH_ID
+              AND PICK_ORDER.OTHER2 = :WK_H_SALE_CHANNEL_CODE
+              AND (POS(:WK_UNPICKEDSTATUS,PICK_ITEM.PICK_LINE_STATUS,0,1) > -1)
+              GROUP BY PICK_ITEM.PROD_ID /* WHY DO WE NEED A GROUP BY CLAUSE HERE? */
+           INTO :WK_ORDER_QTY, :WK_PICKED_QTY;
+      IF (WK_ORDER_QTY IS NULL) THEN
+      BEGIN
+         WK_ORDER_QTY = 0;
+      END
+      IF (WK_PICKED_QTY IS NULL) THEN
+      BEGIN
+         WK_PICKED_QTY = 0;
+      END
+      WK_UNPICKED_ORDER_QTY = WK_ORDER_QTY - WK_PICKED_QTY;
+      WK_PICKED_QTY = 0;
+      WK_ORDER_QTY = 0;
+
+/*
+      v1.3 must update prod_reservation regardless of unfulfilled orders
+      IF (WK_UNPICKED_ORDER_QTY > WK_H_RESERVED_QTY) THEN
+      BEGIN
+         UPDATE PROD_RESERVATION SET 
+            PR_NOTES = 'Cannot Update - more Unpicked than Reserved',
+            LAST_UPDATE_DATE =  'NOW',
+            LAST_UPDATE_BY =  'BDCS',
+            LAST_UPDATE_DEVICE = 'XX'
+         WHERE RECORD_ID = :WK_RESERVED_ID ;
+      END
+      ELSE
+*/
+      BEGIN
+         UPDATE PROD_RESERVATION SET
+            PR_RESERVED_QTY =  :WK_H_RESERVED_QTY,
+            LAST_UPDATE_DATE =  'NOW',
+            LAST_UPDATE_BY =  'BDCS',
+            LAST_UPDATE_DEVICE = 'XX',
+            PR_RESERVATION_STATUS = :WK_H_RESERVATION_STATUS,
+            PR_RESERVATION_PRIORITY = :WK_H_RESERVATION_PRIORITY,
+            PR_NOTES = :WK_H_COMMENTS
+         WHERE RECORD_ID = :WK_RESERVED_ID;
+         IF (WK_PREV_RESERVED_QTY IS NULL) THEN
+         BEGIN
+            WK_PREV_RESERVED_QTY = 0;
+         END
+         IF (WK_PREV_AVAILABLE_QTY IS NULL) THEN
+         BEGIN
+            WK_PREV_AVAILABLE_QTY = 0;
+         END
+         
+         IF (WK_PREV_RESERVED_QTY > WK_H_RESERVED_QTY) THEN
+         BEGIN
+            /* v1.2 must spread the ( current available_qty - wk_h_reserved_qty ) 
+               among any other channels for the product 
+               with available_qty < reserved_qty */
+            /* v1.3 must spread the ( current available_qty - wk_h_reserved_qty ) 
+                to channel NONE for the product 
+             */
+            IF (WK_PREV_AVAILABLE_QTY > WK_H_RESERVED_QTY) THEN
+            BEGIN
+               WK_EFFECTIVE_QTY = WK_PREV_AVAILABLE_QTY - WK_H_RESERVED_QTY;
+               WK_FOUND = 0;
+               /*
+               SELECT COUNT(*)
+               FROM PROD_RESERVATION
+               WHERE PR_PROD_ID  = :WK_H_PROD_ID
+               AND   PR_SALE_CHANNEL_CODE <> :WK_H_SALE_CHANNEL_CODE
+               AND   PR_AVAILABLE_QTY < PR_RESERVED_QTY
+               AND PR_RESERVATION_STATUS = 'OP'
+               INTO :WK_FOUND ;
+               IF (WK_FOUND IS NULL) THEN
+               BEGIN
+                  WK_FOUND = 0;
+               END
+               -* want to allocate ceil(wk_effective_qty/wk_found) to each upto when all used *-
+               IF (WK_FOUND > 0) THEN
+               BEGIN
+                  WK_ALLOCATE_QTY = CEILING(WK_EFFECTIVE_QTY / WK_FOUND);
+                  FOR SELECT RECORD_ID, PR_RESERVED_QTY, PR_AVAILABLE_QTY
+                  FROM PROD_RESERVATION
+                  WHERE PR_PROD_ID  = :WK_H_PROD_ID
+                  AND   PR_SALE_CHANNEL_CODE <> :WK_H_SALE_CHANNEL_CODE
+                  AND   PR_AVAILABLE_QTY < PR_RESERVED_QTY
+                  AND PR_RESERVATION_STATUS = 'OP'
+                  INTO :WK_PR_RECORD_ID, :WK_PR_RESERVED_QTY, :WK_PR_AVAILABLE_QTY 
+                  DO
+                  BEGIN
+                     IF (WK_PR_RESERVED_QTY IS NULL) THEN
+                     BEGIN
+                        WK_PR_RESERVED_QTY = 0;
+                     END
+                     IF (WK_PR_AVAILABLE_QTY IS NULL) THEN
+                     BEGIN
+                        WK_PR_AVAILABLE_QTY = 0;
+                     END
+                     WK_REQUIRED_ALLOCATE_QTY = WK_PR_RESERVED_QTY - WK_PR_AVAILABLE_QTY;
+                     IF (WK_REQUIRED_ALLOCATE_QTY < WK_ALLOCATE_QTY) THEN
+                     BEGIN
+                        WK_USE_ALLOCATE_QTY = WK_REQUIRED_ALLOCATE_QTY;
+                     END
+                     ELSE
+                     BEGIN
+                        WK_USE_ALLOCATE_QTY = WK_ALLOCATE_QTY;
+                     END
+
+                     IF (WK_USE_ALLOCATE_QTY > WK_EFFECTIVE_QTY) THEN
+                     BEGIN
+                        WK_USE_ALLOCATE_QTY = WK_EFFECTIVE_QTY;
+                     END
+                     
+                     IF (WK_USE_ALLOCATE_QTY > 0) THEN
+                     BEGIN
+                        UPDATE PROD_RESERVATION SET 
+                           PR_AVAILABLE_QTY = PR_AVAILABLE_QTY + :WK_USE_ALLOCATE_QTY
+                        WHERE RECORD_ID = :WK_PR_RECORD_ID;
+                     END
+
+                     WK_EFFECTIVE_QTY = WK_EFFECTIVE_QTY - WK_USE_ALLOCATE_QTY;
+                     IF (WK_EFFECTIVE_QTY < 0) THEN
+                     BEGIN
+                        WK_EFFECTIVE_QTY = 0;
+                     END
+                     
+                  END
+               END
+               */
+               /* v1.3 set effective qty to 0 size since all the effective qty is going to channel NONE */
+               WK_EFFECTIVE_QTY = 0;
+               /* now update the original reservation reducing the available qty by the qty used in spreading 
+                  WK_EFFECTIVE_QTY  was  WK_PREV_AVAILABLE_QTY - WK_H_RESERVED_QTY;
+                  now it contains the qty not spread of the total
+                  if effective qty is now 0  then available_qty becomes wk_h_reserved_qty
+                  else                            available_qty becomes wk_h_reserved_qty + wk_effective_qty
+               */
+               UPDATE PROD_RESERVATION SET 
+                      PR_AVAILABLE_QTY = PR_RESERVED_QTY + :WK_EFFECTIVE_QTY
+               WHERE RECORD_ID = :WK_RESERVED_ID;
+            END
+         END
+      END
+   END
+
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

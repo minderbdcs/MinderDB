@@ -1,0 +1,4 @@
+alter table control add export_tril_w value_tf;
+alter table control add export_putaway_printer device_id;
+update control set export_tril_w = 'F';
+

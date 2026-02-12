@@ -1,0 +1,2 @@
+alter table control add default_issue_from_location locn_id;
+

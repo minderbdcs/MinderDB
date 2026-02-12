@@ -1,0 +1,8 @@
+vlpad is an intermediate
+
+change lpad to vlpad
+remove lpad function
+================================
+in procs.190829 do
+change vlpad to use fdb lpad
+then can remove vlpad

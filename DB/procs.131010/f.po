@@ -1,0 +1,4 @@
+drop trigger add_pick_from_temp2;
+CREATE DOMAIN VALUE_TFN AS CHAR(1)
+              DEFAULT NULL;
+alter table pick_order alter partial_despatch_allowed type VALUE_TFN;

@@ -1,0 +1,6 @@
+alter table prod_profile add dimension_x numeric(9,3);
+alter table prod_profile add dimension_y numeric(9,3);
+alter table prod_profile add dimension_z numeric(9,3);
+alter table prod_profile add dimension_x_uom code_two;
+alter table prod_profile add dimension_y_uom code_two;
+alter table prod_profile add dimension_z_uom code_two;

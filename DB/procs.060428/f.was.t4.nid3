@@ -1,0 +1,146 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP TRIGGER RUN_TRANSACTION_NID3 ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_NID3 FOR TRANSACTIONS4 
+ACTIVE AFTER INSERT POSITION 15 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DATA_FIELDS INTEGER;
+DECLARE VARIABLE WK_FIELD_NO INTEGER;
+DECLARE VARIABLE WK_WORK_DATA VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_LABEL VARCHAR(1024);
+DECLARE VARIABLE WK_WORK_FIELD VARCHAR(1024);
+DECLARE VARIABLE WK_SSN VARCHAR(30);
+DECLARE VARIABLE WK_TYPE VARCHAR(40);
+DECLARE VARIABLE WK_GENERIC VARCHAR(40);
+DECLARE VARIABLE WK_SUB_TYPE VARCHAR(40);
+DECLARE VARIABLE WK_CODE VARCHAR(50);
+DECLARE VARIABLE WK_STATUS VARCHAR(5);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_BUFFER VARCHAR(512);
+DECLARE VARIABLE WK_FILENAME VARCHAR(80);
+DECLARE VARIABLE WK_RESULT INTEGER;
+DECLARE VARIABLE WK_DUMMY  INTEGER;
+BEGIN
+   WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+   IF (WK_AUTORUN = 1) THEN
+   BEGIN
+      IF (NEW.TRN_TYPE = 'NID3') THEN
+      BEGIN
+         /* WK_FILENAME = 'd:\tmp\NID3.log'; */
+         /* 
+            for the data fields must split out the labeltype of data
+            and data portions after the first '>'
+            field 1 is the ssn id
+            field 2 is the type 
+            field 3 is the generic 
+            field 4 is the sub type 
+         */
+         WK_SSN = '';
+         WK_TYPE = '';
+         WK_GENERIC = '';
+         WK_SUB_TYPE = '';
+         WK_DUMMY = 0;
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_DATA_FIELDS = STRLEN(NEW.INPUT_SOURCE) ;
+         WK_FIELD_NO = 1;
+         WHILE (WK_FIELD_NO < WK_DATA_FIELDS) DO
+         BEGIN
+            SELECT WK_FIELD_TEXT 
+            FROM GET_REFERENCE_FIELD4 (NEW.TRN_DATA, :WK_FIELD_NO, NEW.TRN_DELIMITER) 
+            INTO :WK_WORK_FIELD;
+            /* now for this field get the label and data */
+            SELECT WK_FIELD_LABEL, WK_FIELD_DATA 
+            FROM GET_DATA_REFERENCE_FIELD4 (:WK_WORK_FIELD, '>')
+            INTO :WK_WORK_LABEL, :WK_WORK_DATA;
+
+            IF (WK_WORK_LABEL = '<SSN_ID') THEN
+            BEGIN
+               WK_BUFFER = 'have SSN ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_SSN = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<SSNType') THEN
+            BEGIN
+               WK_BUFFER = 'have Type ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_TYPE = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<Generic') THEN
+            BEGIN
+               WK_BUFFER = 'have Generic ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_GENERIC = WK_WORK_DATA;
+            END
+            IF (WK_WORK_LABEL = '<SSNSubType') THEN
+            BEGIN
+               WK_BUFFER = 'have Sub Type ' || WK_WORK_DATA;
+/*               WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_BUFFER);*/
+               WK_SUB_TYPE = WK_WORK_DATA;
+            END
+            WK_FIELD_NO = WK_FIELD_NO + 1;
+         END
+         WK_FOUND = 0;
+         SELECT 1 
+         FROM SSN
+         WHERE SSN_ID = :WK_SSN
+         INTO :WK_FOUND ;
+         IF (WK_FOUND = 0) THEN
+         BEGIN
+            /* no ssn - dont create a new one */
+             WK_DUMMY = 1;
+         END
+         ELSE
+         BEGIN
+/*            WK_RESULT = FILE_WRITELN(WK_FILENAME, 'update prod');*/
+            UPDATE SSN SET
+               SSN_TYPE = :WK_TYPE,
+               GENERIC = :WK_GENERIC,
+               SSN_SUB_TYPE = :WK_SUB_TYPE,
+               LAST_UPDATE_DATE = NEW.TRN_DATE,
+               LAST_UPDATE_BY = NEW.PERSON_ID,
+               LAST_UPDATE_DEVICE_ID = NEW.DEVICE_ID
+            WHERE SSN_ID = :WK_SSN; 
+            EXECUTE PROCEDURE ADD_MASTER_DATA('NITP', 'NOW', :WK_TYPE); 
+            WK_CODE = :WK_SSN || '|' || :WK_GENERIC; 
+            EXECUTE PROCEDURE ADD_MASTER_DATA('NIOB', 'NOW', :WK_CODE); 
+            /* add master for sub type */
+            WK_FOUND = 0;
+            SELECT 1
+            FROM SSN_SUB_TYPE
+            WHERE SSN_TYPE = :WK_TYPE
+            AND GENERIC = :WK_GENERIC
+            AND CODE = :WK_SUB_TYPE
+            INTO :WK_FOUND;
+            IF (WK_FOUND = 0) THEN
+            BEGIN
+               INSERT INTO SSN_SUB_TYPE (SSN_TYPE, GENERIC, CODE, DESCRIPTION)
+                  VALUES (:WK_TYPE, :WK_GENERIC, :WK_SUB_TYPE, :WK_SUB_TYPE);
+            END
+            /* Add transaction history */                                                                                     
+            EXECUTE PROCEDURE ADD_SSN_HIST('', '', :WK_SSN, NEW.TRN_TYPE, NEW.TRN_CLASS, NEW.TRN_DATE,
+                                           'Modified SSN_SUB_TYPE', :WK_SUB_TYPE, 0, NEW.PERSON_ID, NEW.DEVICE_ID); 
+         END
+
+         /* Update transactions table */        
+         IF (WK_DUMMY = 1) THEN
+         BEGIN
+            EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'F', 'SSN Not Found');
+         END
+         ELSE
+         BEGIN
+            EXECUTE PROCEDURE UPDATE_TRAN4 (NEW.RECORD_ID, 'T', 'Processed successfully');
+         END
+         EXECUTE PROCEDURE TRAN4_ARCHIVE;
+      END
+   END
+END ^
+ 
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

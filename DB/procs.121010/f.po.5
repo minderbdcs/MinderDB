@@ -1,0 +1,10 @@
+
+drop TRIGGER ADD_PURCHASE_FROM_TEMP ;
+commit;
+
+create domain qty_decimal decimal(18,0);
+
+alter table purchase_order_line_temp alter l_po_line_qty type qty_decimal;
+
+/* in f.po.3; */
+

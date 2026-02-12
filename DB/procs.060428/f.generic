@@ -1,0 +1,13 @@
+update generic set generic.ssn_type = (select first 1 ssn.ssn_type from ssn where ssn.generic = generic.code order by last_update_date desc);
+
+alter table generic drop constraint integ_16;
+
+/*
+create index generic_type_gen_idx on generic(ssn_type, code);
+*/
+drop index genericscode;
+drop index generic_type_gen_idx;
+commit;
+create index genericscode on generic(code);
+create unique index generic_type_gen_idx on generic(ssn_type, code);
+

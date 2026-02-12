@@ -1,0 +1,2 @@
+update control set generate_ssn_method = '|GRN=4|LINE=2|SUFFIX=2,3|';
+commit;

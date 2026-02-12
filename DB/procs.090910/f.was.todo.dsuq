@@ -1,0 +1,130 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+DROP TRIGGER RUN_TRANSACTION_DSUQ ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_DSUQ FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 136
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_OBJECT VARCHAR(30);
+DECLARE VARIABLE WK_REF VARCHAR(40);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_CONSIGNMENT VARCHAR(30);
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+
+DECLARE VARIABLE WK_DESPATCH_ID INTEGER;
+DECLARE VARIABLE WK_PACK_ID INTEGER;
+DECLARE VARIABLE WK_SSN_ID VARCHAR(20);
+DECLARE VARIABLE WK_PACK_QTY INTEGER;
+
+DECLARE VARIABLE WK_FILENAME VARCHAR(255);
+DECLARE VARIABLE WK_RESULT INTEGER;
+DECLARE VARIABLE WK_RESPONSE_FINAL VARCHAR(70);
+
+BEGIN
+/* 
+   started 11/02/08 
+   here want to adjust the qty's of the picked issns
+   so that returned to stock are cancelled
+   issns that are the pack id's have the qty entered
+   other issn's picked are set to zero qty
+   modified 01/05/08
+   save the issns current qty in the picked_qty
+   modified 01/09/09
+   want to say which issn's make up the pack
+*/
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'DSUQ') THEN
+  BEGIN
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_OBJECT = NEW.OBJECT;
+     WK_CONSIGNMENT = WK_OBJECT;
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_REF = ALLTRIM(NEW.REFERENCE);
+     WK_QTY = NEW.QTY;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_FILENAME = '/tmp/dsuq.log';
+     /* for consignment no
+        get the despatch ids not DX or DI ie DC
+        for the pack ids in these despatches
+        update the issn current qty to the despatch qty
+        any other issn in the pick_item_detail
+        for the despatch id are updated to zero qty
+     */
+     FOR SELECT DESPATCH_ID
+         FROM PICK_DESPATCH
+         WHERE AWB_CONSIGNMENT_NO = :WK_CONSIGNMENT
+         AND DESPATCH_STATUS = 'DC'
+         INTO :WK_DESPATCH_ID
+     DO
+     BEGIN
+        FOR SELECT SSN_ID
+            FROM PICK_ITEM_DETAIL
+            WHERE DESPATCH_ID = :WK_DESPATCH_ID
+            AND PICK_DETAIL_STATUS <> 'XX'
+            AND PICK_DETAIL_STATUS <> 'xx'
+            INTO :WK_SSN_ID 
+        DO
+        BEGIN
+           IF (WK_SSN_ID IS NOT NULL) THEN
+           BEGIN
+              UPDATE ISSN SET PICKED_QTY = CURRENT_QTY, CURRENT_QTY = 0, ISSN_STATUS = 'DC'
+              WHERE SSN_ID = :WK_SSN_ID
+              AND ISSN_STATUS = 'DQ';
+           END
+        END
+        FOR SELECT PACK_ID, SSN_ID, QTY
+            FROM PACK_ID
+            WHERE DESPATCH_ID = :WK_DESPATCH_ID
+            INTO :WK_PACK_ID, :WK_SSN_ID, :WK_PACK_QTY
+        DO
+        BEGIN
+           IF (WK_SSN_ID IS NOT NULL) THEN
+           BEGIN
+              UPDATE ISSN SET PICKED_QTY = CURRENT_QTY, CURRENT_QTY = :WK_PACK_QTY, ISSN_STATUS = 'DQ'
+              WHERE SSN_ID = :WK_SSN_ID;
+           END
+        END
+        FOR SELECT SSN_ID
+            FROM PICK_ITEM_DETAIL
+            WHERE DESPATCH_ID = :WK_DESPATCH_ID
+            AND PICK_DETAIL_STATUS <> 'XX'
+            AND PICK_DETAIL_STATUS <> 'xx'
+            INTO :WK_SSN_ID 
+        DO
+        BEGIN
+           IF (WK_SSN_ID IS NOT NULL) THEN
+           BEGIN
+              UPDATE ISSN SET PICKED_QTY = CURRENT_QTY, CURRENT_QTY = 0, ISSN_STATUS = 'CN'
+              WHERE SSN_ID = :WK_SSN_ID
+              AND ISSN_STATUS <> 'DQ';
+           END
+        END
+     END
+
+   
+     WK_RESPONSE_FINAL = 'Processed successfully';
+     EXECUTE PROCEDURE UPDATE_TRAN (:WK_RECORD, 'T', :WK_RESPONSE_FINAL);
+
+   /* EXECUTE PROCEDURE TRAN_ARCHIVE; */
+  END
+ END
+END ^
+ 
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

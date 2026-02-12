@@ -1,0 +1,26 @@
+/*
+add pickd_carrier_service_charge_to to pick_despatch
+*/
+alter table pick_despatch add pickd_service_charge_to person;
+
+/*
+add to carrier post code depo id.
+*/
+create domain depot_id varchar(10);
+alter table carrier add post_code_depot_id depot_id;
+
+CREATE TABLE POSTCODE_DEPOT (POST_CODE POST_CODE NOT NULL,
+        COUNTRY COUNTRY NOT NULL,
+        DESCRIPTION DESCRIPTION ,
+        DEPOT_01 DEPOT_ID,
+        DEPOT_02 DEPOT_ID,
+        DEPOT_03 DEPOT_ID,
+        DEPOT_04 DEPOT_ID,
+        DEPOT_05 DEPOT_ID,
+        DEPOT_06 DEPOT_ID,
+        DEPOT_07 DEPOT_ID,
+        DEPOT_08 DEPOT_ID,
+        DEPOT_09 DEPOT_ID,
+        DEPOT_10 DEPOT_ID,
+PRIMARY KEY (POST_CODE, COUNTRY));
+

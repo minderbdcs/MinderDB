@@ -1,0 +1,3 @@
+
+alter table issn_dx add prev_issn_status status;
+alter table issn_dx add prev_prev_issn_status status;

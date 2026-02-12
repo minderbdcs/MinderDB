@@ -1,0 +1,4 @@
+ alter table carrier add not_last_pack_indicator code_two;
+ alter table carrier add last_pack_indicator code_two;
+ alter table pack_id add pack_sequence_no    code_6;
+ alter table pack_id add pack_last_sequence_indicator    code_two;

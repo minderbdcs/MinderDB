@@ -1,0 +1,2 @@
+alter table control add default_currency_format code;
+

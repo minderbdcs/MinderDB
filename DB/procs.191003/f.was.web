@@ -1,0 +1,3 @@
+create domain trn_error_cnt smallint default 0;
+alter table web_requests add trn_error_cnt trn_error_cnt;
+alter table web_requests_archive add trn_error_cnt trn_error_cnt;

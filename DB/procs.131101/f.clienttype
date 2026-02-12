@@ -1,0 +1,19 @@
+
+/* create table PICK_CLIENT_TYPE */
+/*
+CREATE TABLE PICK_CLIENT_TYPE (RECORD_ID INTEGER NOT NULL,
+        PCT_ID                        CODE NOT NULL,
+	PCT_NAME                      DESCRIPTION, 
+        PCT_PICK_ORDER_SUB_TYPE       CODE_TWO,
+        PCT_ALLOW_KIT_COMPONENTS      VALUE_TFN,
+        PCT_PARTIAL_PICK_ALLOWED      VALUE_TFN,
+        PCT_NOTES                     NOTES,
+        LAST_UPDATE_DATE              LAST_UPDATE_DATE,
+        LAST_UPDATE_BY                USER_ID,
+        PCT_PICK_ORDER_PARAM_ID       DATA_ID,
+        PCT_PARTIAL_DESPATCH_ALLOWED  VALUE_TFN,
+PRIMARY KEY (RECORD_ID));
+*/
+
+alter table pick_client_type add pct_despatch_full_order value_tfn;
+

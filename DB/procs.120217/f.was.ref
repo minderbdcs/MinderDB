@@ -1,0 +1,2 @@
+alter domain reference type varchar(1024);
+

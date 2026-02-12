@@ -1,0 +1,306 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/*
+CREATE OR ALTER PROCEDURE APPROVE_SALES_ORDER (PICK_ORDER VARCHAR(15) CHARACTER SET NONE,
+STATUS_SSN CHAR(2) ,
+PICK_STATUS CHAR(2) ,
+APPROVED_BY VARCHAR(10) )
+*/
+
+CREATE OR ALTER PROCEDURE APPROVE_SALES_ORDER (PICK_ORDER PICK_ORDER,
+STATUS_SSN STATUS ,
+PICK_STATUS STATUS ,
+APPROVED_BY USER_ID )
+RETURNS (VALID_SO CHAR(1) )
+AS 
+
+DECLARE VARIABLE SSSN VARCHAR(20);
+DECLARE VARIABLE SPROD_ID VARCHAR(30);
+DECLARE VARIABLE ICOUNT INTEGER;
+DECLARE VARIABLE SWH CHAR(2);
+DECLARE VARIABLE SLOCN VARCHAR(10);
+DECLARE VARIABLE SPICKLABELNO VARCHAR(7);
+DECLARE VARIABLE IMPORTSTATUS VARCHAR(40);
+DECLARE VARIABLE RESERVEDSTATUS VARCHAR(40);
+DECLARE VARIABLE WK_FOUND INTEGER;
+DECLARE VARIABLE WK_SSNID VARCHAR(20);
+DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(255);
+DECLARE VARIABLE WK_LOG_RESULT INTEGER;
+DECLARE VARIABLE WK_NOCONFIRM CHAR(1);
+DECLARE VARIABLE WK_HAVE_A_LINE CHAR(1);
+DECLARE VARIABLE WK_PO_PARTIAL_PICK VARCHAR(1);
+DECLARE VARIABLE WK_PI_PARTIAL_PICK VARCHAR(1);
+BEGIN
+    ICOUNT = 0;
+    VALID_SO = 'T';    
+    WK_NOCONFIRM = 'F';    
+    WK_LOG_FILENAME = '/tmp/approve.log';
+    
+    WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'start approve ');
+    WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'order:' || PICK_ORDER || ' STATUS_SSN:' || STATUS_SSN || ' PICK_STATUS:' || PICK_STATUS || ' Approved by:' || APPROVED_BY);
+    /* CHECK SALE ORDER LINES FIRST */
+    SELECT COUNT(*)
+    FROM PICK_ITEM
+    WHERE PICK_ORDER = :PICK_ORDER               
+    INTO :ICOUNT;
+    
+    IF (:ICOUNT = 0) THEN
+    BEGIN
+        VALID_SO = 'L';
+        SUSPEND;
+        EXIT;
+    END
+    WK_PO_PARTIAL_PICK = 'F';
+    SELECT PARTIAL_PICK_ALLOWED
+    FROM PICK_ORDER
+    WHERE PICK_ORDER = :PICK_ORDER               
+    INTO :WK_PO_PARTIAL_PICK;
+    IF (WK_PO_PARTIAL_PICK IS NULL) THEN
+    BEGIN
+       WK_PO_PARTIAL_PICK = 'F';
+    END
+    IF (WK_PO_PARTIAL_PICK = '') THEN
+    BEGIN
+       WK_PO_PARTIAL_PICK = 'F';
+    END
+    /* GET VALID STATUSES */
+    SELECT CONTROL.PICK_IMPORT_SSN_STATUS,CONTROL.PICK_RESERVED_SSN_STATUS,CONFIRM_WITH_NO_PROD
+    FROM CONTROL
+    INTO :IMPORTSTATUS, :RESERVEDSTATUS, :WK_NOCONFIRM;
+    IF (WK_NOCONFIRM IS NULL) THEN
+    BEGIN
+       WK_NOCONFIRM = 'F';
+    END
+
+    /* check for any confirmed lines */
+    FOR 
+      SELECT PICK_LABEL_NO, SSN_ID, PROD_ID, PARTIAL_PICK_ALLOWED
+      FROM PICK_ITEM
+      WHERE PICK_ORDER = :PICK_ORDER
+      AND ((PICK_ITEM.PICK_LINE_STATUS = 'CF'))
+
+      INTO :SPICKLABELNO, :SSSN, :SPROD_ID, :WK_PI_PARTIAL_PICK
+    DO
+    BEGIN
+       IF (WK_PI_PARTIAL_PICK IS NULL) THEN
+       BEGIN
+          WK_PI_PARTIAL_PICK = WK_PO_PARTIAL_PICK;
+       END
+       IF (WK_PI_PARTIAL_PICK = '') THEN
+       BEGIN
+          WK_PI_PARTIAL_PICK = WK_PO_PARTIAL_PICK;
+       END
+       IF (:SSSN = '') THEN
+       BEGIN
+          SSSN = NULL;
+       END
+       IF (SPROD_ID = '') THEN
+       BEGIN
+          SPROD_ID = NULL;
+       END
+      IF (:SSSN IS NOT NULL) THEN
+      BEGIN
+              WK_FOUND = 0;
+              /* CHECK TO FIND AN ISSN THAT CAN BE RESERVED */
+              /* WHERE ISSN.ORIGINAL_SSN = :SSSN */
+              SELECT FIRST 1 1, SSN_ID, WH_ID, LOCN_ID FROM ISSN
+              WHERE ISSN.SSN_ID = :SSSN
+              INTO :WK_FOUND, :WK_SSNID, :SWH, :SLOCN;
+              IF (WK_FOUND = 1) THEN
+              BEGIN
+                 /* UPDATE ISSN STATUS*/
+                 
+                 IF (:PICK_STATUS = 'OP') THEN
+                 BEGIN
+                   /* UPDATE WH, LOCATION IN PICK ITEM */
+                   UPDATE PICK_ITEM
+                   SET WH_ID = :SWH,
+                       PICK_LOCATION = :SLOCN,
+                       PICK_LINE_STATUS = :PICK_STATUS,
+                       PICK_ITEM.REASON = ''
+                   WHERE PICK_LABEL_NO = :SPICKLABELNO;
+                 END
+              END
+              ELSE 
+              BEGIN
+                 WK_FOUND = 0;
+                 /* CHECK TO FIND AN ISSN THAT CAN BE RESERVED */
+                 /* WHERE ISSN.ORIGINAL_SSN = :SSSN */
+                 SELECT FIRST 1 1, SSN_ID, WH_ID, LOCN_ID FROM ISSN
+                 WHERE ISSN.ORIGINAL_SSN = :SSSN
+                 INTO :WK_FOUND, :WK_SSNID, :SWH, :SLOCN;
+                 IF (WK_FOUND = 1) THEN
+                 BEGIN
+                    /* UPDATE ISSN STATUS*/
+                    
+                    IF (:PICK_STATUS = 'OP') THEN
+                    BEGIN
+                      /* UPDATE WH, LOCATION IN PICK ITEM */
+                      UPDATE PICK_ITEM
+                      SET WH_ID = :SWH,
+                          PICK_LOCATION = :SLOCN,
+                          PICK_LINE_STATUS = :PICK_STATUS,
+                          PICK_ITEM.REASON = ''
+                      WHERE PICK_LABEL_NO = :SPICKLABELNO;
+                    END
+                 END
+                 ELSE 
+                 BEGIN
+                    IF (WK_NOCONFIRM = 'F') THEN
+                    BEGIN
+                       VALID_SO = 'C';
+                       UPDATE PICK_ITEM
+                       SET PICK_ITEM.REASON = 'NO ITEM FOUND TO APPROVE'
+                       WHERE PICK_LABEL_NO = :SPICKLABELNO;
+                    END
+                    ELSE
+                    BEGIN
+                       IF (:PICK_STATUS = 'OP') THEN
+                       BEGIN
+                         /* UPDATE WH, LOCATION IN PICK ITEM */
+                          UPDATE PICK_ITEM
+                         SET PICK_LINE_STATUS = :PICK_STATUS,
+                             PICK_ITEM.REASON = ''
+                         WHERE PICK_LABEL_NO = :SPICKLABELNO;
+                       END
+                    END
+                 END
+              END
+      END
+      ELSE 
+      BEGIN
+              WK_FOUND = 0;
+              IF (WK_NOCONFIRM = 'F') THEN
+              BEGIN
+                 /* CHECK TO FIND AN ISSN THAT CAN BE RESERVED */
+                 SELECT FIRST 1 1, SSN_ID, WH_ID, LOCN_ID FROM ISSN
+                 WHERE ISSN.PROD_ID = :SPROD_ID
+                 AND (POS(:IMPORTSTATUS,ISSN.ISSN_STATUS,0,1) > -1)
+                 INTO :WK_FOUND, :WK_SSNID, :SWH, :SLOCN;
+                 IF (WK_FOUND = 1) THEN
+                 BEGIN
+                    IF (:PICK_STATUS = 'OP') THEN
+                    BEGIN
+                      /* UPDATE WH, LOCATION IN PICK ITEM */
+                      UPDATE PICK_ITEM
+                      SET WH_ID = :SWH,
+                          PICK_LOCATION = :SLOCN,
+                          PICK_LINE_STATUS = :PICK_STATUS,
+                          PICK_ITEM.REASON = ''
+                      WHERE PICK_LABEL_NO = :SPICKLABELNO;
+                    END
+                 END
+                 ELSE 
+                 BEGIN
+                   VALID_SO = 'F';
+                   UPDATE PICK_ITEM
+                   SET PICK_ITEM.REASON = 'NO ITEM FOUND TO RESERVE'
+                   WHERE PICK_LABEL_NO = :SPICKLABELNO;
+                 END
+              END
+              ELSE
+              BEGIN
+                 IF (:PICK_STATUS = 'OP') THEN
+                 BEGIN
+                   /* UPDATE WH, LOCATION IN PICK ITEM */
+                   UPDATE PICK_ITEM
+                   SET PICK_LINE_STATUS = :PICK_STATUS,
+                       PICK_ITEM.REASON = ''
+                   WHERE PICK_LABEL_NO = :SPICKLABELNO;
+                 END
+              END
+      END
+    END
+
+    /* check for any unconfirmed lines */
+    FOR 
+      SELECT PICK_LABEL_NO, SSN_ID, PROD_ID
+      FROM PICK_ITEM
+      WHERE PICK_ORDER = :PICK_ORDER
+      AND ((PICK_ITEM.PICK_LINE_STATUS = 'UC') OR (PICK_ITEM.PICK_LINE_STATUS IS NULL))
+
+      INTO :SPICKLABELNO, :SSSN, :SPROD_ID
+    DO
+    BEGIN
+      IF (:SSSN IS NOT NULL) THEN
+      BEGIN
+              WK_FOUND = 0;
+              /* CHECK TO FIND AN ISSN THAT CAN BE RESERVED */
+              /* WHERE ISSN.ORIGINAL_SSN = :SSSN */
+              VALID_SO = 'U';
+              /* UPDATE PICK_ITEM
+              SET PICK_ITEM.REASON = 'CANNOT APPROVE - ITEM NEEDS CONFIRM'
+              WHERE PICK_LABEL_NO = :SPICKLABELNO; */
+      END
+      ELSE 
+      BEGIN
+              WK_FOUND = 0;
+              VALID_SO = 'U';
+              /* UPDATE PICK_ITEM
+              SET PICK_ITEM.REASON = 'CANNOT APPROVE - ITEM NEEDS CONFIRM'
+              WHERE PICK_LABEL_NO = :SPICKLABELNO; */
+      END
+    END
+    
+    /* check for any open lines */
+    /*
+    WK_HAVE_A_LINE = 'N';
+    FOR 
+      SELECT PICK_LABEL_NO, SSN_ID, PROD_ID
+      FROM PICK_ITEM
+      WHERE PICK_ORDER = :PICK_ORDER
+      AND ((PICK_ITEM.PICK_LINE_STATUS = 'OP') )
+
+      INTO :SPICKLABELNO, :SSSN, :SPROD_ID
+    DO
+    BEGIN
+      WK_HAVE_A_LINE = 'T';
+    END
+    IF (VALID_SO = 'T') THEN
+    BEGIN
+       IF (WK_HAVE_A_LINE = 'N') THEN
+       BEGIN
+          VALID_SO = 'N';
+       END
+    END
+    */
+    
+    /* UPDATE PICK ORDER STATUS */
+    IF (VALID_SO = 'T') THEN
+    BEGIN
+            IF (:PICK_STATUS = 'OP') THEN
+            BEGIN
+              UPDATE PICK_ORDER
+              SET PICK_STATUS = :PICK_STATUS,
+                  APPROVED_DATE = 'NOW',
+                  APPROVED_BY = :APPROVED_BY
+              WHERE PICK_ORDER = :PICK_ORDER;
+            END
+            ELSE
+            BEGIN
+               IF (:PICK_STATUS = 'DA') THEN
+               BEGIN
+                 UPDATE PICK_ORDER
+                 SET PICK_STATUS = :PICK_STATUS,
+                     APPROVED_DESP_DATE = 'NOW',
+                     APPROVED_DESP_BY = :APPROVED_BY
+                 WHERE PICK_ORDER = :PICK_ORDER;
+               END
+               ELSE
+               BEGIN
+                 UPDATE PICK_ORDER
+                 SET PICK_STATUS = :PICK_STATUS
+                 WHERE PICK_ORDER = :PICK_ORDER;
+               END
+            END
+    END
+    WK_LOG_RESULT = FILE_WRITELN(WK_LOG_FILENAME, 'end approve ' || VALID_SO);
+    SUSPEND;
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

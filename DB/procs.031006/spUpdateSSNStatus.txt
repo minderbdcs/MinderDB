@@ -1,0 +1,12 @@
+CREATE PROCEDURE UPDATE_SSN_STATUS (
+  SSN_ID VARCHAR(20),
+  STATUS_SSN VARCHAR(2)
+)  AS                                                         
+     
+BEGIN
+   /* Update SSN Status */   
+   UPDATE SSN
+   SET STATUS_SSN = :STATUS_SSN
+   WHERE SSN_ID = :SSN_ID;
+            
+END^

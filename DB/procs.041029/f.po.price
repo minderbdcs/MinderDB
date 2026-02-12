@@ -1,0 +1,66 @@
+DROP TRIGGER INSERT_SSN_PO_PRICE ^
+COMMIT^
+ 
+CREATE TRIGGER INSERT_SSN_PO_PRICE FOR SSN 
+ACTIVE BEFORE INSERT POSITION 0 
+AS
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_QTYF FLOAT;
+DECLARE VARIABLE WK_REASON VARCHAR(40);
+BEGIN
+   IF (NOT NEW.PURCHASE_PRICE IS NULL) THEN
+   BEGIN
+      WK_QTY = NEW.PURCHASE_PRICE * 100;
+      WK_REASON =  'No Price Yet';
+/*
+      EXECUTE PROCEDURE ADD_TRAN(
+        NEW.WH_ID,
+        NEW.LOCN_ID,
+        NEW.SSN_ID,
+        'NIPP',
+        'A',
+        "NOW",
+        'No Price Yet',
+        :WK_QTY,
+        'F',
+        '',
+        'MASTER',
+        0,
+        '',
+        'SSSSSSSSS',
+        'DB',
+        'DB');
+*/
+   END
+   ELSE
+   BEGIN
+      /* no price so retrive from control */
+      SELECT DEFAULT_PRICE FROM CONTROL INTO :WK_QTYF;
+      NEW.PURCHASE_PRICE  = WK_QTYF;
+      WK_QTY = WK_QTYF * 100;
+      WK_REASON =  'Defaulted Price - No Price Yet';
+/*
+      EXECUTE PROCEDURE ADD_TRAN(
+        NEW.WH_ID,
+        NEW.LOCN_ID,
+        NEW.SSN_ID,
+        'NIPP',
+        'A',
+        "NOW",
+        'Defaulted Price - No Price Yet',
+        :WK_QTY,
+        'F',
+        '',
+        'MASTER',
+        0,
+        '',
+        'SSSSSSSSS',
+        'DB',
+        'DB');
+*/
+   END
+   EXECUTE PROCEDURE ADD_SSN_HIST(NEW.WH_ID, NEW.LOCN_ID, NEW.SSN_ID, 
+      'nipp', 'A', "NOW",
+      'insert ssn with a price' , :WK_REASON, :WK_QTY, 'DB', 'DB'); 
+END ^
+ 

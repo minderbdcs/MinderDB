@@ -1,0 +1,21 @@
+drop index pick_despatch_manifest;
+drop trigger upd_pick_despatch_time;
+commit;
+
+alter table pick_despatch alter pickd_manifest_id type  varchar(24);
+
+create index pick_despatch_manifest on pick_despatch(pickd_manifest_id);
+
+alter table pick_manifest drop constraint integ_232;
+alter table pick_manifest drop constraint integ_460;
+alter table pick_manifest drop constraint integ_461;
+alter table pick_manifest drop constraint integ_470;
+alter table pick_manifest drop constraint integ_472;
+alter table pick_manifest drop constraint integ_475;
+alter table pick_manifest drop constraint integ_477;
+alter table pick_manifest drop constraint integ_486;
+
+alter table pick_manifest alter manifest_id type  varchar(24);
+
+alter table pick_manifest  add constraint manifest_primary primary key(manifest_id);
+

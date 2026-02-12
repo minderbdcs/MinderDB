@@ -1,0 +1,14 @@
+transaction to update a pick_despatches carrier  
+     - this is prior to the DSOT so no PACK_ID records are effected.
+
+update the pickd_carrier_id
+calculate the default carrier service and update it
+PICKD_SERVICE_RECORD_ID
+PICKD_SERVICE_TYPE
+calculate the awb_consignment no
+   see transaction DSPD for this
+
+update any pack_sscc for the despatch so that the 
+ps_carrier_id is updated
+ps_awb_consignment_no is updated
+

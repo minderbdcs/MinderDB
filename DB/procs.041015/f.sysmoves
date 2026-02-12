@@ -1,0 +1,1 @@
+insert into sys_moves(from_status, into_status, update_flag) values('IN','ST', 'T');

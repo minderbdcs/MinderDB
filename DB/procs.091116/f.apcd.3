@@ -1,0 +1,12 @@
+update sys_screen_var set ss_name='FPGSSN' where ss_name='FPGISSN' and ssv_table='SSN' and ssv_primary_id='T';
+
+/*
+insert into sys_screen_order(sso_order,sso_sequence,sso_order_status,ss_name) values(' ORDER BY SSN.CREATE_DATE DESC ','1','OK','FPGSSN');
+insert into sys_screen_order(sso_order,sso_sequence,sso_order_status,ss_name) values(' , SSN.SSN_ID  DESC ','2','OK','FPGSSN');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_expression,ssv_alias) values('','101','Disposal Cost','SR','OK','FPGSSN','CAST(SSN.DISPOSAL_COST AS VARCHAR(10))','DISPOSAL_COST');
+insert into sys_screen_var(ssv_name,ssv_sequence,ssv_title,ssv_field_type,ssv_field_status,ss_name,ssv_expression,ssv_alias) values('','102','Disposal Price','SR','OK','FPGSSN','CAST(SSN.DISPOSAL_PRICE AS VARCHAR(10))','DISPOSAL_PRICE');
+*/
+update sys_screen_var set ssv_expression= 'CAST(SSN.DISPOSAL_COST AS VARCHAR(10))'
+where ss_name='FPGSSN' and (ssv_expression is not null) and ssv_alias='DISPOSAL_COST';
+update sys_screen_var set ssv_expression= 'CAST(SSN.DISPOSAL_PRICE AS VARCHAR(10))'
+where ss_name='FPGSSN' and (ssv_expression is not null) and ssv_alias='DISPOSAL_PRICE';

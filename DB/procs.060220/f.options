@@ -1,0 +1,2 @@
+insert into options(group_code,code,description) values('CMPRECLOCN','MM','BGRC010000');
+insert into options(group_code,code,description) values('CMPRECLOCN','BW','BCRC010000');

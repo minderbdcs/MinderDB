@@ -1,0 +1,23 @@
+drop index depmethods_ix;
+alter table dep_methods drop constraint dep_methods_px;
+commit;
+
+alter table dep_methods add save_method code;
+commit;
+update dep_methods set save_method=method_code;
+commit;
+alter table dep_methods drop method_code;
+commit;
+alter table dep_methods add method_code method_code10 not null;
+commit;
+update dep_methods set method_code=save_method;
+commit;
+ALTER TABLE dep_methods DROP SAVE_METHOD;
+commit;
+
+alter table dep_methods add constraint dep_methods_px primary key (method_code);
+
+CREATE INDEX DEPMETHODS_IX ON DEP_METHODS(METHOD_CODE);
+
+
+commit;

@@ -1,0 +1,26 @@
+
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','SSN','R','SSN_ID','SSN',01);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq,max_length) values ('none','Company','U','COMPANY_ID','SSN',09,10);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq,max_length) values ('none','Department','U','DEPARTMENT_ID','SSN',11,40);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Audited','R','AUDITED','SSN',13);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Leased','R','LEASED','SSN',15);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Purchase Date','R','PURCHASE_DATE','SSN',16);
+/* insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Purchase Price','R','PURCHASE_PRICE','SSN',17); */
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Purchase Order','R','PO_ORDER','SSN',18);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Audit Date','R','AUDIT_DATE','SSN',14);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','SSN Description','R','SSN_DESCRIPTION','SSN',42);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Prev Location','R','PREV_LOCN_ID','SSN',43);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Date of Prev Location','R','PREV_LOCN_DATE','SSN',44);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Original Qty','R','ORIGINAL_QTY','SSN',12);
+update transaction_types set trn_type = '    ' where trn_prefix='/U';
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Parent SSN','R','PARENT_SSN_ID','SSN',46);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Old SSN','R','OLD_SSN_ID','SSN',48);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Loan Safety Check','R','LOAN_SAFETY_CHECK','SSN',49);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Last Loan Safety Check','R','LOAN_LAST_SAFETY_CHECK_DATE','SSN',50);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Loan Calibrate Check','R','LOAN_CALIBRATE_CHECK','SSN',51);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Last Loan Calibrate Check','R','LOAN_LAST_CALIBRATE_CHECK_DATE','SSN',52);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Warranty Expiry Date','R','WARRANTY_EXPIRY_DATE','SSN',53);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Net Weight','R','NET_WEIGHT','SSN',55);
+insert into transaction_types (trn_type,description,remote_update,field_name,table_name,seq) values ('    ','Net Weight UOM','R','NET_WEIGHT_UOM','SSN',56);
+
+

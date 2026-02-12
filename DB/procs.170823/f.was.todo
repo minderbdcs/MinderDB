@@ -1,0 +1,6 @@
+setup a single field primary key on table transactions_archive TRN_RECORD_ID
+
+change the primary key on pick_item_address to be the record_id
+then add an index on the pick_order,pick_label_no,pia_addr_type
+
+note this updates all transactions_archive records in f.trn

@@ -1,0 +1,6 @@
+alter table ssn drop constraint integ_33;
+alter table ssn add constraint ssn_ssn_primary primary key (ssn_id);
+
+alter table issn drop constraint integ_16;
+alter table issn add constraint issn_ssn_primary primary key (ssn_id);
+

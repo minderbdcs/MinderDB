@@ -1,0 +1,8 @@
+alter table prod_profile add standard_cost_updated last_update_date;
+alter table prod_profile add standard_cost_updated_by user_id;
+alter table prod_profile add prev_standard_cost_updated last_update_date;
+alter table prod_profile add prev_standard_cost standard_cost;
+alter table prod_profile add sale_price_updated last_update_date;
+alter table prod_profile add sale_price_updated_by user_id;
+alter table prod_profile add prev_sale_price_updated last_update_date;
+alter table prod_profile add prev_sale_price unit_price;

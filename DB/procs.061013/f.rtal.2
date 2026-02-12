@@ -1,0 +1,80 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP TRIGGER RUN_TRANSACTION_RTAL ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_RTAL FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 130 
+AS
+/* Transfer of allocated pick to another handheld */
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PROD VARCHAR(30);
+DECLARE VARIABLE WK_PICK_QTY INTEGER;
+DECLARE VARIABLE WK_LINE_CNT INTEGER;
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'RTAL') THEN
+  BEGIN
+     WK_USER = NEW.PERSON_ID;
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     IF (NEW.TRN_CODE = 'Q') THEN
+     BEGIN
+        /* get qty to allocate */
+        WK_PICK_QTY = 0;
+        IF (NEW.QTY = 0) THEN
+        BEGIN
+           SELECT PICK_ALLOCATE_QTY
+               FROM CONTROL
+               INTO :WK_PICK_QTY;
+        END
+        ELSE
+        BEGIN
+           WK_PICK_QTY = NEW.QTY;
+        END
+        /* transfer transfer request to device */
+        WK_LINE_CNT = 0;
+        WHILE (WK_LINE_CNT < WK_PICK_QTY)
+        DO
+        BEGIN
+           WK_LINE_CNT = WK_LINE_CNT + 1;
+           SELECT FIRST 1 P1.PROD_ID
+           FROM TRANSFER_REQUEST P1
+           WHERE  P1.TRN_STATUS IN ('OP')
+           ORDER BY P1.TRN_PRIORITY
+           INTO :WK_PROD; 
+           IF (WK_PROD IS NULL) THEN
+           BEGIN
+              WK_PROD = '';
+              WK_LINE_CNT = WK_PICK_QTY;
+           END
+           ELSE
+           BEGIN
+              UPDATE TRANSFER_REQUEST 
+                 SET DEVICE_ID = :WK_DEVICE,
+                 TRN_STATUS = 'AL'
+                 WHERE PROD_ID =  :WK_PROD
+                 AND TRN_STATUS IN ('OP');
+           END
+        END /* while */
+        EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+     END
+     /*
+   EXECUTE PROCEDURE TRAN_ARCHIVE;
+   */
+  END
+ END
+END ^
+ 
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

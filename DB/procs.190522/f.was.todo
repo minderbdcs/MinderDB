@@ -1,0 +1,4 @@
+for pkol class P
+if the prod_profile is for a batch or use by
+then also order by batch or use by respectively
+instead of create date

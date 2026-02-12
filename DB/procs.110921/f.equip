@@ -1,0 +1,3 @@
+alter table sys_equip add se_connection_id integer;
+alter table sys_equip add se_effective_ip_address code_128;
+

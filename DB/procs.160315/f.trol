@@ -1,0 +1,438 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+ 
+/*
+CREATE OR ALTER PROCEDURE PC_TROL_TRIL (RECORD_ID INTEGER,
+WH_ID CHAR(2) ,
+LOCN_ID VARCHAR(10) ,
+OBJECT VARCHAR(30) ,
+TRN_TYPE VARCHAR(4) ,
+TRN_CODE CHAR(1) ,
+TRN_DATE TIMESTAMP,
+REFERENCE VARCHAR(1024) ,
+QTY INTEGER,
+PERSON_ID VARCHAR(10) ,
+DEVICE_ID CHAR(2) )
+*/
+
+CREATE OR ALTER PROCEDURE PC_TROL_TRIL (RECORD_ID RECORD_ID,
+WH_ID WH_ID ,
+LOCN_ID LOCN_ID ,
+OBJECT OBJECT ,
+TRN_TYPE TRN_TYPE ,
+TRN_CODE TRN_CODE ,
+TRN_DATE TRN_DATE,
+REFERENCE REFERENCE ,
+QTY QTY,
+PERSON_ID PERSON ,
+DEVICE_ID DEVICE_ID )
+AS 
+ 
+  DECLARE VARIABLE SSN_EXIST INTEGER;
+  DECLARE VARIABLE WK_STR_WH_ID CHAR(2);
+  DECLARE VARIABLE WK_STR_LOCN_ID VARCHAR(10);
+  DECLARE VARIABLE WK_STR_AUDIT_DESC VARCHAR(70);
+  DECLARE VARIABLE WK_ICURRENT_QTY INTEGER;
+  DECLARE VARIABLE WK_ISUB_QTY INTEGER;
+  DECLARE VARIABLE PROCESS_OK CHAR(1);
+  DECLARE VARIABLE WK_STR_ISSN_STATUS CHAR(2);
+  DECLARE VARIABLE WK_STR_ISSN_STATUS_CODE VARCHAR(10);
+  DECLARE VARIABLE WK_STR_PROD_ID PRODUCT;
+  DECLARE VARIABLE WK_PROD_NULL INTEGER;
+  DECLARE VARIABLE WK_DO_UASL CHAR(1);
+  DECLARE VARIABLE WK_SUB_LOCN VARCHAR(10);
+  DECLARE VARIABLE WK_IS_COMPANY_ID COMPANY;
+  DECLARE VARIABLE WK_IS_WH_ID      VARCHAR(2);
+  DECLARE VARIABLE WK_IS_LOCN_ID    VARCHAR(10);
+  DECLARE VARIABLE WK_IS_SSN_ID     SSN_ID;
+  DECLARE VARIABLE WK_DO_COMPANY_HOME VARCHAR(50);
+  DECLARE VARIABLE WK_ALTER_COMPANY VARCHAR(1);
+  DECLARE VARIABLE WK_LOCN_MOVE_STAT VARCHAR(2);
+  DECLARE VARIABLE WK_IS_OK         VARCHAR(1);
+  DECLARE VARIABLE WK_TRN_COMPANY_ID COMPANY; 
+  DECLARE VARIABLE WK_TRN_PROD_ID PRODUCT; 
+  DECLARE VARIABLE WK_LOG_FILENAME VARCHAR(255);
+  DECLARE VARIABLE WK_STR_DEVICE_ID DEVICE_ID;
+  DECLARE VARIABLE WK_STR_IP_ADDRESS VARCHAR(40);
+       
+BEGIN
+  
+  WK_STR_AUDIT_DESC = ''; 
+    
+  IF (:TRN_TYPE = 'TROL') THEN
+  BEGIN       
+     WK_STR_WH_ID = '';
+     WK_STR_LOCN_ID = '';
+    
+     /* Check transit location */
+     SELECT FIRST 1 LOCN_ID, WH_ID 
+     FROM LOCATION
+     WHERE LOCN_ID = :DEVICE_ID
+     ORDER BY WH_ID
+     INTO :WK_STR_LOCN_ID, :WK_STR_WH_ID; 
+
+     IF (WK_STR_LOCN_ID = '') THEN /* Transit Location not found */
+     BEGIN
+        /* Update transactions table */        
+        /* EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Transit Location not found TROL'); */
+        INSERT INTO LOCATION (WH_ID, LOCN_ID, LOCN_NAME) VALUES('SY',:DEVICE_ID, 'Transit for ' || :DEVICE_ID);
+        WK_STR_WH_ID = 'SY';
+        WK_STR_LOCN_ID = :DEVICE_ID;
+        /* EXIT; */
+     END
+     /* ELSE */
+     /* check that hte device is not a DHCP device */
+     WK_STR_DEVICE_ID = NULL;
+     WK_STR_IP_ADDRESS = NULL;
+     SELECT DEVICE_ID, IP_ADDRESS 
+     FROM SYS_EQUIP
+     WHERE DEVICE_ID = :DEVICE_ID
+     INTO :WK_STR_DEVICE_ID, :WK_STR_IP_ADDRESS; 
+
+           /* DHCP Device, then exit */
+     IF (:WK_STR_IP_ADDRESS = 'DHCP') THEN
+     BEGIN 
+        /* Update transactions table */        
+        EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'Device Cannot do Tranfers - uses DHCP');
+        EXIT;
+     END 
+     BEGIN                         
+       IF ((:TRN_CODE = 'A') OR  
+           (:TRN_CODE = 'W')) THEN
+       BEGIN
+           SSN_EXIST = 0;
+           WK_ICURRENT_QTY = -1; 
+           WK_ISUB_QTY = (-1) * :QTY;
+           WK_STR_ISSN_STATUS = '';
+           WK_STR_ISSN_STATUS_CODE = '';
+           WK_IS_COMPANY_ID = NULL;
+           WK_STR_PROD_ID = NULL;
+           WK_IS_WH_ID = NULL;
+           WK_IS_LOCN_ID = NULL;
+
+           /* Check SSN */
+/*
+           SELECT 1, CURRENT_QTY, STATUS_SSN, STATUS_CODE, PROD_ID
+           FROM SSN
+           WHERE SSN_ID = :OBJECT
+           INTO :SSN_EXIST, :WK_ICURRENT_QTY, :WK_STR_ISSN_STATUS, :WK_STR_ISSN_STATUS_CODE, :WK_STR_PROD_ID WK_PROD_NULL;
+*/
+           SELECT 1, CURRENT_QTY, ISSN_STATUS, STATUS_CODE, PROD_ID, COMPANY_ID, WH_ID, LOCN_ID
+           FROM ISSN
+           WHERE SSN_ID = :OBJECT
+           INTO :SSN_EXIST, :WK_ICURRENT_QTY, :WK_STR_ISSN_STATUS, :WK_STR_ISSN_STATUS_CODE, :WK_STR_PROD_ID, :WK_IS_COMPANY_ID , :WK_IS_WH_ID, :WK_IS_LOCN_ID ;
+                
+           /* SSN not exists, then exit */
+           IF (SSN_EXIST = 0) THEN
+           BEGIN 
+             /* Update transactions table */        
+             EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'F', 'SSN is not in the database');
+             EXIT;
+           END 
+/*
+           IF (:QTY < :WK_ICURRENT_QTY) THEN
+           BEGIN
+               -* Add new record to ISSN table *-
+               EXECUTE PROCEDURE ADD_ISSN (:OBJECT, :WK_STR_WH_ID, :WK_STR_LOCN_ID, 
+   :LOCN_ID, :WK_ICURRENT_QTY, :QTY, :TRN_DATE, 
+                        :WK_STR_ISSN_STATUS, :WK_STR_ISSN_STATUS_CODE, 'NOW', :PERSON_ID, :WK_STR_PROD_ID, 1); 
+                                      
+               -* Update Current_Qty *-
+               EXECUTE PROCEDURE UPDATE_SSN_QTY_TROL (:OBJECT, :WK_ISUB_QTY);
+
+               WK_STR_AUDIT_DESC = 'Transfered partial qty ' || :QTY || ' into transit location'; 
+           END
+           ELSE IF (:QTY >= :WK_ICURRENT_QTY) THEN
+*/
+           BEGIN
+               /* Update SSN */ 
+               EXECUTE PROCEDURE UPDATE_SSN_TROL_A (:OBJECT, :WK_STR_WH_ID, :WK_STR_LOCN_ID, :TRN_DATE, :DEVICE_ID);
+
+               WK_STR_AUDIT_DESC = 'Transfered all qty  ' || :WK_ICURRENT_QTY || ' into transit location'; 
+           END
+
+           /* Update transactions table */               
+           EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+
+           /* Add transaction history */                                                                                     
+/*
+           EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                          :WK_STR_AUDIT_DESC, :REFERENCE, :QTY,  :PERSON_ID, :DEVICE_ID);
+*/
+           EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                          :WK_STR_AUDIT_DESC, :REFERENCE, :WK_ICURRENT_QTY,  :PERSON_ID, :DEVICE_ID);
+           BEGIN
+              /* now add transactions archive for this ssn_id */
+              INSERT INTO TRANSACTIONS_ARCHIVE
+                 (WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE, REFERENCE,
+                  QTY, ERROR_TEXT, INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+                  PERSON_ID, DEVICE_ID, RECORD_ID, PROD_ID, COMPANY_ID)
+               SELECT :WK_IS_WH_ID, :WK_IS_LOCN_ID, :OBJECT, :TRN_TYPE, 'I', :TRN_DATE, :REFERENCE,
+                  :WK_ICURRENT_QTY, 'Processed successfully', INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+                  :PERSON_ID, :DEVICE_ID, :RECORD_ID , :WK_STR_PROD_ID, :WK_IS_COMPANY_ID
+               FROM TRANSACTIONS
+               WHERE RECORD_ID = :RECORD_ID;
+           END
+       END /* TRN_CODE = 'A' */
+       
+       ELSE IF (:TRN_CODE = 'P') THEN
+       BEGIN
+          PROCESS_OK = 'F';
+          WK_STR_AUDIT_DESC = 'Transfered qty of ' || :QTY || ' into transit location'; 
+          
+          EXECUTE PROCEDURE PC_QTY_TROL_TRIL_P (:RECORD_ID, :WK_STR_WH_ID, :LOCN_ID, :WH_ID,
+                                         :OBJECT, :TRN_TYPE, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID, :TRN_CODE, :TRN_DATE, :WK_STR_AUDIT_DESC) 
+                         RETURNING_VALUES :PROCESS_OK; 
+   
+/*
+          IF (PROCESS_OK = 'T') THEN
+          BEGIN
+              -* Add transaction history *-                                                                                     
+              EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                             :WK_STR_AUDIT_DESC, :REFERENCE, :QTY,  :PERSON_ID, :DEVICE_ID);
+          END         
+*/
+       END /* TRN_CODE = 'P' */
+       
+     END /* else */ 
+  END /* TRN_TYPE = 'TROL' */
+      
+  ELSE IF (:TRN_TYPE = 'TRIL') THEN
+  BEGIN
+     IF (:TRN_CODE = 'A') THEN
+     BEGIN
+         WK_STR_PROD_ID = NULL;
+         WK_IS_COMPANY_ID = NULL;
+         WK_DO_COMPANY_HOME = NULL;
+         SELECT SUB_LOCN_ID 
+         FROM TRANSACTIONS 
+         WHERE RECORD_ID = :RECORD_ID 
+         INTO :WK_SUB_LOCN;
+         SELECT DESCRIPTION 
+         FROM OPTIONS 
+         WHERE GROUP_CODE='PUTAWAY' 
+         AND CODE='COMPANY.HOME_LOCN_ID'
+         INTO :WK_DO_COMPANY_HOME;
+         IF (WK_DO_COMPANY_HOME IS NULL) THEN
+         BEGIN
+            WK_DO_COMPANY_HOME = 'F';
+         END
+
+         /* check temperature of product versus new location */
+         WK_IS_OK = 'T';
+         EXECUTE PROCEDURE PC_CHECK_TEMPERATURE_ZONE (:RECORD_ID, :WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID ) 
+                 RETURNING_VALUES :WK_IS_OK; 
+
+         IF (COALESCE(:WK_IS_OK, 'F') = 'F' ) THEN
+         BEGIN
+            /* cannot transfer */
+            EXIT;
+         END
+
+        /* Update SSN */ 
+        EXECUTE PROCEDURE UPDATE_SSN_TRIL_A (:OBJECT, :WH_ID, :LOCN_ID, :TRN_DATE, :QTY, :TRN_CODE, :WK_SUB_LOCN, :DEVICE_ID, :PERSON_ID);          
+         SELECT 1, CURRENT_QTY, PROD_ID, COMPANY_ID 
+         FROM ISSN
+         WHERE SSN_ID = :OBJECT
+         INTO :SSN_EXIST, :WK_ICURRENT_QTY, :WK_STR_PROD_ID, :WK_IS_COMPANY_ID ;
+
+          IF (WK_DO_COMPANY_HOME = 'T') THEN
+          BEGIN
+             WK_ALTER_COMPANY = 'F';
+             SELECT MOVE_STAT FROM LOCATION WHERE WH_ID = :WH_ID AND LOCN_ID = :LOCN_ID
+             INTO :WK_LOCN_MOVE_STAT;
+             IF (WK_LOCN_MOVE_STAT IS NULL) THEN
+             BEGIN
+                WK_ALTER_COMPANY = 'F';
+             END
+             IF (WK_LOCN_MOVE_STAT = 'ST') THEN
+             BEGIN
+                WK_ALTER_COMPANY = 'T';
+             END
+             IF (WK_ALTER_COMPANY = 'T') THEN
+             BEGIN
+                UPDATE COMPANY SET HOME_LOCN_ID = :LOCN_ID WHERE COMPANY_ID = :WK_IS_COMPANY_ID;
+             END
+          END
+        /* Update transactions table */               
+ /* this adds to locn a new issn */
+ /* must remove this qty from issn in transit location */
+        EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+
+        WK_STR_AUDIT_DESC = 'Transfered qty of ' || :QTY || ' into location'; 
+
+        /* Add transaction history */                                                                                     
+/*
+        EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                         :WK_STR_AUDIT_DESC, :REFERENCE, :QTY,  :PERSON_ID, :DEVICE_ID); 
+*/
+        EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                         :WK_STR_AUDIT_DESC, :REFERENCE, :WK_ICURRENT_QTY,  :PERSON_ID, :DEVICE_ID); 
+           BEGIN
+              /* now add transactions archive for this ssn_id */
+              INSERT INTO TRANSACTIONS_ARCHIVE
+                 (WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE, REFERENCE,
+                  QTY, ERROR_TEXT, INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+                  PERSON_ID, DEVICE_ID, RECORD_ID, PROD_ID, COMPANY_ID)
+               SELECT :WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, 'I', :TRN_DATE, :REFERENCE,
+                  :WK_ICURRENT_QTY, 'Processed successfully', INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+                  :PERSON_ID, :DEVICE_ID, :RECORD_ID , :WK_STR_PROD_ID, :WK_IS_COMPANY_ID
+               FROM TRANSACTIONS
+               WHERE RECORD_ID = :RECORD_ID;
+           END
+     END /* TRN_CODE = 'A' */
+     
+     ELSE IF (:TRN_CODE = 'W') THEN
+     BEGIN
+         WK_STR_PROD_ID = NULL;
+         WK_IS_COMPANY_ID = NULL;
+         WK_DO_COMPANY_HOME = NULL;
+         SELECT SUB_LOCN_ID 
+         FROM TRANSACTIONS 
+         WHERE RECORD_ID = :RECORD_ID 
+         INTO :WK_SUB_LOCN;
+         SELECT DESCRIPTION 
+         FROM OPTIONS 
+         WHERE GROUP_CODE='PUTAWAY' 
+         AND CODE='COMPANY.HOME_LOCN_ID'
+         INTO :WK_DO_COMPANY_HOME;
+         IF (WK_DO_COMPANY_HOME IS NULL) THEN
+         BEGIN
+            WK_DO_COMPANY_HOME = 'F';
+         END
+        /* Update SSN */ 
+        EXECUTE PROCEDURE UPDATE_SSN_TRIL_A (:OBJECT, :WH_ID, :LOCN_ID, :TRN_DATE, :QTY, :TRN_CODE, :WK_SUB_LOCN, :DEVICE_ID, :PERSON_ID);          
+        SELECT 1, CURRENT_QTY, PROD_ID, COMPANY_ID 
+        FROM ISSN
+        WHERE SSN_ID = :OBJECT
+        INTO :SSN_EXIST, :WK_ICURRENT_QTY, :WK_STR_PROD_ID, :WK_IS_COMPANY_ID ;
+
+          IF (WK_DO_COMPANY_HOME = 'T') THEN
+          BEGIN
+             WK_ALTER_COMPANY = 'F';
+             SELECT MOVE_STAT FROM LOCATION WHERE WH_ID = :WH_ID AND LOCN_ID = :LOCN_ID
+             INTO :WK_LOCN_MOVE_STAT;
+             IF (WK_LOCN_MOVE_STAT IS NULL) THEN
+             BEGIN
+                WK_ALTER_COMPANY = 'F';
+             END
+             IF (WK_LOCN_MOVE_STAT = 'ST') THEN
+             BEGIN
+                WK_ALTER_COMPANY = 'T';
+             END
+             IF (WK_ALTER_COMPANY = 'T') THEN
+             BEGIN
+                UPDATE COMPANY SET HOME_LOCN_ID = :LOCN_ID WHERE COMPANY_ID = :WK_IS_COMPANY_ID;
+             END
+          END
+        /* Update transactions table */               
+ /* this adds to locn a new issn */
+ /* must remove this qty from issn in transit location */
+        EXECUTE PROCEDURE UPDATE_TRAN (:RECORD_ID, 'T', 'Processed successfully');
+
+        WK_STR_AUDIT_DESC = 'Transfered qty of ' || :WK_ICURRENT_QTY || ' into location'; 
+/*
+        WK_STR_AUDIT_DESC = 'Transfered qty of ' || :QTY || ' into location'; 
+*/
+
+        /* Add transaction history */                                                                                     
+/*
+        EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                         :WK_STR_AUDIT_DESC, :REFERENCE, :QTY,  :PERSON_ID, :DEVICE_ID); 
+*/
+        EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                         :WK_STR_AUDIT_DESC, :REFERENCE, :WK_ICURRENT_QTY,  :PERSON_ID, :DEVICE_ID); 
+        BEGIN
+           /* now add transactions archive for this ssn_id */
+           INSERT INTO TRANSACTIONS_ARCHIVE
+              (WH_ID, LOCN_ID, OBJECT, TRN_TYPE, TRN_CODE, TRN_DATE, REFERENCE,
+               QTY, ERROR_TEXT, INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+               PERSON_ID, DEVICE_ID, RECORD_ID, PROD_ID, COMPANY_ID)
+            SELECT :WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, 'I', :TRN_DATE, :REFERENCE,
+               :WK_ICURRENT_QTY, 'Processed successfully', INSTANCE_ID, EXPORTED, SUB_LOCN_ID, INPUT_SOURCE,
+               :PERSON_ID, :DEVICE_ID, :RECORD_ID , :WK_STR_PROD_ID, :WK_IS_COMPANY_ID
+            FROM TRANSACTIONS
+            WHERE RECORD_ID = :RECORD_ID;
+        END
+     END /* TRN_CODE = 'W' */
+     
+     ELSE IF (:TRN_CODE = 'P') THEN
+     BEGIN
+         /* check temperature zone of product  */
+        PROCESS_OK = 'F';
+        WK_TRN_COMPANY_ID = NULL;
+        WK_TRN_PROD_ID = NULL;
+        /* get the company to use */ 
+        WK_LOG_FILENAME = '/tmp/TROL_TRIL_P.log';
+        SELECT COMPANY_ID , PROD_ID
+        FROM TRANSACTIONS 
+        WHERE RECORD_ID = :RECORD_ID
+        INTO :WK_TRN_COMPANY_ID, :WK_TRN_PROD_ID;
+        IF (WK_TRN_COMPANY_ID = '') THEN
+        BEGIN
+           WK_TRN_COMPANY_ID = NULL;
+        END
+        IF (WK_TRN_PROD_ID = '') THEN
+        BEGIN
+           WK_TRN_PROD_ID = NULL;
+        END
+        IF (WK_TRN_COMPANY_ID IS NULL) THEN
+        BEGIN
+           /* use the default company */
+           SELECT COMPANY_ID FROM CONTROL INTO :WK_TRN_COMPANY_ID;
+        END
+        WK_IS_OK = 'T';
+        FOR SELECT SSN_ID  
+            FROM ISSN
+            WHERE PROD_ID = :WK_TRN_PROD_ID
+             AND COMPANY_ID = :WK_TRN_COMPANY_ID
+             AND LOCN_ID = :DEVICE_ID
+             AND CURRENT_QTY <> 0
+             INTO :WK_IS_SSN_ID 
+             DO
+             BEGIN
+         /* check temperature of this issns product versus new location */
+                EXECUTE PROCEDURE PC_CHECK_TEMPERATURE_ZONE (:RECORD_ID, :WH_ID, :LOCN_ID, :WK_IS_SSN_ID, :TRN_TYPE, :TRN_CODE, :TRN_DATE, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID ) 
+                 RETURNING_VALUES :WK_IS_OK; 
+
+                 IF (COALESCE(:WK_IS_OK, 'F') = 'F' ) THEN
+                 BEGIN
+                    /* cannot transfer */
+                    EXIT;
+                 END
+             END
+
+        PROCESS_OK = 'F';
+        WK_STR_AUDIT_DESC = 'Transfered qty of ' || :QTY || ' into location'; 
+
+        EXECUTE PROCEDURE PC_QTY_TROL_TRIL_P (:RECORD_ID, :WH_ID, :DEVICE_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :REFERENCE, :QTY, :PERSON_ID, :DEVICE_ID, :TRN_CODE, :TRN_DATE, :WK_STR_AUDIT_DESC) 
+                                               RETURNING_VALUES :PROCESS_OK; 
+
+        IF (PROCESS_OK = 'T') THEN
+        BEGIN
+           /* Add transaction history */                                                                                     
+/*
+           EXECUTE PROCEDURE ADD_SSN_HIST(:WH_ID, :LOCN_ID, :OBJECT, :TRN_TYPE, :TRN_CODE, :TRN_DATE,
+                                         :WK_STR_AUDIT_DESC, :REFERENCE, :QTY,  :PERSON_ID, :DEVICE_ID);
+*/
+
+           /* send to remote the available qty of the prod */
+           SELECT SEND_UASL_V4 FROM CONTROL INTO :WK_DO_UASL;
+           IF (WK_DO_UASL = 'T') THEN
+           BEGIN
+              EXECUTE PROCEDURE SEND_PICKABLE_STOCK (:OBJECT,
+                 :PERSON_ID,
+                 :DEVICE_ID,
+                 :TRN_DATE);
+           END
+        END 
+      END /* TRN_CODE = 'P' */
+  END /* TRN_TYPE = 'TRIL' */
+
+END ^
+
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

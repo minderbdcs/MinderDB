@@ -1,0 +1,2 @@
+alter table control add pick_direct_delivery_location locn_id;
+

@@ -1,0 +1,4 @@
+
+export grn causes firebird server to die on pinpoint 2.1.13
+however it works on barcode7 2.0.6
+

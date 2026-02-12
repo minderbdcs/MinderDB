@@ -1,0 +1,13 @@
+/* in minder db 
+ insert into sys_mirror_var(smv_rules_name,smv_table,smv_fieldname,smv_sequence) values('DESPATCH','PICK_DESPATCH','PICKD_POST_CODE_DEPOT_ID',190);
+*/
+/* in despatch db 
+create domain FMS_CODE VARCHAR(40);
+commit;
+alter table pick_despatch add  post_code_depot_id  FMS_CODE;
+commit;
+GRANT  SELECT  ON PICK_ORDER TO USER DESPATCH;
+*/
+/*
+alter table pick_despatch alter post_code_depot_id  to PICKD_POST_CODE_DEPOT_ID;
+*/

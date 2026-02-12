@@ -1,0 +1,3 @@
+for apcd
+	after deletion or insertion into prod_cond_status recalc ssn's other1-3
+

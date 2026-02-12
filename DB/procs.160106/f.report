@@ -1,0 +1,1 @@
+alter table reports_detail alter QUERY_DB_FIELD type code_255;

@@ -1,0 +1,3 @@
+alter table prod_profile add other1 other_char;
+alter table prod_profile add other2 other_char;
+alter table prod_profile add other3 other_char;

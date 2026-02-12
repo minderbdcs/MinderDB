@@ -1,0 +1,3 @@
+alter table purchase_order add earliest_date datetime;
+alter table purchase_order_line  add earliest_date datetime;
+

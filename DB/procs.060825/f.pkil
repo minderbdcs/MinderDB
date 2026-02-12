@@ -1,0 +1,387 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP TRIGGER RUN_TRANSACTION_PKIL ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_PKIL FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 56 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_DEVICE CHAR(2);
+DECLARE VARIABLE WK_USER VARCHAR(10);
+DECLARE VARIABLE WK_RECORD INTEGER;
+DECLARE VARIABLE WK_LABEL_NO VARCHAR(10);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID VARCHAR(10);
+DECLARE VARIABLE WK_OBJECT VARCHAR(30);
+DECLARE VARIABLE WK_REF VARCHAR(40);
+DECLARE VARIABLE WK_QTY INTEGER;
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_PID_ID INTEGER;
+DECLARE VARIABLE WK_SSN_ID VARCHAR(20);
+DECLARE VARIABLE WK_LOCN_TYPE CHAR(2);
+DECLARE VARIABLE WK_PI_STATUS CHAR(2);
+DECLARE VARIABLE WK_PI_STATUS2 CHAR(2);
+DECLARE VARIABLE WK_TRN_TYPE VARCHAR(4);
+DECLARE VARIABLE WK_TRN_CODE CHAR(1);
+DECLARE VARIABLE WK_AUDIT_DESC VARCHAR(40);
+DECLARE VARIABLE WK_DESC VARCHAR(80);
+DECLARE VARIABLE WK_ORDER VARCHAR(15);
+DECLARE VARIABLE WK_FROM_LOCN VARCHAR(40);
+DECLARE VARIABLE WK_DUMMY CHAR(1);
+
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'PKIL') THEN
+  BEGIN
+     WK_DEVICE = NEW.DEVICE_ID;
+     WK_LABEL_NO = NEW.SUB_LOCN_ID;
+     WK_WH_ID = NEW.WH_ID;
+     WK_LOCN_ID = NEW.LOCN_ID;
+     WK_USER = NEW.PERSON_ID;
+     WK_OBJECT = NEW.OBJECT;
+     WK_QTY = NEW.QTY;
+     WK_DATE = NEW.TRN_DATE;
+     WK_RECORD = NEW.RECORD_ID;
+     WK_TRN_CODE = NEW.TRN_CODE;
+     WK_TRN_TYPE = NEW.TRN_TYPE;
+     WK_REF = NEW.REFERENCE;
+
+/*
+have 4 transaction classes
+ M - transfer all on device
+ D - transfer all for pick_label
+ I - transfer all for issn
+ P - transfer all for product
+ G - transfer all of product access all devices for order
+     only take from the location specified in the reference
+ change the ssn status to DS if for a despatch location
+ and the pick_item .. to PC or PS
+ do the updates as happen already for pick_item and issn
+*/
+
+     /* WK_LOCN_TYPE = 'DS'; */
+     WK_LOCN_TYPE = 'PL';
+     SELECT STORE_AREA
+        FROM LOCATION
+        WHERE LOCN_ID = :WK_LOCN_ID
+          AND WH_ID = :WK_WH_ID
+         INTO :WK_LOCN_TYPE; 
+     IF (WK_LOCN_TYPE = 'DS') THEN
+     BEGIN
+        WK_PI_STATUS = 'DS';
+     END
+     ELSE
+     BEGIN
+        WK_PI_STATUS = 'PL';
+     END
+
+     WK_AUDIT_DESC = 'Picked to Location ' || :WK_LOCN_ID ;
+     IF (NEW.TRN_CODE = 'M') THEN
+     BEGIN
+        FOR SELECT PICK_DETAIL_ID, SSN_ID 
+           FROM PICK_ITEM_DETAIL 
+           WHERE DEVICE_ID = :WK_DEVICE 
+             AND PICK_DETAIL_STATUS = 'PL'
+            INTO :WK_PID_ID, :WK_SSN_ID
+        DO
+        BEGIN
+           UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS,
+               PREV_PREV_WH_ID = PREV_WH_ID,
+               PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+               PREV_WH_ID = WH_ID,
+               PREV_LOCN_ID = LOCN_ID,
+               WH_ID = :WK_WH_ID,
+               LOCN_ID = :WK_LOCN_ID
+           WHERE SSN_ID = :WK_SSN_ID;
+           UPDATE PICK_ITEM_DETAIL SET DESPATCH_LOCATION = :WK_LOCN_ID
+           WHERE PICK_DETAIL_ID = :WK_PID_ID;
+           EXECUTE PROCEDURE ADD_SSN_HIST(:WK_WH_ID, :WK_LOCN_ID, :WK_SSN_ID, :WK_TRN_TYPE, :WK_TRN_CODE, :WK_DATE,
+                  :WK_AUDIT_DESC , '', :WK_QTY, :WK_USER, :WK_DEVICE); 
+        END
+        /* update item to PL or  DS  
+        */
+        IF (WK_PI_STATUS = 'DS') THEN
+        BEGIN
+           UPDATE PICK_ITEM SET DESPATCH_LOCATION = :WK_LOCN_ID,
+              PICK_PICK_FINISH = :WK_DATE,
+              PICK_LINE_STATUS = 'DS'
+              WHERE DEVICE_ID = :WK_DEVICE 
+              AND PICK_LINE_STATUS = 'PL';
+        END
+        ELSE
+        BEGIN
+           UPDATE PICK_ITEM SET DESPATCH_LOCATION = :WK_LOCN_ID
+              WHERE DEVICE_ID = :WK_DEVICE 
+              AND PICK_LINE_STATUS = 'PL';
+        END
+        IF (WK_PI_STATUS = 'DS') THEN
+        BEGIN
+           UPDATE PICK_ITEM_DETAIL SET PICK_DETAIL_STATUS = :WK_PI_STATUS
+              WHERE DEVICE_ID = :WK_DEVICE 
+              AND PICK_DETAIL_STATUS = 'PL';
+        END
+     END
+     ELSE
+     BEGIN
+        IF (NEW.TRN_CODE = 'D') THEN
+        BEGIN
+           FOR SELECT PICK_DETAIL_ID, SSN_ID 
+              FROM PICK_ITEM_DETAIL 
+              WHERE DEVICE_ID = :WK_DEVICE 
+                AND PICK_DETAIL_STATUS = 'PL'
+                AND PICK_LABEL_NO = :WK_LABEL_NO
+               INTO :WK_PID_ID, :WK_SSN_ID
+           DO
+           BEGIN
+              UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS,
+                  PREV_PREV_WH_ID = PREV_WH_ID,
+                  PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                  PREV_WH_ID = WH_ID,
+                  PREV_LOCN_ID = LOCN_ID,
+                  WH_ID = :WK_WH_ID,
+                  LOCN_ID = :WK_LOCN_ID
+              WHERE SSN_ID = :WK_SSN_ID;
+              UPDATE PICK_ITEM_DETAIL SET DESPATCH_LOCATION = :WK_LOCN_ID
+              WHERE PICK_DETAIL_ID = :WK_PID_ID;
+           END
+           /* update item to PL or DS  
+           */
+           IF (WK_PI_STATUS = 'DS') THEN
+           BEGIN
+              UPDATE PICK_ITEM SET DESPATCH_LOCATION = :WK_LOCN_ID,
+                 PICK_LINE_STATUS = 'DS'
+                 WHERE DEVICE_ID = :WK_DEVICE 
+                 AND PICK_LINE_STATUS = 'PL'
+                 AND PICK_LABEL_NO = :WK_LABEL_NO;
+           END
+           ELSE
+           BEGIN
+              UPDATE PICK_ITEM SET DESPATCH_LOCATION = :WK_LOCN_ID
+                 WHERE DEVICE_ID = :WK_DEVICE 
+                 AND PICK_LABEL_NO = :WK_LABEL_NO
+                 AND PICK_LINE_STATUS = 'PL';
+           END
+           IF (WK_PI_STATUS = 'DS') THEN
+           BEGIN
+              UPDATE PICK_ITEM_DETAIL SET PICK_DETAIL_STATUS = :WK_PI_STATUS
+                 WHERE DEVICE_ID = :WK_DEVICE 
+                 AND PICK_LABEL_NO = :WK_LABEL_NO
+                 AND PICK_DETAIL_STATUS = 'PL';
+           END
+        END
+        ELSE
+        BEGIN
+           IF (NEW.TRN_CODE = 'I') THEN
+           BEGIN
+              FOR SELECT PICK_DETAIL_ID, SSN_ID 
+                 FROM PICK_ITEM_DETAIL 
+                 WHERE DEVICE_ID = :WK_DEVICE 
+                   AND PICK_DETAIL_STATUS = 'PL'
+                   AND SSN_ID = :WK_OBJECT
+                  INTO :WK_PID_ID, :WK_SSN_ID
+              DO
+              BEGIN
+                 UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS,
+                     PREV_PREV_WH_ID = PREV_WH_ID,
+                     PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                     PREV_WH_ID = WH_ID,
+                     PREV_LOCN_ID = LOCN_ID,
+                     WH_ID = :WK_WH_ID,
+                     LOCN_ID = :WK_LOCN_ID
+                 WHERE SSN_ID = :WK_SSN_ID;
+                 UPDATE PICK_ITEM_DETAIL SET DESPATCH_LOCATION = :WK_LOCN_ID
+                 WHERE PICK_DETAIL_ID = :WK_PID_ID;
+              END
+              /* update item to PL or DS 
+              */
+              IF (WK_PI_STATUS = 'DS') THEN
+              BEGIN
+                 UPDATE PICK_ITEM SET DESPATCH_LOCATION = :WK_LOCN_ID,
+                    PICK_LINE_STATUS = 'DS'
+                    WHERE DEVICE_ID = :WK_DEVICE 
+                    AND PICK_LINE_STATUS = 'PL'
+                    AND SSN_ID = :WK_OBJECT;
+              END
+              ELSE
+              BEGIN
+                 UPDATE PICK_ITEM SET DESPATCH_LOCATION = :WK_LOCN_ID
+                    WHERE DEVICE_ID = :WK_DEVICE 
+                    AND SSN_ID = :WK_OBJECT
+                    AND PICK_LINE_STATUS = 'PL';
+              END
+              IF (WK_PI_STATUS = 'DS') THEN
+              BEGIN
+                 UPDATE PICK_ITEM_DETAIL SET PICK_DETAIL_STATUS = :WK_PI_STATUS
+                    WHERE DEVICE_ID = :WK_DEVICE 
+                    AND SSN_ID = :WK_OBJECT
+                    AND PICK_DETAIL_STATUS = 'PL';
+              END
+           END
+           ELSE
+           BEGIN
+              IF (NEW.TRN_CODE = 'P') THEN
+              BEGIN
+                 /* class is P */
+                 FOR SELECT PID.PICK_DETAIL_ID, PID.SSN_ID 
+                    FROM PICK_ITEM_DETAIL PID 
+                    JOIN ISSN ISS ON ISS.SSN_ID = PID.SSN_ID 
+                    WHERE PID.DEVICE_ID = :WK_DEVICE 
+                      AND PID.PICK_DETAIL_STATUS = 'PL'
+                      AND ISS.PROD_ID = :WK_OBJECT
+                     INTO :WK_PID_ID, :WK_SSN_ID
+                 DO
+                 BEGIN
+                    UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS,
+                        PREV_PREV_WH_ID = PREV_WH_ID,
+                        PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                        PREV_WH_ID = WH_ID,
+                        PREV_LOCN_ID = LOCN_ID,
+                        WH_ID = :WK_WH_ID,
+                        LOCN_ID = :WK_LOCN_ID
+                    WHERE SSN_ID = :WK_SSN_ID;
+                    UPDATE PICK_ITEM_DETAIL SET DESPATCH_LOCATION = :WK_LOCN_ID
+                    WHERE PICK_DETAIL_ID = :WK_PID_ID;
+                 END
+                 /* update item to PL or DS 
+                 */
+                 IF (WK_PI_STATUS = 'DS') THEN
+                 BEGIN
+                    UPDATE PICK_ITEM SET DESPATCH_LOCATION = :WK_LOCN_ID,
+                       PICK_LINE_STATUS = 'DS'
+                       WHERE DEVICE_ID = :WK_DEVICE 
+                       AND PICK_LINE_STATUS = 'PL'
+                       AND PROD_ID = :WK_OBJECT;
+                 END
+                 ELSE
+                 BEGIN
+                    UPDATE PICK_ITEM SET DESPATCH_LOCATION = :WK_LOCN_ID
+                       WHERE DEVICE_ID = :WK_DEVICE 
+                       AND PROD_ID = :WK_OBJECT
+                       AND PICK_LINE_STATUS = 'PL';
+                 END
+                 IF (WK_PI_STATUS = 'DS') THEN
+                 BEGIN
+                    FOR SELECT PID.PICK_DETAIL_ID, PI.PICK_LINE_STATUS  
+                       FROM PICK_ITEM_DETAIL  PID 
+                       JOIN PICK_ITEM PI 
+                       ON PI.PICK_LABEL_NO = PID.PICK_LABEL_NO
+                       WHERE PID.DEVICE_ID = :WK_DEVICE 
+                         AND PID.PICK_DETAIL_STATUS = 'PL'
+                         AND PI.PROD_ID = :WK_OBJECT
+                        INTO :WK_PID_ID, :WK_PI_STATUS2
+                    DO
+                    BEGIN
+                       UPDATE PICK_ITEM_DETAIL SET PICK_DETAIL_STATUS = :WK_PI_STATUS2
+                          WHERE PICK_DETAIL_ID = :WK_PID_ID;
+                    END
+                 END
+              END
+              ELSE
+              BEGIN
+                 IF (NEW.TRN_CODE = 'G') THEN
+                 BEGIN
+                    /* class is G */
+                    WK_FROM_LOCN = ALLTRIM(WK_REF);
+                    WK_ORDER = NEW.SUB_LOCN_ID;
+                    /*   AND PID.DESPATCH_LOCATION = :WK_FROM_LOCN */
+                    FOR SELECT PID.PICK_DETAIL_ID, PID.SSN_ID 
+                       FROM PICK_ITEM_DETAIL PID 
+                       JOIN PICK_ITEM PI ON PI.PICK_LABEL_NO = PID.PICK_LABEL_NO 
+                       JOIN ISSN ISS ON ISS.SSN_ID = PID.SSN_ID 
+                       WHERE PID.PICK_DETAIL_STATUS = 'PL'
+                         AND PI.PICK_ORDER = :WK_ORDER
+                         AND ISS.PROD_ID = :WK_OBJECT
+                        INTO :WK_PID_ID, :WK_SSN_ID
+                    DO
+                    BEGIN
+                       UPDATE ISSN SET ISSN_STATUS = :WK_PI_STATUS,
+                           PREV_PREV_WH_ID = PREV_WH_ID,
+                           PREV_PREV_LOCN_ID = PREV_LOCN_ID,
+                           PREV_WH_ID = WH_ID,
+                           PREV_LOCN_ID = LOCN_ID,
+                           WH_ID = :WK_WH_ID,
+                           LOCN_ID = :WK_LOCN_ID
+                       WHERE SSN_ID = :WK_SSN_ID;
+                       UPDATE PICK_ITEM_DETAIL SET DESPATCH_LOCATION = :WK_LOCN_ID
+                       WHERE PICK_DETAIL_ID = :WK_PID_ID;
+                    END
+                    /* update item to PL or DS 
+                    */
+                    IF (WK_PI_STATUS = 'DS') THEN
+                    BEGIN
+                       UPDATE PICK_ITEM SET DESPATCH_LOCATION = :WK_LOCN_ID,
+                          PICK_LINE_STATUS = 'DS'
+                          WHERE PICK_LINE_STATUS = 'PL'
+                          AND PICK_ORDER = :WK_ORDER
+                          AND PROD_ID = :WK_OBJECT;
+                    END
+                    ELSE
+                    BEGIN
+                       UPDATE PICK_ITEM SET DESPATCH_LOCATION = :WK_LOCN_ID
+                          WHERE PICK_LINE_STATUS = 'PL'
+                          AND PICK_ORDER = :WK_ORDER
+                          AND PROD_ID = :WK_OBJECT;
+                    END
+                    IF (WK_PI_STATUS = 'DS') THEN
+                    BEGIN
+                       FOR SELECT PID.PICK_DETAIL_ID, PI.PICK_LINE_STATUS  
+                          FROM PICK_ITEM_DETAIL  PID 
+                          JOIN PICK_ITEM PI 
+                          ON PI.PICK_LABEL_NO = PID.PICK_LABEL_NO
+                          WHERE PID.PICK_DETAIL_STATUS = 'PL'
+                            AND PI.PICK_ORDER = :WK_ORDER
+                            AND PI.PROD_ID = :WK_OBJECT
+                           INTO :WK_PID_ID, :WK_PI_STATUS2
+                       DO
+                       BEGIN
+                          UPDATE PICK_ITEM_DETAIL SET PICK_DETAIL_STATUS = :WK_PI_STATUS2
+                             WHERE PICK_DETAIL_ID = :WK_PID_ID;
+                       END
+                    END
+                 END
+              END
+           END
+        END
+     END
+   EXECUTE PROCEDURE UPDATE_TRAN (WK_RECORD, 'T','Processed successfully');
+/*
+   had to put pkua back for vb handheld
+*/
+   EXECUTE PROCEDURE ADD_TRAN(
+        :WK_DEVICE,
+        '',
+        '',
+        'PKUA',
+        'I',
+        :WK_DATE,
+        '',
+        0,
+        'F',
+        '',
+        'MASTER',
+        0,
+        '',
+        'SSSSSSSSS',
+        :WK_USER,
+        :WK_DEVICE);
+   IF (NEW.COMPLETE = 'f') THEN
+   BEGIN
+      WK_DUMMY = '1';
+   END
+   ELSE
+   BEGIN
+     EXECUTE PROCEDURE TRAN_ARCHIVE;
+   END
+  END
+ END
+END ^
+ 
+
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;

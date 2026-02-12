@@ -1,0 +1,4 @@
+alter table control add send_so_cancel value_tf;
+alter table control add export_so_held_printer device_id ;
+alter table control add export_so_cancel_printer device_id;
+

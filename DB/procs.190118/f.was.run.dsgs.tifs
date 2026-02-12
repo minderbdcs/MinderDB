@@ -1,0 +1,4 @@
+/* execute procedure run_dsgs('00320000000000558166',1); */
+ update pack_sscc set ps_pick_label_no='M216631' where record_id=53951;
+ update pack_sscc set ps_pick_label_no='M216632' where record_id=53952;
+ update pack_sscc set ps_pick_label_no='M216633' where record_id=53953;

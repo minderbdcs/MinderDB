@@ -1,0 +1,7 @@
+alter table issn add prev_pick_order pick_order;
+alter table issn add prev_prev_pick_order pick_order;
+
+alter table issn add prev_pack_id pack_id;
+alter table issn add prev_prev_pack_id pack_id;
+alter table issn add prev_despatch_id despatch_id;
+alter table issn add prev_prev_despatch_id despatch_id;

@@ -1,0 +1,5 @@
+update param set symbology_prefix=symbology_prefix || ';;' where data_id in ('PROD_13','LOCATION');
+update param set symbology_prefix=symbology_prefix || ';;',data_expression='[A-Z0-9]*',max_length=12 where data_id in ('PROD_INTERNAL');
+insert into param (data_id, max_length, data_type, fixed_length, symbology_prefix, data_expression) values (
+'ALT_PROD_INTERNAL',5,1,'F',';;','[0-9]*');
+

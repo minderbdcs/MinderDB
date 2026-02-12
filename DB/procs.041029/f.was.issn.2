@@ -1,0 +1,7 @@
+update issn set 
+label_date = (select ssn.label_date from ssn where ssn.ssn_id=issn.original_ssn), 
+original_qty = (select ssn.original_qty from ssn where ssn.ssn_id=issn.original_ssn), 
+audit_date = (select ssn.audit_date from ssn where ssn.ssn_id=issn.original_ssn), 
+company_id = (select ssn.company_id from ssn where ssn.ssn_id=issn.original_ssn), 
+division_id = (select ssn.division_id from ssn where ssn.ssn_id=issn.original_ssn), 
+serial_number = (select ssn.serial_number from ssn where ssn.ssn_id=issn.original_ssn); 

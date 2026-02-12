@@ -1,0 +1,2 @@
+alter table prod_profile add legacy_other1 integer;
+alter table prod_profile add legacy_other2 integer;

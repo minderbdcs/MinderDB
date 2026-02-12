@@ -1,0 +1,385 @@
+COMMIT WORK;
+SET AUTODDL OFF;
+SET TERM ^ ;
+
+DROP   TRIGGER RUN_TRANSACTION_GRND ^
+COMMIT^
+ 
+CREATE TRIGGER RUN_TRANSACTION_GRND FOR TRANSACTIONS 
+ACTIVE AFTER INSERT POSITION 43 
+AS
+DECLARE VARIABLE WK_AUTORUN INTEGER;
+DECLARE VARIABLE WK_RECORD  INTEGER;
+DECLARE VARIABLE WK_OBJECT  VARCHAR(30);
+DECLARE VARIABLE WK_REFERENCE  VARCHAR(40);
+DECLARE VARIABLE WK_AWB  VARCHAR(20);
+DECLARE VARIABLE WK_WH_ID CHAR(2);
+DECLARE VARIABLE WK_LOCN_ID  VARCHAR(10);
+DECLARE VARIABLE WK_CARRIER  VARCHAR(10);
+DECLARE VARIABLE WK_CARRIER_X  VARCHAR(12);
+DECLARE VARIABLE WK_SUBLOCN  VARCHAR(10);
+DECLARE VARIABLE WK_VECHICLE  VARCHAR(8);
+DECLARE VARIABLE WK_GRN_TYPE CHAR(2);
+DECLARE VARIABLE WK_LOADNO VARCHAR(10);
+DECLARE VARIABLE WK_LOAD_LINE_NO VARCHAR(4);
+DECLARE VARIABLE WK_CONTAINERS CHAR(1);
+DECLARE VARIABLE WK_OWNER VARCHAR(10);
+DECLARE VARIABLE WK_PALLET_QTY INTEGER;
+DECLARE VARIABLE WK_PALLET_QTY_X VARCHAR(3);
+DECLARE VARIABLE WK_QTY  INTEGER;
+DECLARE VARIABLE WK_GRN  VARCHAR(10);
+DECLARE VARIABLE WK_USER  VARCHAR(10);
+DECLARE VARIABLE WK_DEVICE  VARCHAR(2);
+DECLARE VARIABLE WK_DATE TIMESTAMP;
+DECLARE VARIABLE WK_GRN_ID  VARCHAR(10);
+DECLARE VARIABLE WK_ERROR_TEXT  VARCHAR(70);
+DECLARE VARIABLE WK_DIRECTORY VARCHAR(80);
+DECLARE VARIABLE WK_FILENAME VARCHAR(80);
+DECLARE VARIABLE WK_FILENAME2 VARCHAR(80);
+DECLARE VARIABLE WK_RESULT INTEGER;
+DECLARE VARIABLE WK_SHIP_DATE_X  VARCHAR(30);
+DECLARE VARIABLE WK_SHIP_DATE2_X  VARCHAR(30);
+DECLARE VARIABLE WK_POSN  INTEGER;
+DECLARE VARIABLE WK_SHIP  INTEGER;
+DECLARE VARIABLE WK_SHIP_DATE TIMESTAMP;
+DECLARE VARIABLE WK_OWNER_X  VARCHAR(12);
+DECLARE VARIABLE WK_SUPPLIER  VARCHAR(10);
+DECLARE VARIABLE WK_PRINTER  VARCHAR(40);
+DECLARE VARIABLE WK_GRN_LABEL  VARCHAR(10);
+DECLARE VARIABLE WK_HAVE_FILE_2 INTEGER;
+DECLARE VARIABLE WK_DATE_X VARCHAR(24);
+DECLARE VARIABLE WK_TIME VARCHAR(10);
+DECLARE VARIABLE WK_LABEL_LINE  VARCHAR(110);
+BEGIN
+ WK_AUTORUN = GEN_ID(AUTOEXEC_TRANSACTIONS,0); 
+ IF (WK_AUTORUN = 1) THEN
+ BEGIN
+  IF (NEW.TRN_TYPE = 'GRND') THEN
+  BEGIN
+     WK_RECORD = NEW.RECORD_ID; 
+     /* WK_ERROR_TEXT = 'Processed OK'; */
+     WK_ERROR_TEXT = 'Processed successfully';
+     WK_SHIP_DATE = NULL;
+     IF (NEW.TRN_CODE = 'R') THEN
+     BEGIN
+        WK_GRN = '';
+        WK_OBJECT = NEW.OBJECT;
+        WK_AWB = substr(WK_OBJECT,1, 20);
+        WK_POSN = POS(:WK_OBJECT,'|',0,1);
+        IF (WK_POSN > -1) THEN
+        BEGIN
+           WK_AWB = SUBSTR(WK_OBJECT, 1, WK_POSN);
+           EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_OBJECT, 2  RETURNING_VALUES :WK_SHIP_DATE2_X ; 
+           WK_SHIP_DATE_X = SUBSTR(WK_SHIP_DATE2_X, 1, 4) || '-' ||
+           SUBSTR(WK_SHIP_DATE2_X, 5, 6) || '-' ||
+           SUBSTR(WK_SHIP_DATE2_X, 7, 8);
+        END
+        WK_WH_ID = NEW.WH_ID;
+        WK_LOCN_ID = NEW.LOCN_ID;
+        WK_CARRIER_X = WK_WH_ID || WK_LOCN_ID;
+        WK_CARRIER = substr(WK_CARRIER_X,1,10);
+        WK_SUBLOCN = NEW.SUB_LOCN_ID;
+        WK_VECHICLE = substr(WK_SUBLOCN,1,8);
+        WK_REFERENCE = NEW.REFERENCE;
+        WK_GRN_TYPE = substr(WK_REFERENCE,1,2);
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 2  RETURNING_VALUES :WK_LOADNO ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 3  RETURNING_VALUES :WK_LOAD_LINE_NO ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 4  RETURNING_VALUES :WK_CONTAINERS ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 5  RETURNING_VALUES :WK_OWNER ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 6  RETURNING_VALUES :WK_PALLET_QTY_X ; 
+        WK_PALLET_QTY = CAST(WK_PALLET_QTY_X AS INTEGER);
+        WK_QTY = NEW.QTY;
+        WK_USER = NEW.PERSON_ID;
+        WK_DEVICE = NEW.DEVICE_ID;
+        WK_DATE = NEW.TRN_DATE;
+        IF (WK_GRN_TYPE = 'LD') THEN
+        BEGIN
+           IF (WK_LOADNO = '') THEN
+           BEGIN
+              EXECUTE PROCEDURE GET_LOAD_NO RETURNING_VALUES :WK_LOADNO;
+           END
+        END
+        IF (WK_POSN > -1) THEN
+        BEGIN
+           WK_SHIP_DATE = CAST(:WK_SHIP_DATE_X AS TIMESTAMP);
+           WHEN SQLCODE -413
+           DO
+           BEGIN
+              /* No Ship date */
+              WK_SHIP_DATE = NULL;
+           END
+        END
+        /*
+	if the order no is empty
+	must calc the next order no to use
+
+	for the screens ?? also have a table
+	for companys allowed orders
+	with a status
+	company
+	order
+	status
+
+	can I use the purchase_order for this ?? ***
+	(ie is the order no on its own unique ??)
+	I shall assume that it is
+        */
+        EXECUTE PROCEDURE ADD_GRN :WK_GRN, :WK_GRN_TYPE, :WK_QTY, '', 
+                                  :WK_CARRIER, :WK_VECHICLE, :WK_AWB,
+                                  :WK_PALLET_QTY, '', :WK_CONTAINERS,
+                                  :WK_OWNER, :WK_USER, :WK_DEVICE,
+                                  :WK_DATE, :WK_LOADNO, :WK_LOAD_LINE_NO,
+                                  '', '', :WK_SHIP_DATE RETURNING_VALUES :WK_GRN_ID;
+/*
+        IF (WK_POSN > -1) THEN
+        BEGIN
+           UPDATE GRN SET SHIPPED_DATE = CAST(:WK_SHIP_DATE_X AS TIMESTAMP)
+           WHERE GRN = :WK_GRN_ID;
+           WHEN SQLCODE -413
+           DO
+           BEGIN
+              -* No Ship date *-
+              WK_SHIP = 0;
+           END
+        END
+*/
+        WK_ERROR_TEXT = 'GRN:' || WK_GRN_ID || ':LOAD:' || WK_LOADNO || ':message:' || WK_ERROR_TEXT;
+
+        WK_DIRECTORY = '';
+        SELECT FTP_DIRECTORY
+           FROM CONTROL
+           INTO :WK_DIRECTORY;
+        WK_FILENAME = WK_DIRECTORY || WK_DEVICE || '.rp';
+        /* clear devices file */
+        WK_RESULT = FILE_DELETE(WK_FILENAME);
+        WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_ERROR_TEXT); 
+        UPDATE TRANSACTIONS SET COMPLETE='T',ERROR_TEXT=:WK_ERROR_TEXT WHERE RECORD_ID = :WK_RECORD;
+     END
+     IF (NEW.TRN_CODE = 'B') THEN
+     BEGIN
+        WK_GRN = '';
+        WK_OBJECT = NEW.OBJECT;
+        /* object is awb | ship date */
+        WK_AWB = substr(WK_OBJECT,1, 20);
+        WK_POSN = POS(:WK_OBJECT,'|',0,1);
+        IF (WK_POSN > -1) THEN
+        BEGIN
+           WK_AWB = SUBSTR(WK_OBJECT, 1, WK_POSN);
+           EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_OBJECT, 2  RETURNING_VALUES :WK_SHIP_DATE2_X ; 
+           WK_SHIP_DATE_X = SUBSTR(WK_SHIP_DATE2_X, 1, 4) || '-' ||
+           SUBSTR(WK_SHIP_DATE2_X, 5, 6) || '-' ||
+           SUBSTR(WK_SHIP_DATE2_X, 7, 8);
+        END
+        WK_WH_ID = NEW.WH_ID;
+        WK_LOCN_ID = NEW.LOCN_ID;
+        WK_CARRIER_X = WK_WH_ID || WK_LOCN_ID;
+        WK_CARRIER = substr(WK_CARRIER_X,1,10);
+        WK_SUBLOCN = NEW.SUB_LOCN_ID;
+        WK_VECHICLE = substr(WK_SUBLOCN,1,8);
+        WK_REFERENCE = NEW.REFERENCE;
+        WK_GRN_TYPE = substr(WK_REFERENCE,1,2);
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 2  RETURNING_VALUES :WK_LOADNO ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 3  RETURNING_VALUES :WK_LOAD_LINE_NO ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 4  RETURNING_VALUES :WK_CONTAINERS ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 5  RETURNING_VALUES :WK_OWNER ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 6  RETURNING_VALUES :WK_PALLET_QTY_X ; 
+ IF (WK_OWNER <> 'NONE') THEN
+        BEGIN
+           WK_PALLET_QTY = CAST(WK_PALLET_QTY_X AS INTEGER);
+        END
+        ELSE
+        BEGIN
+           WK_PALLET_QTY = 0;
+        END
+        WK_QTY = NEW.QTY;
+        WK_USER = NEW.PERSON_ID;
+        WK_DEVICE = NEW.DEVICE_ID;
+        WK_DATE = NEW.TRN_DATE;
+        IF (WK_POSN > -1) THEN
+        BEGIN
+           WK_SHIP_DATE = CAST(:WK_SHIP_DATE_X AS TIMESTAMP);
+           WHEN SQLCODE -413
+           DO
+           BEGIN
+              /* No Ship date */
+              WK_SHIP_DATE = NULL;
+           END
+        END
+        IF (WK_GRN_TYPE = 'LD') THEN
+        BEGIN
+           IF (WK_LOADNO = '') THEN
+           BEGIN
+              EXECUTE PROCEDURE GET_LOAD_NO RETURNING_VALUES :WK_LOADNO;
+           END
+        END
+        EXECUTE PROCEDURE ADD_GRN :WK_GRN, :WK_GRN_TYPE, :WK_QTY, '', 
+                                  :WK_CARRIER, :WK_VECHICLE, :WK_AWB,
+                                  :WK_PALLET_QTY, '', :WK_CONTAINERS,
+                                  :WK_OWNER, :WK_USER, :WK_DEVICE,
+                                  :WK_DATE, :WK_LOADNO, :WK_LOAD_LINE_NO,
+                                  '', '', :WK_SHIP_DATE RETURNING_VALUES :WK_GRN_ID;
+/*
+        IF (WK_POSN > -1) THEN
+        BEGIN
+           UPDATE GRN SET SHIPPED_DATE = CAST(:WK_SHIP_DATE_X AS TIMESTAMP)
+           WHERE GRN = :WK_GRN_ID;
+           WHEN SQLCODE -413
+           DO
+           BEGIN
+              -* No Ship date *-
+              WK_SHIP = 0;
+           END
+        END
+*/
+        WK_ERROR_TEXT = 'GRN:' || WK_GRN_ID || ':LOAD:' || WK_LOADNO || ':message:' || WK_ERROR_TEXT;
+        UPDATE TRANSACTIONS SET COMPLETE='T',ERROR_TEXT=:WK_ERROR_TEXT WHERE RECORD_ID = :WK_RECORD;
+   
+     END
+     IF (NEW.TRN_CODE = 'G') THEN
+     BEGIN
+        /* do nothing since the delphi has already done it */
+        WK_SHIP = 0;
+        UPDATE TRANSACTIONS SET COMPLETE='T',ERROR_TEXT=:WK_ERROR_TEXT WHERE RECORD_ID = :WK_RECORD;
+     END
+     IF (NEW.TRN_CODE = 'L') THEN
+     BEGIN
+/*
+create a new class for this transaction GRND|L
+
+GRND|(G,R,B) does a create of GRN for a purchase order
+	or LOAD
+
+GRND|L then for the given GRN creates the qty of
+	GRN Labels 
+	was going to have a new table grn_order
+	with 
+	grn
+	order no
+	grn_label_no (calced a G followed by the next generated no)
+	company (person)
+	supplier (person)
+	uniqueness is 
+	the grn_label_no
+	or order_no + company ***
+	I shall use order no as unique
+	
+	if the order no is empty
+	must calc the next order no to use
+
+	for the screens ?? also have a table
+	for companys allowed orders
+	with a status
+	company
+	order
+	status
+
+	can I use the purchase_order for this ?? ***
+	(ie is the order no on its own unique ??)
+	I shall assume that it is
+
+*/
+        WK_OBJECT = NEW.OBJECT;
+        WK_GRN = substr(WK_OBJECT,1, 20);
+        WK_POSN = POS(:WK_OBJECT,'|',0,1);
+        IF (WK_POSN > -1) THEN
+        BEGIN
+           WK_GRN = SUBSTR(WK_OBJECT, 1, WK_POSN);
+        END
+        WK_GRN = VRTRIM(WK_GRN);
+        WK_WH_ID = NEW.WH_ID;
+        WK_LOCN_ID = NEW.LOCN_ID;
+        WK_OWNER_X = WK_WH_ID || WK_LOCN_ID;
+        WK_OWNER = SUBSTR(WK_OWNER_X,1,10);
+        WK_SUBLOCN = NEW.SUB_LOCN_ID;
+        WK_SUPPLIER = WK_SUBLOCN;
+
+        WK_LOADNO = '';
+        WK_PRINTER = 'PA';
+        WK_REFERENCE = NEW.REFERENCE;
+        WK_GRN_TYPE = substr(WK_REFERENCE,1,2);
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 2  RETURNING_VALUES :WK_LOADNO ; 
+        EXECUTE PROCEDURE GET_REFERENCE_FIELD :WK_REFERENCE, 4  RETURNING_VALUES :WK_PRINTER ; 
+        WK_PRINTER = VRTRIM(WK_PRINTER);
+        WK_QTY = NEW.QTY;
+        WK_USER = NEW.PERSON_ID;
+        WK_DEVICE = NEW.DEVICE_ID;
+        WK_DATE = NEW.TRN_DATE;
+        WK_DATE_X = LPAD(MER_DAY(WK_DATE),'0',2) || '/' || LPAD(MER_MONTH(WK_DATE),'0',2) || '/' || SUBSTR(CAST(MER_YEAR(WK_DATE) AS CHAR(4)) , 3,4);
+        WK_TIME = LPAD(MER_HOUR(WK_DATE),'0',2) || ':' || LPAD(MER_MINUTE(WK_DATE),'0',2) ;
+        WK_DATE_X = WK_DATE_X || ' ' || WK_TIME;
+
+        SELECT AWB_CONSIGNMENT_NO
+        FROM GRN
+        WHERE GRN = :WK_GRN
+        INTO :WK_AWB;
+        /* need the directory for this label set */
+        SELECT WORKING_DIRECTORY FROM SYS_EQUIP 
+           WHERE DEVICE_ID = :WK_PRINTER
+           INTO :WK_DIRECTORY;
+        /* must create qty of labels
+           and send the print request to the printer */
+
+        WK_HAVE_FILE_2 = 0;
+        SELECT LABEL_NO 
+        FROM NEXT_GRN_ORDER_LABEL
+        INTO :WK_GRN_LABEL ;
+        /* ok now have wk_grn_label */
+        INSERT INTO GRN_ORDER (GRN ,
+           ORDER_NO ,
+           GRN_LABEL_NO ,
+           COMPANY_ID ,
+           SUPPLIER_ID ,
+           CREATE_DATE ,
+           CREATED_BY )
+        VALUES (:WK_GRN,
+           :WK_LOADNO,
+           :WK_GRN_LABEL,
+           :WK_OWNER,
+           :WK_SUPPLIER,
+           :WK_DATE,
+           :WK_USER);             
+        /* write printer file  */
+        /* append the file name to the directory*/
+        WK_FILENAME = WK_DIRECTORY || 'GRN.1xt';
+        WK_LABEL_LINE = '"' || WK_GRN_LABEL || '","' ||
+            WK_GRN || '","' ||
+            WK_GRN_TYPE || '","' ||
+            WK_LOADNO || '","' ||
+            WK_AWB || '",' ||
+            WK_QTY || ',"' ||
+            WK_DATE_X || '","' ||
+            WK_PRINTER || '"';
+        WK_HAVE_FILE_2 = 1;
+        WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+        IF (WK_RESULT <> 0) THEN
+        BEGIN
+           WK_FILENAME = WK_DIRECTORY || 'GRN.2xt';
+           WK_RESULT = FILE_WRITELN(WK_FILENAME, WK_LABEL_LINE);
+           WK_HAVE_FILE_2 = -1;
+        END
+        IF (WK_HAVE_FILE_2 = 1) THEN
+        BEGIN
+           /* rename grn.1xt to grn.txt */
+           WK_FILENAME = WK_DIRECTORY || 'GRN.1xt';
+           WK_FILENAME2 = WK_DIRECTORY || 'GRN.txt';
+           WK_RESULT = FILE_RENAME(WK_FILENAME, WK_FILENAME2);
+        END
+        IF (WK_HAVE_FILE_2 = -1) THEN
+        BEGIN
+           /* rename grn.1xt to grn.txt */
+           WK_FILENAME = WK_DIRECTORY || 'GRN.2xt';
+           WK_FILENAME2 = WK_DIRECTORY || 'GRN.txt';
+           WK_RESULT = FILE_RENAME(WK_FILENAME, WK_FILENAME2);
+        END
+
+        UPDATE TRANSACTIONS SET COMPLETE='T',ERROR_TEXT=:WK_ERROR_TEXT WHERE RECORD_ID = :WK_RECORD;
+     END
+
+  END
+ END
+END ^
+ 
+SET TERM ; ^
+COMMIT WORK;
+SET AUTODDL ON;
+

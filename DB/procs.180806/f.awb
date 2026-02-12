@@ -1,0 +1,2 @@
+commit;
+alter domain awb_consignment_no TYPE VARCHAR(50);

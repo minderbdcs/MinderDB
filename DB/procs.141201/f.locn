@@ -1,0 +1,3 @@
+alter table location add locn_reprint value_ft;
+update location set locn_reprint = 'T';
+

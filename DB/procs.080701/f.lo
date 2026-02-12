@@ -1,0 +1,2 @@
+alter table loan_order add loan_due_date datetime;
+

@@ -1,0 +1,4 @@
+
+alter table pick_item_detail add alternate_companys  company_group;
+alter table pick_item_detail_dx add alternate_companys  company_group;
+

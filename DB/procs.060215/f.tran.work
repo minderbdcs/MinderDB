@@ -1,0 +1,8 @@
+alter table transactions_work add trn_date trn_date;
+alter table transactions_work add instance_id instance_id;
+alter table transactions_work add sub_locn_id locn_id;
+alter table transactions_work add input_source input_source;
+alter table transactions_work add person_id person;
+alter table transactions_work add device_id device_id;
+alter table transactions_work add complete complete;
+

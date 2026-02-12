@@ -1,0 +1,15 @@
+	add pickd_carrier_service_charge_to to pick_despatch
+
+make carrier_service have record_id as primary key
+
+	add post codes table
+		country
+		post code
+		name
+		depo code 01 - 10 (varchar(10)
+
+	add to carrier post code depo id.
+
+add to post codes table as the fist few fields
+Pcode,Locality,State,Comments,DeliveryOffice,PresortIndicator,ParcelZone,BSPnumber,BSPname,Category
+(pcode is the postcode but its an int)

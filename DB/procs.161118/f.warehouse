@@ -1,0 +1,3 @@
+create domain SSN_ID_PREFIX VARCHAR(15);
+
+alter table warehouse add SSN_ID_PREFIX SSN_ID_PREFIX;

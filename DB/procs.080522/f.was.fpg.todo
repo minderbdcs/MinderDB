@@ -1,0 +1,99 @@
+
+in insert pick order or purchase order
+check that company id in company table
+(check exists as company_id or as name)
+if not found add it
+
+dsdx - allow DL status
+===================================================================================================
+done
+ssn_group 
+	wants fields (labels) for
+	standard fixed fields
+	ssn_type
+	generic
+	brand
+	model
+	ssn_sub_type
+	
+ssn_type
+	want labels for standard fields
+	already have ssn_type and generic in table
+	field_ssn_type
+	field_generic
+	field_brand
+	field_model
+	field_ssn_sub_type	
+
+purchase_order
+	po_legacy_rec_wh_id	char(2)
+	po_legacy_rec_wh_name	varchar(50)
+	po_legacy_consignment	vc(10)
+		remove prefix -> grn	
+	po_legacy_status_id	char(2)
+	po_created_by_name	varchar() person
+	po_ship_to_attension	vc(80)
+	po_ship_to_addressee	vc(80)
+	po_ship_to_phone	vc(50)
+	po_ship_to_address1	vc(80)
+	po_ship_to_address2	vc(80)
+	po_ship_to_suburb	vc(50)
+	po_ship_to_state	vc(50)
+	po_ship_to_postcode	vc(20)
+	po_ship_to_country	vc(50)
+
+po line
+	po_line_description	text blob
+	po_line_options		varchar(255)
+	po_line_qty_f		double
+	po_line_lotno_list	text blob
+	remove po_legacy_status_tf
+	po_line_status_tf	value_tf default 'T'
+	remove po_line_customer
+	po_line_customer_id	person
+	po_line_customer_name	??
+
+warehouse
+	wh_legacy_wh_id		char(2)
+	wh_legacy_wh_name	varchar(50)
+
+grn
+	grn_legacy_internal_id	vc(20)
+	grn_legacy_memo		vc(1024)
+	grn_posting_period	vc(20)
+	wh_id			char(2)
+	
+ssn
+	ssn_original_qty_f	double
+
+pick_order
+	so_legacy_consignment	other_char
+	so_legacy_project	varchar(50)
+	so_legacy_internal_id	charchar(20)
+	so_legacy_last_modified	timestamp last_update_date
+	so_legacy_pick_wh_id	char(2)
+	so_legacy_pick_wh_name	varchar(50)
+	so_legacy_memo		varchar(1024)
+	so_legacy_status_id	varchar(2)
+	so_legacy_status	varchar(50)
+	d_country		increase to varchar(35)
+	ship_via_name		varchar(50)
+	so_legacy_create_date	last_update_date timestamp
+	
+pick_item
+	pi_legacy_item_descr	blob
+	pi_legacy_closed	value_tf
+	pi_legacy_lineno	integer
+	pi_legacy_wh_name	varchar(30)
+
+	other 1 2 3 will hold variety, brand and grade ie generic , brand and model
+
+	pi_legacy_fulfilled_qty	integer
+	pi_legacy_packed_qty	integer
+	pi_legacy_picked_qty	integer
+	pi_legacy_rate		varchar(15)
+	pi_legacy_pick_uom	code_two
+
+==================================================================================================
+pkol for new length
+dsss for new length
